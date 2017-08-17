@@ -4,7 +4,7 @@ library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-identifier = 'v012' #run identifier
+identifier = 'v013' #run identifier
 use_real_data <- TRUE
 nSamples = 4
 

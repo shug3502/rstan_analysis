@@ -31,12 +31,19 @@ parameters {
 }
 model {
   real z[T,16];
-  sigma ~ normal(1.0,0.25) T[0,]; //cauchy(0,2.5) T[0,];
+  int cell_indices[5]; //only model these cells
+  sigma ~ cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
   theta ~ normal(0,10);
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts, theta, B, x_i);
+  cell_indices[1] = 1;
+  cell_indices[2] = 2;
+  cell_indices[3] = 3;
+  cell_indices[4] = 9;
+  cell_indices[5] = 5;
   for (t in 1:T){
-    for (j in 1:16) {
-      y[t,j] ~ poisson(sigma*z[t,j]);
+    for (j in 1:5) {
+//      y[t,j] ~ poisson(sigma*z[t,j]);
+      y[t,j] ~ neg_binomial_2(z[t,cell_indices[j]], sigma);
     }
   }
 }
@@ -46,7 +53,8 @@ generated quantities {
   y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts, theta, B, x_i );
   for (t in 1:T){
     for (j in 1:16){
-      y_pred[t,j] = poisson_rng(sigma*y_ode[t,j]);
+//      y_pred[t,j] = poisson_rng(sigma*y_ode[t,j]);
+      y_pred[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
     }
   }
 }

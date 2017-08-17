@@ -35,7 +35,7 @@ generated quantities {
   y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts, theta, B, x_i );
   for (t in 1:T){
     for (j in 1:16){
-      y_hat[t,j] = poisson_rng(sigma*y_ode[t,j]);
+      y_hat[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
     }
   }
 }
