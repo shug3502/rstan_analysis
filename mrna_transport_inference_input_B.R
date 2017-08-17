@@ -4,17 +4,41 @@ library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-identifier = 'test' #run identifier
-use_real_data <- FALSE
+identifier = 'v012' #run identifier
+use_real_data <- TRUE
+nSamples = 4
 
+#############################################################
+#Fit linear model to log(length) of egg chambers to get time of development.
+#Could use area or volume of egg chamber. Compare to Jia 2016 Sci Reports.
+#Area may be better as in some examples egg chambers are quite squashed.
+#To get lengths read length.txt file in each folder
+
+egg_chamber_areas <- rep(0,nSamples)
+#stages <- rep(0,nSamples) #don't need to extract estimated stages for each egg chamber example
+for (j in 1:nSamples){
+  egg_chamber_areas[j] <- as.numeric(read.table(paste('../data/Example',j,'/area.txt',sep='')))
+  #   temp <- list.files(path = paste('../data/Example',j,'/',sep=''), pattern = "\\_grk\\.tif$") %>%
+  #     stringr::str_extract(., 'stg.') %>%
+  #     stringr::str_split(.,'stg',simplify=TRUE)
+  #   stages[j] = temp[2] %>% as.numeric
+}
+#lm_time <- lm(log(egg_chamber_lengths) ~ stages)
+
+#take l0 = log(20) as initial time (when using length)
+#take measure egg chamber lengths as a scaled time variable
+t0 = log(400)
+log_areas = sort.int(log(egg_chamber_areas),index.return=TRUE)
+ts = log_areas$x #ts needs to be an ordered time vector
+sort_indices = log_areas$ix
+
+#############################################################
 deltaT = 1
-nSamples = 3
 m0 = c(0, rep(1,15)) #initial condition
 th = c(1.7,2.0)
-t0 = 0.0
-ts = seq(deltaT,nSamples * deltaT,deltaT)
 sig = 1
-
+#t0 = 0.0
+#ts = seq(deltaT,nSamples * deltaT,deltaT)
 
 #############################################################
 source('get_nc_transition_matrix.R')
@@ -37,7 +61,8 @@ if (use_real_data){
      18.,   127.,    20.,    53.,    19.,   109.,    20.,    11.,
      1106.,   162.,    36.,   118.,    92.,   131.,    61.,    76.,
      82.,   129.,    39.,   135.,   122.,    84.,    31.,    35.),ncol=16,byrow=TRUE)
-} else {
+  exp_data = exp_data[sort_indices,] #need to sort time series and correspondingly reorder rows
+  } else {
   #sample from the model to get fake data
   print('using fake generated data')
   samples <- stan(file = 'mrna_transport6.stan',
@@ -48,13 +73,13 @@ if (use_real_data){
                     ts = ts,
                     theta = array(th, dim = 2),
                     sigma = sig,
-                    B = B2,
+                    B = B1,
                     refresh = -1
                   ),
                   algorithm="Fixed_param",
                   seed = 42,
                   chains = 1,
-                  iter =100
+                  iter =1
   )
   
   s <- rstan::extract(samples,permuted=FALSE)
@@ -73,7 +98,7 @@ estimates <- stan(file = 'mrna_transport5.stan',
                     y0 = m0,
                     t0 = t0,
                     ts = ts,
-                    B = B2
+                    B = B1
                   ),
                   seed = 42,
                   chains = 4,
