@@ -4,9 +4,9 @@ library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-identifier = 'v013' #run identifier
+identifier = 'v020' #run identifier
 use_real_data <- TRUE
-nSamples = 4
+nSamples = 4 #how many egg chambers segmented
 
 #############################################################
 #Fit linear model to log(length) of egg chambers to get time of development.
@@ -30,13 +30,15 @@ for (j in 1:nSamples){
 t0 = log(400)
 log_areas = sort.int(log(egg_chamber_areas),index.return=TRUE)
 ts = log_areas$x #ts needs to be an ordered time vector
+ts = seq(from=10,to=40,length=nSamples)
 sort_indices = log_areas$ix
 
 #############################################################
-deltaT = 1
 m0 = c(0, rep(1,15)) #initial condition
-th = c(1.7,2.0)
-sig = 1
+th = c(5,50)
+sig = 4.0
+phi = 1.0/5
+#deltaT = 1
 #t0 = 0.0
 #ts = seq(deltaT,nSamples * deltaT,deltaT)
 
@@ -53,6 +55,7 @@ if (use_real_data){
   #exp_data <- matrix(c(708, 47, 117, 50, 91, 34, 86, 49, 76, 94, 100, 63, 110, 73, 81, 71,
   #                     1805, 283, 194, 168, 382, 179, 67, 22, 85, 70, 56, 47, 174, 136, 20, 17,
   #                     1454, 261, 144, 180, 108, 142, 10, 96, 18, 127, 20, 53, 19, 109, 20, 11),nrow=nSamples, byrow=TRUE) 
+  #could run python code from here to extract this
   exp_data = matrix(c(1840.,   283.,   194.,   168.,   190.,   179.,    67.,    22.,
      85.,    70.,    56.,    47.,   174.,   136.,    20.,    17.,
      708.,    47.,   117.,    50.,    91.,    34.,    86.,    49.,
@@ -73,18 +76,20 @@ if (use_real_data){
                     ts = ts,
                     theta = array(th, dim = 2),
                     sigma = sig,
-                    B = B1,
-                    refresh = -1
+                    phi = phi,
+                    B = B1
                   ),
                   algorithm="Fixed_param",
                   seed = 42,
                   chains = 1,
-                  iter =1
+                  iter =100, 
+                  refresh = -1
   )
   
   s <- rstan::extract(samples,permuted=FALSE)
   plot(s[1,1,seq(from=1, to=(nSamples*16-1), by=nSamples)])
   plot(s[1,1,seq(from=nSamples, to=(nSamples*16), by=nSamples)])
+  boxplot(s[,1,seq(from=nSamples, to=(nSamples*16), by=nSamples)])
   exp_data = matrix(s[1,1,1:(16*nSamples)],nrow=nSamples,byrow=FALSE) #this is our fake data
 }
 
@@ -106,7 +111,7 @@ estimates <- stan(file = 'mrna_transport5.stan',
                   warmup = 500
 )
 
-parametersToPlot = c("theta","sigma","lp__")
+parametersToPlot = c("theta","sigma","phi","lp__")
 
 tryCatch({
   #estimates@stanmodel@dso <- new("cxxdso") #seems have to do this to be able to save :S
@@ -121,8 +126,6 @@ tryCatch({
 
 print(estimates, pars = parametersToPlot)
 
-#pairs(estimates, pars = parametersToPlot)
-
 #######################
 #visualisation
 source('mcmcDensity.R')
@@ -133,10 +136,10 @@ library(bayesplot)
 draws <- as.array(estimates, pars=parametersToPlot)
 mcmc_trace(draws)
 ggsave(paste('plots/trace',identifier, '.eps',sep=''),device=cairo_ps)
-mcmc_intervals(draws,pars=c('theta[1]','theta[2]','sigma'))
+mcmc_intervals(draws,pars=c('theta[1]','theta[2]','sigma','phi'))
 ggsave(paste('plots/intervals',identifier, '.eps',sep=''),device=cairo_ps)
 color_scheme_set("purple")
-mcmc_areas(draws,pars=c('theta[1]','theta[2]','sigma'))
+mcmc_areas(draws,pars=c('theta[1]','theta[2]','sigma','phi'))
 ggsave(paste('plots/areas',identifier, '.eps',sep=''),device=cairo_ps)
 color_scheme_set("brightblue")
 mcmc_scatter(draws,pars=c('theta[1]','theta[2]'))
@@ -162,6 +165,8 @@ p1 + geom_line(aes(x = time, y = median)) +
   geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25) + 
   facet_wrap(~factor(cellID))
 ggsave(paste('plots/posterior_pred',identifier, '.eps',sep=''),device=cairo_ps)
+
+pairs(estimates, pars = parametersToPlot)
 
 ######################
 #cos saving wasn't working
