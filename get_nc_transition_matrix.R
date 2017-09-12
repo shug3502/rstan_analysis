@@ -10,5 +10,8 @@ get_nc_transition_matrix <- function(isBidirectional){
     B[v[[j]],j] = 1;
     B[j,j] = ifelse(isBidirectional,-length(v[[j]]),ifelse(j>1,-1,0));
   }
+  if (isBidirectional){
+    B[,1] = rep(0,16)
+  }
   return(B)
 }
