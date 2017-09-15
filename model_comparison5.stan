@@ -1,6 +1,8 @@
 functions {
-  matrix construct_matrix(real nu) {
+  matrix construct_matrix(real th) {
+  real nu;
   matrix[16,16] B;
+  nu = (1+th)/2;
   B = rep_matrix(0,16,16);
   B[1,1] = -4*(1-nu);
   B[2,1] = nu;
@@ -48,7 +50,8 @@ functions {
   B[15,15] = -nu;
   B[8,16] = 1-nu;
   B[16,16] = -nu;
-  return B;
+//need to return transpose
+  return B';
   }
 
 real[] mrnatransport(real t,
@@ -60,7 +63,7 @@ real[] mrnatransport(real t,
     vector[16] dydt;
     matrix[16,16] B;
     vector[16] producers;
-    B = construct_matrix((1+theta[3])/2); //manual transform of params
+    B = construct_matrix(theta[3]); //manual transform of params
     producers = rep_vector(1,16);
     producers[1] = 0;
     dydt = theta[1] * B * to_vector(y) + theta[2] * producers;
@@ -90,7 +93,7 @@ model {
   phi ~ normal(0.289,0.0285) T[0,1];
   theta[1] ~ normal(0,10) T[0,];
   theta[2] ~ normal(0,100) T[0,];
-  theta[3] ~ beta(1,1); // normal(0.99,0.01) T[0,1];
+  theta[3] ~ beta(0.5,0.5); // normal(0.99,0.01) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts, theta, x_r, x_i);
   cell_indices[1] = 1;
   cell_indices[2] = 2;

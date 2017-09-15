@@ -1,0 +1,53 @@
+---
+title: "Rough work"
+author: "Jonathan Harrison"
+date: "07/09/2017"
+output: html_document
+---
+Looking at implications of rate matrices being not full rank. 
+Note they have a null space.
+When we apply the linear operator $L\mathbf{y}$ to $\mathbf{k_1}$ and $\mathbf{k_2}t$, we should lose the linear part since the function on the right hand side of our inhomogeneous problem is a constant in time.
+That is, $\mathbf{k_2} \in \ker(B)$.
+```{r, echo=FALSE,message=FALSE}
+library(Matrix)
+library(MASS)
+library(rstan)
+source('get_nc_transition_matrix.R')
+B1 = get_nc_transition_matrix(0)
+B2 = get_nc_transition_matrix(1)
+
+mc <- stan_model('model_comparison5.stan')
+expose_stan_functions(mc)
+```
+
+Consider the rank of the matrix B as $\nu$ varies.
+
+```{r}
+rnk <- vector()
+nu <- seq(from=0,to=1,length=50)
+for (i in seq_along(nu)){
+  rnk[i] <- rankMatrix(construct_matrix(nu[i]))
+}
+```
+
+Plotting this behaviour, we see that for $\nu=0$, we have different behaviour, corresponding to no forward flow through ring canals, while for $\nu>0$, we have matrices with a null space spanned by a single vector, which should be $k_2$. 
+
+```{r, echo=FALSE}
+plot(nu,rnk)
+```
+
+Thus we can calculate:
+```{r}
+k_2 = function(nu) Null(t(construct_matrix(nu)))
+k_2(0.5)
+k_2(1)
+k_2(0)
+```
+This tells us biologically that in the case where we have bidirectional transport (corresponding to $\nu=0.5$ in this parameterisation), then we have uniform linear growth in all cells in the long time limit.
+In the case $\nu = 1$, where we have unidirectional transport, there is linear growth in the oocyte only, and no gorwth in the nurse cells.
+In the case where $\nu = 0$ with unidirectional flow away from the oocyte (not biological) there is linear growth in the anterior nurse cells.
+
+```{r}
+k_2(0.75)
+k_2(0.82)
+```

@@ -4,7 +4,7 @@ library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-identifier = 'MCv026' #run identifier
+identifier = 'MCv035' #run identifier
 use_real_data <- FALSE
 run_mcmc <- TRUE
 nSamples = 15 #how many egg chambers segmented
@@ -21,32 +21,11 @@ egg_chamber_areas <- rep(0,nTotal)
 #stages <- rep(0,nSamples) #don't need to extract estimated stages for each egg chamber example
 for (j in 1:(nTotal)){
   egg_chamber_areas[j] <- as.numeric(read.table(paste('../data/Example',j,'/area.txt',sep='')))
-  #   temp <- list.files(path = paste('../data/Example',j,'/',sep=''), pattern = "\\_grk\\.tif$") %>%
-  #     stringr::str_extract(., 'stg.') %>%
-  #     stringr::str_split(.,'stg',simplify=TRUE)
-  #   stages[j] = temp[2] %>% as.numeric
 }
-#lm_time <- lm(log(egg_chamber_lengths) ~ stages)
-
-#take l0 = log(20) as initial time (when using length)
-#take measure egg chamber lengths as a scaled time variable
-
-# t0 = log(400)
-# log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
-# ts1 = log_areas$x #ts needs to be an ordered time vector
-# log_areas_test = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-# ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
-# sort_indices1 = log_areas$ix
-# sort_indices2 = log_areas_test$ix
-# ts = setdiff(ts2,ts1) #beware using this name, also a fn
-# log_areas = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-# sort_indices = log_areas$ix
 
 t0 = log(400)
 log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
 ts1 = log_areas$x #ts needs to be an ordered time vector
-#log_areas_test = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-#ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
 log_areas_test = sort.int(log(egg_chamber_areas),index.return=TRUE)
 ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
 sort_indices1 = log_areas$ix
@@ -58,20 +37,17 @@ sort_indices3 = log_areas3$ix
 #############################################################
 m0 = c(0, rep(1,15)) #initial condition
 th = c(6.8,132.8)
-sig = 48.0 #108.0
-phi = 0.28
-#deltaT = 1
-#t0 = 0.0
-#ts = seq(deltaT,nSamples * deltaT,deltaT)
+sig = 10.0 
+phi = 0.289
 
 #############################################################
 source('get_nc_transition_matrix.R')
 B1 = get_nc_transition_matrix(0) %>% as.vector
 B2 = get_nc_transition_matrix(1) %>% as.vector
 
-mc <- stan_model('model_comparison5.stan')
+mc <- stan_model('model_comparison_test.stan')
 expose_stan_functions(mc)
-nu = 0.72
+nu = 0.90
 set_oocyte_absorbing = function(B){
   B[,1] = 0
   return(B)
@@ -111,10 +87,10 @@ if (use_real_data){
   )
   
   s <- rstan::extract(samples,permuted=FALSE)
-   plot(s[1,1,seq(from=1, to=(nTotal*16-1), by=nTotal)])
-   plot(s[1,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
-   boxplot(s[,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
-#   exp_data = matrix(s[1,1,1:(16*nSamples)],nrow=nSamples,byrow=FALSE) #this is our fake data
+  plot(s[1,1,seq(from=1, to=(nTotal*16-1), by=nTotal)])
+  plot(s[1,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
+  boxplot(s[,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
+  #   exp_data = matrix(s[1,1,1:(16*nSamples)],nrow=nSamples,byrow=FALSE) #this is our fake data
   test_data = matrix(s[1,1,1:(16*(nTotal))],nrow=(nTotal),byrow=FALSE) #this is our fake data
   exp_data = test_data[!(ts2 %in% ts3),] 
 }
@@ -122,23 +98,16 @@ if (use_real_data){
 
 ##########################
 if (run_mcmc) {
-  estimates <- stan(file = 'model_comparison5.stan',
+  estimates <- stan(file = 'model_comparison_at_stst.stan',
                     data = list (
-                      y = exp_data,
-                      T  = nSamples,
-                      y0 = m0,
-                      t0 = t0,
-                      ts = ts1
-                      #B1 = B1,
-                      #B2 = B2
-                      #bothB = c(B1,B2)
+                      y_obs = exp_data[10,]
                     ),
                     seed = 42,
                     chains = 4,
                     warmup = 1000,
                     iter = 2000,
-                    control = list(adapt_delta = 0.999, 
-				max_treedepth = 15)
+                    control = list(adapt_delta = 0.9, 
+                                   max_treedepth = 15)
   )
   
   tryCatch({
@@ -155,7 +124,7 @@ if (run_mcmc) {
   estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
 }
 
-parametersToPlot = c("theta","phi","sigma","lp__") #c('mu','tau','psi','zeta')
+parametersToPlot = c('nu','sigma')
 print(estimates, pars = parametersToPlot)
 
 #######################
@@ -169,26 +138,6 @@ dev.off()
 #look at posterior predictive distn
 source('post_pred_plot.R')
 post_pred_plot(exp_data,ts1,nSamples,'y_pred',estimates,identifier,title_stem='plots/posterior_pred')
-#library(tidyr)
-#xdata <- data.frame(rna = as.vector(exp_data),cellID = as.vector(matrix(rep(1:16,nSamples),nrow=nSamples,byrow=TRUE)),time = rep(ts,16))
-#pred <- as.data.frame(estimates, pars = "y_pred") %>%
-#  gather(factor_key = TRUE) %>%
-#  group_by(key) %>%
-#  summarize(lb = quantile(value, probs = 0.05),
-#            median = quantile(value, probs = 0.5),
-#            ub = quantile(value, probs = 0.95)) %>%
-#  bind_cols(xdata)
-#
-#p1 <- ggplot(pred, aes(x = time, y = rna))
-#p1 <- p1 + geom_point() +
-#  labs(x = "time (h)", y = "rna") +
-#  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-#        legend.position = "none", strip.text = element_text(size = 8))
-#p1 + geom_line(aes(x = time, y = median)) +
-#  geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25) + 
-#  facet_wrap(~factor(cellID))
-#ggsave(paste('plots/posterior_pred',identifier, '.eps',sep=''),device=cairo_ps)
-
 source('mcmcDensity.R')
 mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
 ggsave(paste('plots/denisty',identifier, '.eps',sep=''),device=cairo_ps)
@@ -197,13 +146,13 @@ library(bayesplot)
 draws <- as.array(estimates, pars=parametersToPlot)
 mcmc_trace(draws)
 ggsave(paste('plots/trace',identifier, '.eps',sep=''),device=cairo_ps)
-mcmc_intervals(draws,pars=c('theta[1]','theta[2]','phi'))
+mcmc_intervals(draws,pars=parametersToPlot)
 ggsave(paste('plots/intervals',identifier, '.eps',sep=''),device=cairo_ps)
 color_scheme_set("purple")
-mcmc_areas(draws,pars=c('theta[1]','theta[2]','phi'))
+mcmc_areas(draws,pars=parametersToPlot)
 ggsave(paste('plots/areas',identifier, '.eps',sep=''),device=cairo_ps)
 color_scheme_set("brightblue")
-mcmc_scatter(draws,pars=c('theta[1]','theta[2]'))
+mcmc_scatter(draws,pars=parametersToPlot)
 ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
 
 
