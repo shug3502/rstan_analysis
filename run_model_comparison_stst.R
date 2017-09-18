@@ -4,10 +4,10 @@ library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-identifier = 'MCv035' #run identifier
+identifier = 'MCv041' #run identifier
 use_real_data <- FALSE
 run_mcmc <- TRUE
-nSamples = 15 #how many egg chambers segmented
+nSamples = 5 #how many egg chambers segmented
 nTest = 5 #how many to test on
 nTotal = nSamples + nTest
 
@@ -17,27 +17,28 @@ nTotal = nSamples + nTest
 #Area may be better as in some examples egg chambers are quite squashed.
 #To get lengths read length.txt file in each folder
 
-egg_chamber_areas <- rep(0,nTotal)
-#stages <- rep(0,nSamples) #don't need to extract estimated stages for each egg chamber example
-for (j in 1:(nTotal)){
-  egg_chamber_areas[j] <- as.numeric(read.table(paste('../data/Example',j,'/area.txt',sep='')))
-}
-
-t0 = log(400)
-log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
-ts1 = log_areas$x #ts needs to be an ordered time vector
-log_areas_test = sort.int(log(egg_chamber_areas),index.return=TRUE)
-ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
-sort_indices1 = log_areas$ix
-sort_indices2 = log_areas_test$ix
-ts3 = setdiff(ts2,ts1) 
-log_areas3 = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-sort_indices3 = log_areas3$ix
-
+# egg_chamber_areas <- rep(0,nTotal)
+# #stages <- rep(0,nSamples) #don't need to extract estimated stages for each egg chamber example
+# for (j in 1:(nTotal)){
+#   egg_chamber_areas[j] <- as.numeric(read.table(paste('../data/Example',j,'/area.txt',sep='')))
+# }
+# 
+# t0 = log(400)
+# log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
+# ts1 = log_areas$x #ts needs to be an ordered time vector
+# log_areas_test = sort.int(log(egg_chamber_areas),index.return=TRUE)
+# ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
+# sort_indices1 = log_areas$ix
+# sort_indices2 = log_areas_test$ix
+# ts3 = setdiff(ts2,ts1) 
+# log_areas3 = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
+# sort_indices3 = log_areas3$ix
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(nSamples,nTest)
 #############################################################
 m0 = c(0, rep(1,15)) #initial condition
 th = c(6.8,132.8)
-sig = 10.0 
+sig = 0.10 
 phi = 0.289
 
 #############################################################
@@ -61,10 +62,10 @@ if (use_real_data){
   print('using real data \n')
   #system('python ../custom_analysis/process_all_NCs.py',wait=TRUE)
   data = matrix(as.numeric(read.csv('../data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
-  raw_data = data[sort_indices1,] #need to sort time series and correspondingly reorder rows
+  raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
   exp_data = raw_data
   exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
-  test_data = data[sort_indices2,]
+  test_data = data[times$sort_indices2,]
 } else {
   #sample from the model to get fake data
   print('using fake generated data')
@@ -72,8 +73,8 @@ if (use_real_data){
                   data = list (
                     T  = nTotal,
                     y0 = m0,
-                    t0 = t0,
-                    ts = ts2,
+                    t0 = times$t0,
+                    ts = times$ts2,
                     theta = array(th, dim = 2),
                     sigma = sig,
                     phi = phi,
@@ -92,7 +93,8 @@ if (use_real_data){
   boxplot(s[,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
   #   exp_data = matrix(s[1,1,1:(16*nSamples)],nrow=nSamples,byrow=FALSE) #this is our fake data
   test_data = matrix(s[1,1,1:(16*(nTotal))],nrow=(nTotal),byrow=FALSE) #this is our fake data
-  exp_data = test_data[!(ts2 %in% ts3),] 
+  exp_data = test_data[!(times$ts2 %in% times$ts3),] 
+  normalised_data = apply(exp_data,1,function(x)x/x[1]) %>% t() #divide by amount in oocyte to normalise for stst
 }
 
 
@@ -100,12 +102,14 @@ if (use_real_data){
 if (run_mcmc) {
   estimates <- stan(file = 'model_comparison_at_stst.stan',
                     data = list (
-                      y_obs = exp_data[10,]
+                      T1 = nSamples,
+                      T2 = nTest,
+                      y_obs = normalised_data
                     ),
                     seed = 42,
                     chains = 4,
-                    warmup = 1000,
-                    iter = 2000,
+                    warmup = 500,
+                    iter = 1000,
                     control = list(adapt_delta = 0.9, 
                                    max_treedepth = 15)
   )
@@ -124,8 +128,11 @@ if (run_mcmc) {
   estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
 }
 
-parametersToPlot = c('nu','sigma')
+parametersToPlot = c('mu','tau','zeta','xi')
 print(estimates, pars = parametersToPlot)
+
+source('hist_treedepth.R')
+hist_treedepth(estimates)
 
 #######################
 #visualisation
@@ -136,8 +143,8 @@ dev.off()
 #ggsave(paste('plots/pairs',identifier, '.eps',sep=''),device=cairo_ps)
 
 #look at posterior predictive distn
-source('post_pred_plot.R')
-post_pred_plot(exp_data,ts1,nSamples,'y_pred',estimates,identifier,title_stem='plots/posterior_pred')
+source('post_pred_plot_at_stst.R')
+post_pred_plot_at_stst(exp_data,times$ts1,nSamples,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
 source('mcmcDensity.R')
 mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
 ggsave(paste('plots/denisty',identifier, '.eps',sep=''),device=cairo_ps)

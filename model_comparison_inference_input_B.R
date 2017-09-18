@@ -17,43 +17,8 @@ nTotal = nSamples + nTest
 #Area may be better as in some examples egg chambers are quite squashed.
 #To get lengths read length.txt file in each folder
 
-egg_chamber_areas <- rep(0,nTotal)
-#stages <- rep(0,nSamples) #don't need to extract estimated stages for each egg chamber example
-for (j in 1:(nTotal)){
-  egg_chamber_areas[j] <- as.numeric(read.table(paste('../data/Example',j,'/area.txt',sep='')))
-  #   temp <- list.files(path = paste('../data/Example',j,'/',sep=''), pattern = "\\_grk\\.tif$") %>%
-  #     stringr::str_extract(., 'stg.') %>%
-  #     stringr::str_split(.,'stg',simplify=TRUE)
-  #   stages[j] = temp[2] %>% as.numeric
-}
-#lm_time <- lm(log(egg_chamber_lengths) ~ stages)
-
-#take l0 = log(20) as initial time (when using length)
-#take measure egg chamber lengths as a scaled time variable
-
-# t0 = log(400)
-# log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
-# ts1 = log_areas$x #ts needs to be an ordered time vector
-# log_areas_test = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-# ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
-# sort_indices1 = log_areas$ix
-# sort_indices2 = log_areas_test$ix
-# ts = setdiff(ts2,ts1) #beware using this name, also a fn
-# log_areas = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-# sort_indices = log_areas$ix
-
-t0 = log(400)
-log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
-ts1 = log_areas$x #ts needs to be an ordered time vector
-#log_areas_test = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-#ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
-log_areas_test = sort.int(log(egg_chamber_areas),index.return=TRUE)
-ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
-sort_indices1 = log_areas$ix
-sort_indices2 = log_areas_test$ix
-ts3 = setdiff(ts2,ts1) 
-log_areas3 = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-sort_indices3 = log_areas3$ix
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(nSamples,nTest)
 
 #############################################################
 m0 = c(0, rep(1,15)) #initial condition
@@ -85,10 +50,10 @@ if (use_real_data){
   print('using real data \n')
   #system('python ../custom_analysis/process_all_NCs.py',wait=TRUE)
   data = matrix(as.numeric(read.csv('../data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
-  raw_data = data[sort_indices1,] #need to sort time series and correspondingly reorder rows
+  raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
   exp_data = raw_data
   exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
-  test_data = data[sort_indices2,]
+  test_data = data[times$sort_indices2,]
 } else {
   #sample from the model to get fake data
   print('using fake generated data')
@@ -96,8 +61,8 @@ if (use_real_data){
                   data = list (
                     T  = nTotal,
                     y0 = m0,
-                    t0 = t0,
-                    ts = ts2,
+                    t0 = times$t0,
+                    ts = times$ts2,
                     theta = array(th, dim = 2),
                     sigma = sig,
                     phi = phi,
@@ -116,7 +81,7 @@ if (use_real_data){
    boxplot(s[,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
 #   exp_data = matrix(s[1,1,1:(16*nSamples)],nrow=nSamples,byrow=FALSE) #this is our fake data
   test_data = matrix(s[1,1,1:(16*(nTotal))],nrow=(nTotal),byrow=FALSE) #this is our fake data
-  exp_data = test_data[!(ts2 %in% ts3),] 
+  exp_data = test_data[!(times$ts2 %in% times$ts3),] 
 }
 
 
@@ -127,8 +92,8 @@ if (run_mcmc) {
                       y = exp_data,
                       T  = nSamples,
                       y0 = m0,
-                      t0 = t0,
-                      ts = ts1
+                      t0 = times$t0,
+                      ts = times$ts1
                       #B1 = B1,
                       #B2 = B2
                       #bothB = c(B1,B2)
@@ -168,7 +133,7 @@ dev.off()
 
 #look at posterior predictive distn
 source('post_pred_plot.R')
-post_pred_plot(exp_data,ts1,nSamples,'y_pred',estimates,identifier,title_stem='plots/posterior_pred')
+post_pred_plot(exp_data,times$ts1,nSamples,'y_pred',estimates,identifier,title_stem='plots/posterior_pred')
 #library(tidyr)
 #xdata <- data.frame(rna = as.vector(exp_data),cellID = as.vector(matrix(rep(1:16,nSamples),nrow=nSamples,byrow=TRUE)),time = rep(ts,16))
 #pred <- as.data.frame(estimates, pars = "y_pred") %>%
