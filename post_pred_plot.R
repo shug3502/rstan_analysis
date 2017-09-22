@@ -23,4 +23,5 @@ if (!is.na(raw_data[1])){
 p1 <- p1 + geom_point(aes(x = time, y = rna, colour = split))
 }
 ggsave(paste(title_stem,identifier, '.eps',sep=''),device=cairo_ps)
+return(p1)
 }

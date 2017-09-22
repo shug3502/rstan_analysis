@@ -68,4 +68,3 @@ g + geom_raster(aes(fill=log10(dy)),interpolate=FALSE) +
 
 
 
-

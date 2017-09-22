@@ -4,10 +4,10 @@ library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-identifier = 'MCv041' #run identifier
+identifier = 'MCv055' #run identifier
 use_real_data <- FALSE
 run_mcmc <- TRUE
-nSamples = 5 #how many egg chambers segmented
+nSamples = 15 #how many egg chambers segmented
 nTest = 5 #how many to test on
 nTotal = nSamples + nTest
 
@@ -17,45 +17,16 @@ nTotal = nSamples + nTest
 #Area may be better as in some examples egg chambers are quite squashed.
 #To get lengths read length.txt file in each folder
 
-# egg_chamber_areas <- rep(0,nTotal)
-# #stages <- rep(0,nSamples) #don't need to extract estimated stages for each egg chamber example
-# for (j in 1:(nTotal)){
-#   egg_chamber_areas[j] <- as.numeric(read.table(paste('../data/Example',j,'/area.txt',sep='')))
-# }
-# 
-# t0 = log(400)
-# log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
-# ts1 = log_areas$x #ts needs to be an ordered time vector
-# log_areas_test = sort.int(log(egg_chamber_areas),index.return=TRUE)
-# ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
-# sort_indices1 = log_areas$ix
-# sort_indices2 = log_areas_test$ix
-# ts3 = setdiff(ts2,ts1) 
-# log_areas3 = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-# sort_indices3 = log_areas3$ix
 source('extract_times_and_scaling.R')
 times = extract_times_and_scaling(nSamples,nTest)
 #############################################################
 m0 = c(0, rep(1,15)) #initial condition
 th = c(6.8,132.8)
-sig = 0.10 
-phi = 0.289
+sig = 150 
+phi = 0.289 #careful can cause issues if phi is not 1 when looking at stst
 
 #############################################################
-source('get_nc_transition_matrix.R')
-B1 = get_nc_transition_matrix(0) %>% as.vector
-B2 = get_nc_transition_matrix(1) %>% as.vector
-
-mc <- stan_model('model_comparison_test.stan')
-expose_stan_functions(mc)
-nu = 0.90
-set_oocyte_absorbing = function(B){
-  B[,1] = 0
-  return(B)
-}
-#currently will not be using the absorbing oocyte fn
-B = construct_matrix(nu) %>% as.vector
-#############################################################
+my_normaliser <- function(dataset) apply(dataset,1,function(x)x/x[1]) %>% t()
 
 if (use_real_data){
   #data taken from spot detection on 3 egg chambers
@@ -65,16 +36,34 @@ if (use_real_data){
   raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
   exp_data = raw_data
   exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
-  test_data = data[times$sort_indices2,]
+  full_data = data[times$sort_indices2,]
+  normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
+  test_data = data[!(times$sort_indices2 %in% times$sort_indices1),]
+  #test_data = apply(test_data,1,function(x)x/x[1]) %>% t()
 } else {
   #sample from the model to get fake data
   print('using fake generated data')
+  #############################################################
+  source('get_nc_transition_matrix.R')
+  B1 = get_nc_transition_matrix(0) %>% as.vector
+  B2 = get_nc_transition_matrix(1) %>% as.vector
+  
+  mc <- stan_model('model_comparison_at_stst2.stan')
+  expose_stan_functions(mc)
+  nu = 0.72
+  # set_oocyte_absorbing = function(B){
+  #   B[,1] = 0
+  #   return(B)
+  # }
+  #currently will not be using the absorbing oocyte fn
+  B = construct_matrix(nu) %>% as.vector
+  #############################################################
   samples <- stan(file = 'mrna_transport6.stan',
                   data = list (
                     T  = nTotal,
                     y0 = m0,
-                    t0 = times$t0,
-                    ts = times$ts2,
+                    t0 = (times$t0)*10,
+                    ts = (times$ts2)*10,
                     theta = array(th, dim = 2),
                     sigma = sig,
                     phi = phi,
@@ -85,22 +74,23 @@ if (use_real_data){
                   chains = 1,
                   iter =100, 
                   refresh = -1
-  )
-  
+  )  
   s <- rstan::extract(samples,permuted=FALSE)
   plot(s[1,1,seq(from=1, to=(nTotal*16-1), by=nTotal)])
   plot(s[1,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
   boxplot(s[,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
   #   exp_data = matrix(s[1,1,1:(16*nSamples)],nrow=nSamples,byrow=FALSE) #this is our fake data
-  test_data = matrix(s[1,1,1:(16*(nTotal))],nrow=(nTotal),byrow=FALSE) #this is our fake data
-  exp_data = test_data[!(times$ts2 %in% times$ts3),] 
-  normalised_data = apply(exp_data,1,function(x)x/x[1]) %>% t() #divide by amount in oocyte to normalise for stst
+  full_data = matrix(s[1,1,1:(16*(nTotal))],nrow=(nTotal),byrow=FALSE) #this is our fake data
+  exp_data = full_data[!(times$ts2 %in% times$ts3),] 
+  normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
+  boxplot(normalised_data)
+  test_data = full_data[(times$ts2 %in% times$ts3),]
+  #test_data = apply(test_data,1,function(x)x/x[1]) %>% t()
 }
-
 
 ##########################
 if (run_mcmc) {
-  estimates <- stan(file = 'model_comparison_at_stst.stan',
+  estimates <- stan(file = 'model_comparison_at_stst2.stan',
                     data = list (
                       T1 = nSamples,
                       T2 = nTest,
@@ -108,10 +98,9 @@ if (run_mcmc) {
                     ),
                     seed = 42,
                     chains = 4,
-                    warmup = 500,
-                    iter = 1000,
-                    control = list(adapt_delta = 0.9, 
-                                   max_treedepth = 15)
+                    warmup = 1000,
+                    iter = 2000,
+                    control = list(adapt_delta = 0.99)
   )
   
   tryCatch({
@@ -128,7 +117,7 @@ if (run_mcmc) {
   estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
 }
 
-parametersToPlot = c('mu','tau','zeta','xi')
+parametersToPlot = c('nu','sigma','phi') #c('mu','tau','zeta','xi') 
 print(estimates, pars = parametersToPlot)
 
 source('hist_treedepth.R')
@@ -144,7 +133,8 @@ dev.off()
 
 #look at posterior predictive distn
 source('post_pred_plot_at_stst.R')
-post_pred_plot_at_stst(exp_data,times$ts1,nSamples,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
+#post_pred_plot_at_stst((test_data %>% my_normaliser),times$ts3,nTest,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
+post_pred_plot_at_stst((full_data %>% my_normaliser),times$ts2,nTotal,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
 source('mcmcDensity.R')
 mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
 ggsave(paste('plots/denisty',identifier, '.eps',sep=''),device=cairo_ps)

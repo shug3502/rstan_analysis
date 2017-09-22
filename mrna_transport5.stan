@@ -52,11 +52,11 @@ model {
       if (j>1){
         //y[t,j] ~ neg_binomial_2(z[t,cell_indices[j]], sigma);
         //y[t,j] ~ poisson(z[t,cell_indices[j]]);
-	      y[t,j] ~ normal(z[t,cell_indices[j]], sigma);
+	      y[t,cell_indices[j]] ~ normal(z[t,cell_indices[j]], sigma);
       } else {
         //y[t,j] ~ neg_binomial_2(phi*z[t,cell_indices[j]], sigma);    
         //y[t,j] ~ poisson(phi*z[t,cell_indices[j]]);    
-	      y[t,j] ~ normal(phi*z[t,cell_indices[j]], sigma);
+	      y[t,j] ~ normal(phi*z[t,j], sigma);
       }
     }
   }

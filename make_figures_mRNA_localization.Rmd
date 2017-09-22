@@ -1,0 +1,42 @@
+---
+title: "Rate limiting steps of mRNA localization"
+author: "Jonathan Harrison"
+date: "22/09/2017"
+output: html_document
+fig_width: 6
+fig_height: 4
+---
+
+Outline of Figures:
+
+Fig1: A) Cartoon of tissue, B) Equivalent image of tissue, C) Diagram of connections between NCs via RCs.
+![optional caption text](/home/harrison/Documents/DTC_Project1_mRNA/Latex/schematic.png){ width=30% }
+![optional caption text](/home/harrison/Documents/FISH_data/data/Example4/20170714_oocyte_stg6_phalloidin-488_grk-546_Z_02.png){ width=30% }
+![optional caption text](/home/harrison/Documents/DTC_Project1_mRNA/Latex/NC_map.png){ width=30% }
+
+Fig2: Behaviour of differential equation model.
+```{r, echo=FALSE,message=FALSE}
+source('~/Documents/FISH_data/rstan_analysis/mrna_transport_sims_and_plot.R')
+```
+
+Fig3: A) Imaging to show agregation of complexes, B) Distribution of intensities of particles.
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Fig4: Model comparison/unidirectional transport through ring canals A) Schematic of transport between two compartments, B) Posterior pairs plot, C) Posterior predictive plot.
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posterior predictive distribution, C) Sensitivity to a, b.
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Fig6: Prediction for overexpression versus measured results. 
+```{r, echo=FALSE}
+plot(cars)
+```
+
+

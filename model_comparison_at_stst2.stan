@@ -60,7 +60,6 @@ functions {
     real s;
     //int r;
     B = construct_matrix(th);    
-    //r = 15; //compute_rank(B); //rank will be 15 unless nu=0
     Q = qr_Q(B'); //compute qr decomposition
   //take last n-r cols of Q as basis of null space
   //may need to also exclude case where null space has dim 0, ie r=16
@@ -77,58 +76,48 @@ data {
   int<lower=1> T2;
   real y_obs[T1,16];
 }
-/*
-transformed data {
-  real y[T1,16];
-  for (t in 1:T1){
-    for (i in 1:16){
-      y[t,i] = y_obs[t,i]/y_obs[t,1]; //normalise the vectors for comparison
+parameters {
+  real<lower=0,upper=1> nu;
+  real<lower=0> sigma;
+  real<lower=0,upper=1> phi;
+}
+model {
+  int cell_indices[16]; //only model these cells
+  real y_stst[T1,16];
+  sigma ~ normal(0,0.05) T[0,];
+  nu ~ beta(1,1) T[0,1];
+  phi ~ normal(0.289,0.0285) T[0,1];
+//for (j in 1:16){ cell_indices[j] = j; }
+  cell_indices[1] = 1;
+  cell_indices[2] = 2;
+  cell_indices[3] = 3;
+  cell_indices[4] = 9;
+  cell_indices[5] = 5;
+for (t in 1:T1){
+  //relying on the fact that in practice dim of null space is 1, unless nu=0 (unidirectional backward transport)
+  y_stst[t] = to_array_1d(get_k2(nu));
+  for (j in 1:5){
+    if (j>1) {
+      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]]/phi,sigma);
+    } else {
+      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]],sigma);
     }
   }
 }
-*/
-parameters {
-  real<lower=0,upper=1> nu[T1];
-  real<lower=0,upper=1> mu;
-  real<lower=0> tau;
-  real<lower=0> sigma;
-  //real<lower=0> zeta;
-  //real<lower=0> xi;
-}
-model {
-  real y_stst[T1,16];
-  mu ~ beta(0.5,0.5) T[0,1];
-  tau ~ normal(0,0.1) T[0,];
-  //zeta ~ normal(0,0.1) T[0,];
-  //xi ~ normal(0,0.1) T[0,];
-  sigma ~ normal(0,0.05) T[0,];
-for (t in 1:T1){
-  nu[t] ~ normal(mu,tau) T[0,1];
-  //sigma[t] ~ normal(zeta,xi) T[0,];
-//relying on the fact that in practice dim of null space is 1, unless nu=0 (unidirectional backward transport)
-  y_stst[t] = to_array_1d(get_k2(nu[t]));
-/*
-for (i in 1:16) {
-    y_stst[t,i] = y_stst[t,i]/y_stst[t,1]; //normalise for comparison
-  }
-*/
-  y_obs[t] ~ normal(y_stst[t],sigma);
-}
 }
 generated quantities {
-  real y_pred[T2,16];
-  real y_sim[T2,16];
-  real nu_sim[T2];
-  //real sigma_sim[T2];
-for (t in 1:T2) {
-  nu_sim[t] = normal_rng(mu,tau); 
-  //sigma_sim[t] = fabs(normal_rng(zeta,xi)); //scale parameter should be +ve
-  y_pred[t] = to_array_1d(get_k2(nu_sim[t]));
-for (i in 1:16){
-//    y_pred[t,i] = y_pred[t,i]/y_pred[t,1];
-    y_sim[t,i] = normal_rng(y_pred[t,i],sigma);
+  real y_pred[(T1+T2),16];
+  real y_sim[(T1+T2),16];
+  for (t in 1:(T1+T2)) {
+    y_pred[t] = to_array_1d(get_k2(nu));
+    for (i in 1:16){
+      if (i>1) {
+        y_sim[t,i] = normal_rng(y_pred[t,i]/phi,sigma);
+      } else {
+        y_sim[t,i] = normal_rng(y_pred[t,i],sigma);
+      }
+    }
   }
-}
 }
 
  
