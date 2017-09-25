@@ -1,10 +1,10 @@
-setwd('~/Documents/FISH_data/rstan_analysis')
+#setwd('~/Documents/FISH_data/rstan_analysis')
 library(rstan)
 library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-identifier = 'v052' #run identifier
+identifier = 'v053' #run identifier
 use_real_data <- TRUE
 run_mcmc <- TRUE
 nSamples = 15 #how many egg chambers segmented
