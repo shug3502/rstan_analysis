@@ -39,7 +39,7 @@ if (use_real_data){
   #data taken from spot detection on 3 egg chambers
   print('using real data \n')
   #system('python ../custom_analysis/process_all_NCs.py',wait=TRUE)
-  data = matrix(as.numeric(read.csv('../data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+  data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
   raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
   exp_data = raw_data
   exp_data[is.na(exp_data)]=0 #stan can't deal with NAs

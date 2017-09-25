@@ -7,11 +7,11 @@ extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE){
   egg_chamber_areas <- rep(0,nSamples+nTest)
   stages <- rep(0,nSamples+nTest) #don't need to extract estimated stages for each egg chamber example
   for (j in 1:(nSamples+nTest)){
-    egg_chamber_areas[j] <- as.numeric(read.table(paste('../data/Example',j,'/area.txt',sep='')))
+    egg_chamber_areas[j] <- as.numeric(read.table(paste('data/Example',j,'/area.txt',sep='')))
     #      temp <- list.files(path = paste('../data/Example',j,'/',sep=''), pattern = "\\_grk\\.tif$") %>%
     #        stringr::str_extract(., 'stg.') %>%
     #        stringr::str_split(.,'stg',simplify=TRUE)
-    temp = read.table(file = paste('../data/Example',j,'/','filenames.txt',sep='')) %>%
+    temp = read.table(file = paste('data/Example',j,'/','filenames.txt',sep='')) %>%
       unlist %>%
       stringr::str_extract(., 'stg.') %>%
       stringr::str_split(.,'stg',simplify=TRUE)
