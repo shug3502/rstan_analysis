@@ -29,9 +29,9 @@ source('get_nc_transition_matrix.R')
 B1 = get_nc_transition_matrix(0) %>% as.vector
 B2 = get_nc_transition_matrix(1) %>% as.vector
 
-mc <- stan_model('model_comparison5.stan')
+mc <- stan_model('mrna_transport5.stan')
 expose_stan_functions(mc)
-nu = 0.5
+nu = 0.95
 B = construct_matrix(nu) %>% as.vector
 #############################################################
 
@@ -57,7 +57,7 @@ if (use_real_data){
                     theta = array(th, dim = 2),
                     sigma = sig,
                     phi = phi,
-                    B = B1
+                    B = B
                   ),
                   algorithm="Fixed_param",
                   seed = 42,
@@ -86,7 +86,7 @@ estimates <- stan(file = 'mrna_transport5.stan',
                     t0 = times$t0,
                     ts1 = times$ts1,
                     ts2 = times$ts2,
-                    B = B1
+                    nu = c(nu)
                   ),
                   seed = 42,
                   chains = 4,

@@ -16,22 +16,23 @@ Fig1: A) Cartoon of tissue, B) Equivalent image of tissue, C) Diagram of connect
 
 Fig2: Behaviour of differential equation model.
 ```{r, echo=FALSE,message=FALSE}
-source('~/Documents/FISH_data/rstan_analysis/mrna_transport_sims_and_plot.R')
+source('mrna_transport_sims_and_plot.R')
 ```
 
-Fig3: A) Imaging to show agregation of complexes, B) Distribution of intensities of particles.
+Fig3: A) Imaging to show assembly of higher order complexes, B) Distribution of intensities of particles.
 ```{r, echo=FALSE}
 plot(cars)
 ```
 
 Fig4: Model comparison/unidirectional transport through ring canals A) Schematic of transport between two compartments, B) Posterior pairs plot, C) Posterior predictive plot.
 ```{r, echo=FALSE}
-plot(cars)
+source('run_model_comparison_stst.R')
 ```
 
 Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posterior predictive distribution, C) Sensitivity to a, b.
 ```{r, echo=FALSE}
-plot(cars)
+#source('mrna_transport_inference_input_B.R')
+print(9+6)
 ```
 
 Fig6: Prediction for overexpression versus measured results. 

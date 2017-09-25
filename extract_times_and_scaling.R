@@ -2,8 +2,8 @@ extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE){
   #Get time series for egg chamber times and fit linear model 
   #Last Edited: 18/09/2017
   #JH
-  
   #################################
+  require(dplyr)
   egg_chamber_areas <- rep(0,nSamples+nTest)
   stages <- rep(0,nSamples+nTest) #don't need to extract estimated stages for each egg chamber example
   for (j in 1:(nSamples+nTest)){

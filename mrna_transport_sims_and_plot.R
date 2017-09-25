@@ -1,4 +1,4 @@
-setwd('~/Documents/FISH_data/rstan_analysis')
+#setwd('~/Documents/FISH_data/rstan_analysis')
 library(rstan)
 library(mvtnorm)
 library(dplyr)
@@ -23,7 +23,7 @@ sig = 10^-9
 phi = 0.289
 #deltaT = 0.1
 t0 = times$t0 #0.0
-ts = times$ts2 #seq(deltaT,nSamples * deltaT,deltaT)
+ts = times$ts1 #seq(deltaT,nSamples * deltaT,deltaT)
 nu = 0.95
 
 #############################################################
