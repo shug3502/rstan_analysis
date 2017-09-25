@@ -1,0 +1,4 @@
+In this data folder, there are subfolders containing each of the analysed example images.
+In these subfolders, named ExampleN/, is the processed image and a folder called roi_coords.
+In the roi_coords folder is the .txt file output by fish_quant with spot locations and info; there are also files with the segmentation coords for each nurse cell with file names cellK.csv for K=1 to 16.
+To find original image, compare filenames with Omero.
