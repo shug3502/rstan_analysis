@@ -7,3 +7,4 @@ fits/
 plots/*.eps
 plots/*converted-to.pdf
 data/Example*/roi_coords/
+data*/*.png
