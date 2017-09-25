@@ -1,0 +1,6 @@
+*.rds
+*.rds*
+log_files/
+*.old
+Rplots.pdf
+fits/
