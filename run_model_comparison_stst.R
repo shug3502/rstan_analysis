@@ -149,8 +149,8 @@ color_scheme_set("purple")
 mcmc_areas(draws,pars=parametersToPlot)
 ggsave(paste('plots/areas',identifier, '.eps',sep=''),device=cairo_ps)
 color_scheme_set("brightblue")
-mcmc_scatter(draws,pars=parametersToPlot)
-ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
+# mcmc_scatter(draws,pars=parametersToPlot)
+# ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
 
 
 ######################
