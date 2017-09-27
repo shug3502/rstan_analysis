@@ -6,12 +6,15 @@ output: html_document
 fig_width: 6
 fig_height: 4
 ---
-
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
 Outline of Figures:
 
 Fig1: A) Cartoon of tissue, B) Equivalent image of tissue, C) Diagram of connections between NCs via RCs.
 ![optional caption text](/home/harrison/Documents/DTC_Project1_mRNA/Latex/schematic.png){ width=30% }
-![optional caption text](/home/harrison/Documents/FISH_data/data/Example4/20170714_oocyte_stg6_phalloidin-488_grk-546_Z_02.png){ width=30% }
+![optional caption text](data/Example4/20170714_oocyte_stg6_phalloidin-488_grk-546_Z_02.png){ width=30% }
 ![optional caption text](/home/harrison/Documents/DTC_Project1_mRNA/Latex/NC_map.png){ width=30% }
 
 Fig2: Behaviour of differential equation model.
@@ -20,19 +23,64 @@ source('mrna_transport_sims_and_plot.R')
 ```
 
 Fig3: A) Imaging to show assembly of higher order complexes, B) Distribution of intensities of particles.
-```{r, echo=FALSE}
-plot(cars)
+
+```{r, echo=FALSE,message=FALSE}
+#setup
+library(dplyr)
+library(ggplot2)
+v <- seq(from=2,to=6) #labelled data
+regions <- c('background','nurse_cells','oocyte')
+particles <- data.frame(Area=numeric(),Mean=numeric(),Min=numeric(),Max=numeric(),RawIntDen=numeric(),Region=factor(),Sample=factor())
+
+#####################
+#loop over each regions
+for (r in seq_along(regions)){
+  #get list of files for all examples, and extract results for a given region
+  #returns a list of results for all examples for a given region
+  temp <- list.files(path = paste('data/Example',v,'/',sep=''), pattern = "\\.xls$",full.names=TRUE) %>%
+    grep(regions[r],. , value=TRUE) %>% 
+    lapply(.,read.table)
+
+  #take results for each example and add to data frame  
+  for (j in seq_along(temp)){
+    Region <- rep(regions[r],nrow(temp[[j]]))
+    Sample <- rep(j,nrow(temp[[j]]))
+    particles <- rbind(particles,cbind(cbind(temp[[j]],Region),Sample))  
+  }
+}
+#########################
+#process by subtracting background values and valculating ratio
+processed <- particles %>% 
+  group_by(Sample) %>% 
+  mutate(MeanBgd = mean(RawIntDen[Region=='background']),BgdSubtract = RawIntDen-MeanBgd)
+
+q <- processed %>%
+  select(BgdSubtract,Region,Sample) %>%
+  group_by(Region) %>%
+  mutate(MeanByRegion = mean(BgdSubtract),StdByRegion = sd(BgdSubtract))
+q <- q %>%
+mutate(Ratio = MeanByRegion/median(q$MeanByRegion))
+hh <- ggplot(q,aes(Region,BgdSubtract/MeanByRegion[Region=='nurse_cells'])) +
+  geom_violin() + 
+  geom_jitter() +
+  theme_bw() +
+  scale_x_discrete("Region", labels = c("background" = "BGD","oocyte" = "OO","nurse_cells" = "NC")) +
+  ylab('Normalised intensity')
+print(hh)
+ggsave(paste('plots/processed_particle_data','.eps',sep=''),device=cairo_ps)
 ```
 
+
 Fig4: Model comparison/unidirectional transport through ring canals A) Schematic of transport between two compartments, B) Posterior pairs plot, C) Posterior predictive plot.
-```{r, echo=FALSE}
+```{r, echo=FALSE,message=FALSE}
 source('run_model_comparison_stst.R')
+run_model_comparison_stst(identifier='MCv056',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,parametersToPlot = c('nu','sigma','phi'),verbose=FALSE,show_diagnostic_plots=FALSE)
 ```
 
 Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posterior predictive distribution, C) Sensitivity to a, b.
-```{r, echo=FALSE}
-#source('mrna_transport_inference_input_B.R')
-print(9+6)
+```{r, echo=FALSE,message=FALSE}
+source('mrna_transport_inference_input_B.R')
+mrna_transport_inference_input_B(identifier='v054',use_real_data=TRUE,run_mcmc=TRUE,nSamples=15,nTest=5,parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,show_diagnostic_plots=FALSE)
 ```
 
 Fig6: Prediction for overexpression versus measured results. 

@@ -21,4 +21,5 @@ post_pred_plot_at_stst <- function(raw_data,ts,nSamples,params,estimates,identif
     p1 <- p1 + geom_point(aes(x = cellID, y = rna, colour = split))
   }
   ggsave(paste(title_stem,identifier, '.eps',sep=''),device=cairo_ps)
+return(p1)
 }

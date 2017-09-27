@@ -1,14 +1,17 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
+mrna_transport_inference_input_B <- function(identifier='v099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,
+                                      parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,
+                                      show_diagnostic_plots=FALSE){
 library(rstan)
 library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-identifier = 'v053' #run identifier
-use_real_data <- TRUE
-run_mcmc <- TRUE
-nSamples = 15 #how many egg chambers segmented
-nTest = 5 #how many to test on
+# identifier = 'v053' #run identifier
+# use_real_data <- TRUE
+# run_mcmc <- TRUE
+# nSamples = 15 #how many egg chambers segmented
+# nTest = 5 #how many to test on
 
 #############################################################
 #Fit linear model to log(length) of egg chambers to get time of development.
@@ -25,9 +28,9 @@ sig = 1.080
 phi = 0.23
 
 #############################################################
-source('get_nc_transition_matrix.R')
-B1 = get_nc_transition_matrix(0) %>% as.vector
-B2 = get_nc_transition_matrix(1) %>% as.vector
+# source('get_nc_transition_matrix.R')
+# B1 = get_nc_transition_matrix(0) %>% as.vector
+# B2 = get_nc_transition_matrix(1) %>% as.vector
 
 mc <- stan_model('mrna_transport5.stan')
 expose_stan_functions(mc)
@@ -37,7 +40,7 @@ B = construct_matrix(nu) %>% as.vector
 
 if (use_real_data){
   #data taken from spot detection on 3 egg chambers
-  print('using real data \n')
+  if (verbose) print('using real data \n')
   #system('python ../custom_analysis/process_all_NCs.py',wait=TRUE)
   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
   raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
@@ -108,40 +111,44 @@ tryCatch({
   estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep=''))
 }
 
-parametersToPlot = c("theta","phi","sigma") #c('mu','tau','psi','zeta')# c('mu','tau','phi')
-print(estimates, pars = parametersToPlot)
+#parametersToPlot = c("theta","phi","sigma") #c('mu','tau','psi','zeta')# c('mu','tau','phi')
+if (verbose) print(estimates, pars = parametersToPlot)
 
 #######################
 #visualisation
 ###############################
-cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
+#cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
 pairs(estimates, pars = parametersToPlot)
-dev.off()
-#ggsave(paste('plots/pairs',identifier, '.eps',sep=''),device=cairo_ps)
+#dev.off()
 
 #look at posterior predictive distn
 source('post_pred_plot.R')
-post_pred_plot(test_data,times$ts2,nTest+nSamples,'y_pred',estimates,identifier,title_stem='plots/posterior_pred',ts_test=times$ts3)
+p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples,'y_pred',estimates,identifier,title_stem='plots/posterior_pred',ts_test=times$ts3)
 
-source('mcmcDensity.R')
-mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
-ggsave(paste('plots/denisty',identifier, '.eps',sep=''),device=cairo_ps)
-
-library(bayesplot)
-draws <- as.array(estimates, pars=parametersToPlot)
-mcmc_trace(draws)
-ggsave(paste('plots/trace',identifier, '.eps',sep=''),device=cairo_ps)
-mcmc_intervals(draws,pars=c('theta[1]','theta[2]','phi'))
-ggsave(paste('plots/intervals',identifier, '.eps',sep=''),device=cairo_ps)
-color_scheme_set("purple")
-mcmc_areas(draws,pars=c('theta[1]','theta[2]','phi'))
-ggsave(paste('plots/areas',identifier, '.eps',sep=''),device=cairo_ps)
-color_scheme_set("brightblue")
-mcmc_scatter(draws,pars=c('theta[1]','theta[2]'))
-ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
-
-
+if (show_diagnostic_plots) {
+  source('mcmcDensity.R')
+  mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
+  ggsave(paste('plots/denisty',identifier, '.eps',sep=''),device=cairo_ps)
+  
+  library(bayesplot)
+  draws <- as.array(estimates, pars=parametersToPlot)
+  mcmc_trace(draws)
+  ggsave(paste('plots/trace',identifier, '.eps',sep=''),device=cairo_ps)
+  mcmc_intervals(draws,pars=c('theta[1]','theta[2]','phi'))
+  ggsave(paste('plots/intervals',identifier, '.eps',sep=''),device=cairo_ps)
+  color_scheme_set("purple")
+  mcmc_areas(draws,pars=c('theta[1]','theta[2]','phi'))
+  ggsave(paste('plots/areas',identifier, '.eps',sep=''),device=cairo_ps)
+  color_scheme_set("brightblue")
+  mcmc_scatter(draws,pars=c('theta[1]','theta[2]'))
+  ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
+  
+  #cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
+  pairs(estimates, pars = parametersToPlot)
+  #dev.off()
+}
 ######################
 #cos saving wasn't working
 e <- rstan::extract(estimates,pars=parametersToPlot,permuted=TRUE)
 save(e,file=paste('fits/alt_save',identifier,'.Rsave',sep=''))
+}

@@ -100,7 +100,7 @@ model {
   phi ~ normal(0.289,0.0285) T[0,1];
 //  theta ~ cauchy(0,2.5); //normal(0,10);
   theta[1] ~ normal(0,10) T[0,];
-  theta[2] ~ noraml0,100) T[0,];
+  theta[2] ~ normal(0,100) T[0,];
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
   cell_indices[1] = 1;
   cell_indices[2] = 2;

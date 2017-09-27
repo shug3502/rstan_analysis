@@ -1,14 +1,18 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
+#write as function, may need to think about what to do if want to run from command line again
+run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,
+                                      parametersToPlot = c('nu','sigma','phi'),verbose=FALSE,
+                                      show_diagnostic_plots=FALSE){
 library(rstan)
 library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-identifier = 'MCv056' #run identifier
-use_real_data <- TRUE
-run_mcmc <- TRUE
-nSamples = 15 #how many egg chambers segmented
-nTest = 5 #how many to test on
+# identifier = 'MCv056' #run identifier
+# use_real_data <- TRUE
+# run_mcmc <- FALSE
+# nSamples = 15 #how many egg chambers segmented
+# nTest = 5 #how many to test on
 nTotal = nSamples + nTest
 
 #############################################################
@@ -30,7 +34,7 @@ my_normaliser <- function(dataset) apply(dataset,1,function(x)x/x[1]) %>% t()
 
 if (use_real_data){
   #data taken from spot detection on 3 egg chambers
-  print('using real data \n')
+  if (verbose) print('using real data \n')
   #system('python ../custom_analysis/process_all_NCs.py',wait=TRUE)
   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
   raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
@@ -117,43 +121,48 @@ if (run_mcmc) {
   estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
 }
 
-parametersToPlot = c('nu','sigma','phi') #c('mu','tau','zeta','xi') 
-print(estimates, pars = parametersToPlot)
-
-source('hist_treedepth.R')
-hist_treedepth(estimates)
+#parametersToPlot = c('nu','sigma','phi') #c('mu','tau','zeta','xi') 
+if (verbose) print(estimates, pars = parametersToPlot)
 
 #######################
 #visualisation
 ###############################
-cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
+#cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
 pairs(estimates, pars = parametersToPlot)
-dev.off()
+#dev.off()
 #ggsave(paste('plots/pairs',identifier, '.eps',sep=''),device=cairo_ps)
 
 #look at posterior predictive distn
 source('post_pred_plot_at_stst.R')
 #post_pred_plot_at_stst((test_data %>% my_normaliser),times$ts3,nTest,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
-post_pred_plot_at_stst((full_data %>% my_normaliser),times$ts2,nTotal,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
-source('mcmcDensity.R')
-mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
-ggsave(paste('plots/denisty',identifier, '.eps',sep=''),device=cairo_ps)
+p1 <- post_pred_plot_at_stst((full_data %>% my_normaliser),times$ts2,nTotal,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
 
-library(bayesplot)
-draws <- as.array(estimates, pars=parametersToPlot)
-mcmc_trace(draws)
-ggsave(paste('plots/trace',identifier, '.eps',sep=''),device=cairo_ps)
-mcmc_intervals(draws,pars=parametersToPlot)
-ggsave(paste('plots/intervals',identifier, '.eps',sep=''),device=cairo_ps)
-color_scheme_set("purple")
-mcmc_areas(draws,pars=parametersToPlot)
-ggsave(paste('plots/areas',identifier, '.eps',sep=''),device=cairo_ps)
-color_scheme_set("brightblue")
-# mcmc_scatter(draws,pars=parametersToPlot)
-# ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
-
+if (show_diagnostic_plots) {
+  source('hist_treedepth.R')
+  hist_treedepth(estimates)
+  source('mcmcDensity.R')
+  mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
+  ggsave(paste('plots/denisty',identifier, '.eps',sep=''),device=cairo_ps)
+  
+  library(bayesplot)
+  draws <- as.array(estimates, pars=parametersToPlot)
+  mcmc_trace(draws)
+  ggsave(paste('plots/trace',identifier, '.eps',sep=''),device=cairo_ps)
+  mcmc_intervals(draws,pars=parametersToPlot)
+  ggsave(paste('plots/intervals',identifier, '.eps',sep=''),device=cairo_ps)
+  color_scheme_set("purple")
+  mcmc_areas(draws,pars=parametersToPlot)
+  ggsave(paste('plots/areas',identifier, '.eps',sep=''),device=cairo_ps)
+  color_scheme_set("brightblue")
+  # mcmc_scatter(draws,pars=parametersToPlot)
+  # ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
+}
 
 ######################
 #cos saving wasn't working
 e <- rstan::extract(estimates,pars=parametersToPlot,permuted=TRUE)
 save(e,file=paste('fits/alt_save_MC',identifier,'.Rsave',sep=''))
+
+return(p1)
+}
+
