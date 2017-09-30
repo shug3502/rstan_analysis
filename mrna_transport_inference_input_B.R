@@ -143,12 +143,14 @@ if (show_diagnostic_plots) {
   mcmc_scatter(draws,pars=c('theta[1]','theta[2]'))
   ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
   
-  #cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
+  cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
   pairs(estimates, pars = parametersToPlot)
-  #dev.off()
+  dev.off()
 }
 ######################
 #cos saving wasn't working
 e <- rstan::extract(estimates,pars=parametersToPlot,permuted=TRUE)
 save(e,file=paste('fits/alt_save',identifier,'.Rsave',sep=''))
+
+return(p1)
 }

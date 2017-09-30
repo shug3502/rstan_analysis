@@ -91,16 +91,29 @@ transformed data {
 parameters {
   real<lower=0> sigma; //noise param
   real<lower=0,upper=1> phi; //difference between particles in NCs and in Oocyte
-  real<lower=0> theta[2];
+//  real<lower=0> theta[2];
+  real<lower=0> a;
+  real<lower=0> b;
+
+}
+transformed parameters {
+/*
+  real a; //relate to parameters used in manuscript
+  real b;
+  a = theta[2];
+  b = theta[1];
+*/
+real theta[2];
+theta[1] = b;
+theta[2] = a;
 }
 model {
   real z[T1,16];
   int cell_indices[5]; //only model these cells
-  sigma ~ normal(0,50) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
+  sigma ~ normal(0,100) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
   phi ~ normal(0.289,0.0285) T[0,1];
-//  theta ~ cauchy(0,2.5); //normal(0,10);
-  theta[1] ~ normal(0,10) T[0,];
-  theta[2] ~ normal(0,100) T[0,];
+  a ~ normal(0,100) T[0,];
+  b ~ normal(0,100) T[0,];
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
   cell_indices[1] = 1;
   cell_indices[2] = 2;

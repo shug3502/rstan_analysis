@@ -7,24 +7,25 @@ fig_width: 6
 fig_height: 4
 ---
 ```{r global_options, include=FALSE}
-knitr::opts_chunk$set(fig.width=12, fig.height=8,
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
                       echo=FALSE, warning=FALSE, message=FALSE)
 ```
 Outline of Figures:
 
-Fig1: A) Cartoon of tissue, B) Equivalent image of tissue, C) Diagram of connections between NCs via RCs.
+Fig1: Drosophila egg chambers exhibit a characteristic network structure of connections between nurse cells A) Cartoon of tissue, B) Equivalent image of tissue, C) Diagram of connections between NCs via RCs.
 ![optional caption text](/home/harrison/Documents/DTC_Project1_mRNA/Latex/schematic.png){ width=30% }
-![optional caption text](data/Example4/20170714_oocyte_stg6_phalloidin-488_grk-546_Z_02.png){ width=30% }
+![optional caption text](data/Example4/20170714_oocyte_stg6_phalloidin-488_grk-546_Z_02-1.png){ width=30% }
 ![optional caption text](/home/harrison/Documents/DTC_Project1_mRNA/Latex/NC_map.png){ width=30% }
 
-Fig2: Behaviour of differential equation model.
-```{r, echo=FALSE,message=FALSE}
+Fig2: Behaviour of differential equation model. A) Dynamics in time shown for each cell, B) Model related to network structure of nurse cells.
+```{r, Fig2, echo=FALSE,message=FALSE}
 source('mrna_transport_sims_and_plot.R')
+mrna_transport_sims_and_plot(identifier='v003',nSamples=15,nTest=5,th=c(2,2),sig=10^-9,phi=0.289,nu=0.95)
 ```
 
-Fig3: A) Imaging to show assembly of higher order complexes, B) Distribution of intensities of particles.
+Fig3: Assembly of higher order complexes in oocyte A) Particles in different regions of the egg chamber, B) Distribution of intensities of particles in different regions.
 
-```{r, echo=FALSE,message=FALSE}
+```{r, Fig3, echo=FALSE,message=FALSE}
 #setup
 library(dplyr)
 library(ggplot2)
@@ -71,21 +72,30 @@ ggsave(paste('plots/processed_particle_data','.eps',sep=''),device=cairo_ps)
 ```
 
 
-Fig4: Model comparison/unidirectional transport through ring canals A) Schematic of transport between two compartments, B) Posterior pairs plot, C) Posterior predictive plot.
-```{r, echo=FALSE,message=FALSE}
+Fig4: Characterisation of the bias in directionality of transport through ring canals A) Schematic of transport between two compartments, B) Posterior pairs plot, C) Posterior predictive plot.
+![optional caption text](plots/fig4_schematic.eps){ width=30% }
+```{r, Fig4, echo=FALSE,message=FALSE}
 source('run_model_comparison_stst.R')
 run_model_comparison_stst(identifier='MCv056',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,parametersToPlot = c('nu','sigma','phi'),verbose=FALSE,show_diagnostic_plots=FALSE)
 ```
 
 Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posterior predictive distribution, C) Sensitivity to a, b.
-```{r, echo=FALSE,message=FALSE}
+```{r, Fig5, echo=FALSE,message=FALSE}
 source('mrna_transport_inference_input_B.R')
-mrna_transport_inference_input_B(identifier='v054',use_real_data=TRUE,run_mcmc=TRUE,nSamples=15,nTest=5,parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,show_diagnostic_plots=FALSE)
+mrna_transport_inference_input_B(identifier='v055',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,show_diagnostic_plots=FALSE)
 ```
 
-Fig6: Prediction for overexpression versus measured results. 
-```{r, echo=FALSE}
+Fig6: Validation of testable prediction for over expression versus measured results.  
+```{r, Fig6, echo=FALSE}
 plot(cars)
 ```
 
+FigS1: (Supplementary) Exponential growth model to establish timescales A) Schematic of time points used for each stage, B) Linear regression of log(A) against the time points for each stage.
+```{r, FigS1, echo=FALSE}
+plot(cars)
+```
 
+FigS2: Convergence diagnostics for MCMC inference methods
+```{r, FigS2, echo=FALSE}
+plot(cars)
+```
