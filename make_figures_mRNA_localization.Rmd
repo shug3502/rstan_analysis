@@ -13,9 +13,9 @@ knitr::opts_chunk$set(fig.width=6, fig.height=4,
 Outline of Figures:
 
 Fig1: Drosophila egg chambers exhibit a characteristic network structure of connections between nurse cells A) Cartoon of tissue, B) Equivalent image of tissue, C) Diagram of connections between NCs via RCs.
-![optional caption text](/home/harrison/Documents/DTC_Project1_mRNA/Latex/schematic.png){ width=30% }
-![optional caption text](data/Example4/20170714_oocyte_stg6_phalloidin-488_grk-546_Z_02-1.png){ width=30% }
-![optional caption text](/home/harrison/Documents/DTC_Project1_mRNA/Latex/NC_map.png){ width=30% }
+![optional caption text](plots/schematic.png){ width=30% }
+![optional caption text](data/Example4/20170714_oocyte_stg6_phalloidin-488_grk-546_Z_02.png){ width=30% }
+![optional caption text](plots/NC_map.png){ width=30% }
 
 Fig2: Behaviour of differential equation model. A) Dynamics in time shown for each cell, B) Model related to network structure of nurse cells.
 ```{r, Fig2, echo=FALSE,message=FALSE}
