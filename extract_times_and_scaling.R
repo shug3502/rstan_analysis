@@ -59,6 +59,7 @@ extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE){
       theme_bw() + 
       labs(x='age (hrs)',y='log(area)')
     print(g) 
+    ggsave('plots/timescale_model.eps')
   }
  #########################################
 ##use coefficients of linear model

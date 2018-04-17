@@ -1,6 +1,6 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
 mrna_transport_inference_input_B <- function(identifier='v099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,
-                                      parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,
+                                      parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,compare_via_loo=TRUE,
                                       show_diagnostic_plots=FALSE){
 library(rstan)
 library(mvtnorm)
@@ -32,10 +32,11 @@ phi = 0.23
 # B1 = get_nc_transition_matrix(0) %>% as.vector
 # B2 = get_nc_transition_matrix(1) %>% as.vector
 
-mc <- stan_model('mrna_transport5.stan')
+mc <- stan_model('model_comparison_at_stst_with_decay.stan')  #('mrna_transport5.stan')
 expose_stan_functions(mc)
 nu = 0.95
-B = construct_matrix(nu) %>% as.vector
+gamma = 0.01
+B = construct_matrix(nu, gamma) %>% as.vector
 #############################################################
 
 if (use_real_data){
@@ -114,6 +115,13 @@ tryCatch({
 #parametersToPlot = c("theta","phi","sigma") #c('mu','tau','psi','zeta')# c('mu','tau','phi')
 if (verbose) print(estimates, pars = parametersToPlot)
 
+if (compare_via_loo){
+  library(loo)
+  log_lik_1 <- extract_log_lik(estimates)
+  loo_1 <- loo(log_lik_1)
+  print(loo_1)
+}  
+
 #######################
 #visualisation
 ###############################
@@ -134,13 +142,13 @@ if (show_diagnostic_plots) {
   draws <- as.array(estimates, pars=parametersToPlot)
   mcmc_trace(draws)
   ggsave(paste('plots/trace',identifier, '.eps',sep=''),device=cairo_ps)
-  mcmc_intervals(draws,pars=c('theta[1]','theta[2]','phi'))
+  mcmc_intervals(draws,pars=c('a','b','phi'))
   ggsave(paste('plots/intervals',identifier, '.eps',sep=''),device=cairo_ps)
   color_scheme_set("purple")
-  mcmc_areas(draws,pars=c('theta[1]','theta[2]','phi'))
+  mcmc_areas(draws,pars=c('a','b','phi'))
   ggsave(paste('plots/areas',identifier, '.eps',sep=''),device=cairo_ps)
   color_scheme_set("brightblue")
-  mcmc_scatter(draws,pars=c('theta[1]','theta[2]'))
+  mcmc_scatter(draws,pars=c('a','b'))
   ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
   
   cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
@@ -152,5 +160,9 @@ if (show_diagnostic_plots) {
 e <- rstan::extract(estimates,pars=parametersToPlot,permuted=TRUE)
 save(e,file=paste('fits/alt_save',identifier,'.Rsave',sep=''))
 
-return(p1)
+if (compare_via_loo){
+  return(list(p1,loo_1,estimates))
+} else {
+  return(p1)
+}
 }

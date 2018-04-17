@@ -2,6 +2,7 @@
 #write as function, may need to think about what to do if want to run from command line again
 run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,
                                       parametersToPlot = c('nu','sigma','phi'),verbose=FALSE,
+                                      compare_via_loo=FALSE,
                                       show_diagnostic_plots=FALSE){
 library(rstan)
 library(mvtnorm)
@@ -137,6 +138,13 @@ source('post_pred_plot_at_stst.R')
 #post_pred_plot_at_stst((test_data %>% my_normaliser),times$ts3,nTest,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
 p1 <- post_pred_plot_at_stst((full_data %>% my_normaliser),times$ts2,nTotal,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
 
+if (compare_via_loo){
+  library(loo)
+  log_lik_1 <- extract_log_lik(estimates)
+  loo_1 <- loo(log_lik_1)
+  print(loo_1)
+}  
+
 if (show_diagnostic_plots) {
   source('hist_treedepth.R')
   hist_treedepth(estimates)
@@ -154,6 +162,9 @@ if (show_diagnostic_plots) {
   mcmc_areas(draws,pars=parametersToPlot)
   ggsave(paste('plots/areas',identifier, '.eps',sep=''),device=cairo_ps)
   color_scheme_set("brightblue")
+  cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
+  pairs(estimates, pars = parametersToPlot)
+  dev.off()
   # mcmc_scatter(draws,pars=parametersToPlot)
   # ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
 }
@@ -163,6 +174,6 @@ if (show_diagnostic_plots) {
 e <- rstan::extract(estimates,pars=parametersToPlot,permuted=TRUE)
 save(e,file=paste('fits/alt_save_MC',identifier,'.Rsave',sep=''))
 
-return(p1)
+return(list(p1,estimates,loo_1))
 }
 

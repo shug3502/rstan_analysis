@@ -73,18 +73,18 @@ functions {
 }
 data {
   int<lower=1> T1;
-  int<lower=1> T2;
+  int<lower=0> T2;
   real y_obs[T1,16];
 }
 parameters {
   real<lower=0,upper=1> nu;
-  real<lower=0> sigma;
+  real<lower=0> xi;
   real<lower=0,upper=1> phi;
 }
 model {
   int cell_indices[16]; //only model these cells
   real y_stst[T1,16];
-  sigma ~ normal(0,0.05) T[0,];
+  xi ~ normal(0,0.05) T[0,];
   nu ~ beta(1,1) T[0,1];
   phi ~ normal(0.289,0.0285) T[0,1];
 //for (j in 1:16){ cell_indices[j] = j; }
@@ -98,9 +98,9 @@ for (t in 1:T1){
   y_stst[t] = to_array_1d(get_k2(nu));
   for (j in 1:5){
     if (j>1) {
-      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]]/phi,sigma);
+      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]]/phi,xi);
     } else {
-      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]],sigma);
+      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]],xi);
     }
   }
 }
@@ -108,16 +108,34 @@ for (t in 1:T1){
 generated quantities {
   real y_pred[(T1+T2),16];
   real y_sim[(T1+T2),16];
+  vector[T1] log_lik;
+  int cell_indices[16]; //only model these cells
+  real y_stst[T1,16];
+  cell_indices[1] = 1;
+  cell_indices[2] = 2;
+  cell_indices[3] = 3;
+  cell_indices[4] = 9;
+  cell_indices[5] = 5;
   for (t in 1:(T1+T2)) {
     y_pred[t] = to_array_1d(get_k2(nu));
     for (i in 1:16){
       if (i>1) {
-        y_sim[t,i] = normal_rng(y_pred[t,i]/phi,sigma);
+        y_sim[t,i] = normal_rng(y_pred[t,i]/phi,xi);
       } else {
-        y_sim[t,i] = normal_rng(y_pred[t,i],sigma);
+        y_sim[t,i] = normal_rng(y_pred[t,i],xi);
+      }
+    }
+  }
+    //compute log likelihood for model comparison via loo
+  log_lik = rep_vector(0,T1);
+  for (t in 1:T1){
+    y_stst[t] = to_array_1d(get_k2(nu));
+    for (j in 1:5){
+      if (j>1) {
+        log_lik[t] = log_lik[t] + normal_lpdf(y_obs[t,cell_indices[j]] | y_stst[t,cell_indices[j]]/phi,xi);
+      } else {
+        log_lik[t] = log_lik[t] + normal_lpdf(y_obs[t,cell_indices[j]] | y_stst[t,cell_indices[j]],xi);
       }
     }
   }
 }
-
- 

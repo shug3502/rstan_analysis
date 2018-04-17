@@ -52,9 +52,25 @@ B = construct_matrix(nu) %>% as.vector
                   iter =100, 
                   refresh = -1
   )
+
+####################################
+require(tidyr)
+pred <- as.data.frame(samples, pars = 'y_hat') %>%
+  gather(factor_key = TRUE) %>%
+  group_by(key) %>%
+  summarize(median = quantile(value, probs = 0.5))
+
+df = matrix(NA,nrow=nSamples,ncol=16)
+for (j in 1:nSamples){
+  df[j,] = pred$median[seq(from=j,to=nSamples*16,by=nSamples)]
+}
+write.table(df,file='mrna_sims.csv',row.names=FALSE,col.names=FALSE,sep=',')
+system('matlab -nodisplay -nosplash -r call_plot_for_sims')
+
+##################################
   
 source('post_pred_plot.R')
-p1 <- post_pred_plot(raw_data=NA,ts,nSamples,'y_hat',samples,identifier,title_stem='plots/sims')
+p1 <- post_pred_plot(raw_data=NA,ts,nSamples,'y_hat',samples,identifier,title_stem='plots/sims',neighbouring_ncs_only=TRUE)
 print(p1)
 return(p1)
 }

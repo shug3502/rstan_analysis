@@ -20,7 +20,7 @@ Fig1: Drosophila egg chambers exhibit a characteristic network structure of conn
 Fig2: Behaviour of differential equation model. A) Dynamics in time shown for each cell, B) Model related to network structure of nurse cells.
 ```{r, Fig2, echo=FALSE,message=FALSE}
 source('mrna_transport_sims_and_plot.R')
-mrna_transport_sims_and_plot(identifier='v003',nSamples=15,nTest=5,th=c(2,2),sig=10^-9,phi=0.289,nu=0.95)
+mrna_transport_sims_and_plot(identifier='v003',nSamples=15,nTest=5,th=c(10,25),sig=10^-9,phi=0.289,nu=0.95)
 ```
 
 Fig3: Assembly of higher order complexes in oocyte A) Particles in different regions of the egg chamber, B) Distribution of intensities of particles in different regions.
@@ -76,13 +76,14 @@ Fig4: Characterisation of the bias in directionality of transport through ring c
 ![optional caption text](plots/fig4_schematic.eps){ width=30% }
 ```{r, Fig4, echo=FALSE,message=FALSE}
 source('run_model_comparison_stst.R')
-run_model_comparison_stst(identifier='MCv056',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,parametersToPlot = c('nu','sigma','phi'),verbose=FALSE,show_diagnostic_plots=FALSE)
+run_model_comparison_stst(identifier='MCv057',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE)
 ```
 
 Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posterior predictive distribution, C) Sensitivity to a, b.
 ```{r, Fig5, echo=FALSE,message=FALSE}
 source('mrna_transport_inference_input_B.R')
-mrna_transport_inference_input_B(identifier='v055',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,show_diagnostic_plots=FALSE)
+mrna_transport_inference_input_B(identifier='v057',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,parametersToPlot = c("a","b","phi","sigma"),verbose=FALSE,show_diagnostic_plots=TRUE)
+source('sensitivity_and_analytics.R')
 ```
 
 Fig6: Validation of testable prediction for over expression versus measured results.  
@@ -92,10 +93,12 @@ plot(cars)
 
 FigS1: (Supplementary) Exponential growth model to establish timescales A) Schematic of time points used for each stage, B) Linear regression of log(A) against the time points for each stage.
 ```{r, FigS1, echo=FALSE}
-plot(cars)
+source('extract_times_and_scaling.R')
+extract_times_and_scaling(nSamples=15,nTest=5,optional_plot=TRUE)
 ```
 
 FigS2: Convergence diagnostics for MCMC inference methods
 ```{r, FigS2, echo=FALSE}
-plot(cars)
+![MCMC trace corresponding to Figure 4](plots/traceMCv057.eps){ width=30% }
+![MCMC trace corresponding to Figure 5](plots/tracev057.eps){ width=30% }
 ```
