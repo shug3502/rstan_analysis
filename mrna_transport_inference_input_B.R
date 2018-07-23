@@ -1,7 +1,7 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
 mrna_transport_inference_input_B <- function(identifier='v099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,
-                                      parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,compare_via_loo=TRUE,
-                                      show_diagnostic_plots=FALSE){
+                                      parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,compare_via_loo=FALSE,
+                                      show_diagnostic_plots=FALSE, test_on_mutant_data=TRUE){
 library(rstan)
 library(mvtnorm)
 library(dplyr)
@@ -20,7 +20,7 @@ options(mc.cores = parallel::detectCores())
 #To get lengths read length.txt file in each folder
 
 source('extract_times_and_scaling.R')
-times = extract_times_and_scaling(nSamples,nTest)
+times = extract_times_and_scaling(nSamples,nTest,test_on_mutant_data=test_on_mutant_data)
 #############################################################
 m0 = c(0, rep(1,15)) #initial condition
 th = c(6.8,132.8)
@@ -48,8 +48,17 @@ if (use_real_data){
   exp_data = raw_data
   exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
   #test_data = data[nSamples+sort_indices2,]
-  test_data = data[times$sort_indices2,]
+  if (test_on_mutant_data){
+    overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+    test_data = rbind(data,overexpression_data)
+    test_data = test_data[times$sort_indices2,]
+    test_data[is.na(test_data)]=0
+    # overexpression_data = overexpression_data[times$sort_indices3,] #need to sort time series and correspondingly reorder rows
+    # overexpression_data[is.na(overexpression_data)]=0 #stan can't deal with NAs
   } else {
+    test_data = data[times$sort_indices2,]
+  }
+} else {
   #sample from the model to get fake data
   print('using fake generated data')
   samples <- stan(file = 'mrna_transport6.stan',
@@ -131,6 +140,7 @@ pairs(estimates, pars = parametersToPlot)
 
 #look at posterior predictive distn
 source('post_pred_plot.R')
+print(test_data)
 p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples,'y_pred',estimates,identifier,title_stem='plots/posterior_pred',ts_test=times$ts3)
 
 if (show_diagnostic_plots) {

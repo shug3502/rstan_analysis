@@ -34,22 +34,20 @@ parameters {
 model {
 }
 generated quantities {
-  real y_hat[T,16];
+  int y_hat[T,16];
   real y_ode[T,16];
   y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts, theta, B, x_i );
   for (t in 1:T){
     for (j in 1:16){
       if (j>1){
-        //y_hat[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
+        y_hat[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
         //y_hat[t,j] = poisson_rng(y_ode[t,j]);
-	y_hat[t,j] = normal_rng(y_ode[t,j],sigma);
+	//y_hat[t,j] = normal_rng(y_ode[t,j],sigma);
       } else {
-        //y_hat[t,j] = neg_binomial_2_rng(phi*y_ode[t,j], sigma);    
+        y_hat[t,j] = neg_binomial_2_rng(phi*y_ode[t,j], sigma);    
         //y_hat[t,j] = poisson_rng(phi*y_ode[t,j]);    
-	y_hat[t,j] = normal_rng(phi*y_ode[t,j],sigma);
+	//y_hat[t,j] = normal_rng(phi*y_ode[t,j],sigma);
       }
     }
   }
 }
-
-

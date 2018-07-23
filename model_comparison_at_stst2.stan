@@ -86,21 +86,23 @@ model {
   real y_stst[T1,16];
   xi ~ normal(0,0.05) T[0,];
   nu ~ beta(1,1) T[0,1];
-  phi ~ normal(0.289,0.0285) T[0,1];
-//for (j in 1:16){ cell_indices[j] = j; }
+  phi ~ normal(0.208,0.05) T[0,1]; //normal(0.289,0.0285) T[0,1];
+for (j in 1:16){ cell_indices[j] = j; }
+/*
   cell_indices[1] = 1;
   cell_indices[2] = 2;
   cell_indices[3] = 3;
   cell_indices[4] = 9;
   cell_indices[5] = 5;
+  */
 for (t in 1:T1){
   //relying on the fact that in practice dim of null space is 1, unless nu=0 (unidirectional backward transport)
   y_stst[t] = to_array_1d(get_k2(nu));
-  for (j in 1:5){
+  for (j in 1:16){
     if (j>1) {
-      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]]/phi,xi);
+      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]]/phi,xi) T[0,];
     } else {
-      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]],xi);
+      y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]],xi) T[0,];
     }
   }
 }
@@ -120,9 +122,9 @@ generated quantities {
     y_pred[t] = to_array_1d(get_k2(nu));
     for (i in 1:16){
       if (i>1) {
-        y_sim[t,i] = normal_rng(y_pred[t,i]/phi,xi);
+        y_sim[t,i] = fabs(normal_rng(y_pred[t,i]/phi,xi));
       } else {
-        y_sim[t,i] = normal_rng(y_pred[t,i],xi);
+        y_sim[t,i] = fabs(normal_rng(y_pred[t,i],xi));
       }
     }
   }

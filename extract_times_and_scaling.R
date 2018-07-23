@@ -1,23 +1,40 @@
-extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE){
+extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE,test_on_mutant_data=TRUE){
   #Get time series for egg chamber times and fit linear model 
-  #Last Edited: 18/09/2017
+  #Last Edited: 27/06/2018
   #JH
   #################################
   require(dplyr)
   egg_chamber_areas <- rep(0,nSamples+nTest)
   stages <- rep(0,nSamples+nTest) #don't need to extract estimated stages for each egg chamber example
-  for (j in 1:(nSamples+nTest)){
+  for (j in 1:(nSamples)){
     egg_chamber_areas[j] <- as.numeric(read.table(paste('data/Example',j,'/area.txt',sep='')))
-    #      temp <- list.files(path = paste('../data/Example',j,'/',sep=''), pattern = "\\_grk\\.tif$") %>%
-    #        stringr::str_extract(., 'stg.') %>%
-    #        stringr::str_split(.,'stg',simplify=TRUE)
     temp = read.table(file = paste('data/Example',j,'/','filenames.txt',sep='')) %>%
       unlist %>%
       stringr::str_extract(., 'stg.') %>%
       stringr::str_split(.,'stg',simplify=TRUE)
     stages[j] = temp[1,2] %>% as.numeric
   }
-  
+  if (test_on_mutant_data){
+    for (j in seq_len(nTest)){
+      egg_chamber_areas[nSamples+j] <- as.numeric(read.table(paste('data/Overexpression',j,'/area.txt',sep='')))
+      temp = read.table(file = paste('data/Overexpression',j,'/','filenames.txt',sep='')) %>%
+        unlist %>%
+        stringr::str_extract(., 'stg.') %>%
+        stringr::str_split(.,'stg',simplify=TRUE)
+      stages[nSamples+j] = temp[1,2] %>% as.numeric
+    }
+  } else {
+    for (j in (nsamples+1):(nSamples+nTest)){
+      egg_chamber_areas[j] <- as.numeric(read.table(paste('data/Example',j,'/area.txt',sep='')))
+      temp = read.table(file = paste('data/Example',j,'/','filenames.txt',sep='')) %>%
+        unlist %>%
+        stringr::str_extract(., 'stg.') %>%
+        stringr::str_split(.,'stg',simplify=TRUE)
+      stages[j] = temp[1,2] %>% as.numeric
+    }
+    
+  }
+    
   #take l0 = log(20) as initial time (when using length)
   #take measure egg chamber lengths as a scaled time variable
   log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
@@ -68,5 +85,5 @@ extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE){
 ##or 
   t0 = coef(lm_time_hrs)[1] #log(400)
   time_scaling = coef(lm_time_hrs)[2]
-  return(list(t0=t0,ts1=ts1,ts2=ts2,ts3=ts3,sort_indices1=sort_indices1,sort_indices2=sort_indices2,time_scaling=time_scaling))
+  return(list(t0=t0,ts1=ts1,ts2=ts2,ts3=ts3,sort_indices1=sort_indices1,sort_indices2=sort_indices2,sort_indices3=sort_indices3,time_scaling=time_scaling))
 }

@@ -7,7 +7,6 @@ pred <- as.data.frame(estimates, pars = params) %>%
   summarize(lb = quantile(value, probs = 0.05),
             median = quantile(value, probs = 0.5),
             ub = quantile(value, probs = 0.95))
-
 xdata <- data.frame(rna = as.vector(raw_data),cellID = as.vector(matrix(rep(1:16,nSamples),nrow=nSamples,byrow=TRUE)),time = rep(ts,16))
 pred <- pred %>% bind_cols(xdata) %>%
         mutate(split = if_else(time %in% ts_test,'train','test'))
@@ -17,7 +16,7 @@ if (neighbouring_ncs_only) pred <- pred %>% filter(cellID %in% c(1,2,3,5,9)) #on
 p1 <- ggplot(pred, aes(x = time, y = median))
 p1 <- p1 + geom_line() +
   geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25) +
-  facet_wrap(~factor(cellID)) +  
+  facet_wrap(~factor(cellID),scales='free') +  
   labs(x = "time", y = "rna") +
   theme(text = element_text(size = 12), axis.text = element_text(size = 12),
         legend.position = "none", strip.text = element_text(size = 8))

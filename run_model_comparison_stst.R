@@ -1,9 +1,10 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
 #write as function, may need to think about what to do if want to run from command line again
 run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,
-                                      parametersToPlot = c('nu','sigma','phi'),verbose=FALSE,
+                                      parametersToPlot = c('nu','xi','phi'),verbose=FALSE,
                                       compare_via_loo=FALSE,
-                                      show_diagnostic_plots=FALSE){
+                                      show_diagnostic_plots=FALSE,
+                                      test_on_mutant_data=TRUE){
 library(rstan)
 library(mvtnorm)
 library(dplyr)
@@ -23,7 +24,8 @@ nTotal = nSamples + nTest
 #To get lengths read length.txt file in each folder
 
 source('extract_times_and_scaling.R')
-times = extract_times_and_scaling(nSamples,nTest)
+times = extract_times_and_scaling(nSamples,nTest,test_on_mutant_data=test_on_mutant_data)
+
 #############################################################
 m0 = c(0, rep(1,15)) #initial condition
 th = c(6.8,132.8)
@@ -32,19 +34,39 @@ phi = 0.289 #careful can cause issues if phi is not 1 when looking at stst
 
 #############################################################
 my_normaliser <- function(dataset) apply(dataset,1,function(x)x/x[1]) %>% t()
+#########
+median_imputation <- function(exp_data){
+  #impute missing data
+  chambers_to_impute = apply(exp_data,1,function(x) any(is.na(x)))
+  imputed_median_values = apply(exp_data,2,function(x) median(x, na.rm=TRUE))
+  exp_data[chambers_to_impute,-c(1,2,3,5,9)] = matrix(rep(imputed_median_values[-c(1,2,3,5,9)],sum(chambers_to_impute)),byrow=TRUE,ncol=11) #impute only for cells that aren't neighbouring the oocyte
+  return(exp_data)
+}
+#########
+
 
 if (use_real_data){
   #data taken from spot detection on 3 egg chambers
   if (verbose) print('using real data \n')
   #system('python ../custom_analysis/process_all_NCs.py',wait=TRUE)
   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+  data = data[seq_len(nSamples),]
   raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
   exp_data = raw_data
-  exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
-  full_data = data[times$sort_indices2,]
+  exp_data = median_imputation(exp_data)
+#  exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
   normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
-  test_data = data[!(times$sort_indices2 %in% times$sort_indices1),]
-  #test_data = apply(test_data,1,function(x)x/x[1]) %>% t()
+  if (test_on_mutant_data){
+    overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+    overexpression_data = overexpression_data[seq_len(nTest),]
+    test_data = rbind(data,overexpression_data)
+    full_data = test_data[times$sort_indices2,]
+    test_data = test_data[!(times$sort_indices2 %in% times$sort_indices1),]
+    #test_data[is.na(test_data)]=0 
+  } else {
+    full_data = data[times$sort_indices2,]
+    test_data = data[!(times$sort_indices2 %in% times$sort_indices1),]
+  }
 } else {
   #sample from the model to get fake data
   print('using fake generated data')
@@ -93,12 +115,14 @@ if (use_real_data){
   #test_data = apply(test_data,1,function(x)x/x[1]) %>% t()
 }
 
-##########################
+############################
 if (run_mcmc) {
+   normalised_data <- overexpression_data[times$sort_indices3,] %>% my_normaliser
+   print(normalised_data)
   estimates <- stan(file = 'model_comparison_at_stst2.stan',
                     data = list (
-                      T1 = nSamples,
-                      T2 = nTest,
+                      T1 = nTest,
+                      T2 = nSamples,
                       y_obs = normalised_data
                     ),
                     seed = 42,
@@ -136,14 +160,16 @@ pairs(estimates, pars = parametersToPlot)
 #look at posterior predictive distn
 source('post_pred_plot_at_stst.R')
 #post_pred_plot_at_stst((test_data %>% my_normaliser),times$ts3,nTest,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
-p1 <- post_pred_plot_at_stst((full_data %>% my_normaliser),times$ts2,nTotal,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
+p1 <- post_pred_plot_at_stst((full_data %>% my_normaliser),times$ts2,nTotal,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst',ts_test=times$ts3)
 
 if (compare_via_loo){
   library(loo)
   log_lik_1 <- extract_log_lik(estimates)
   loo_1 <- loo(log_lik_1)
   print(loo_1)
-}  
+} else {
+  loo_1 <- NA
+} 
 
 if (show_diagnostic_plots) {
   source('hist_treedepth.R')

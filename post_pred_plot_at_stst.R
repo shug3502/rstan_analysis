@@ -10,6 +10,7 @@ post_pred_plot_at_stst <- function(raw_data,ts,nSamples,params,estimates,identif
   xdata <- data.frame(rna = as.vector(raw_data),cellID = as.vector(matrix(rep(1:16,nSamples),nrow=nSamples,byrow=TRUE)),time = rep(ts,16))
   pred <- pred %>% bind_cols(xdata) %>%
     mutate(split = if_else(time %in% ts_test,'train','test')) 
+  pred <- pred %>% mutate(rna = if_else(split=='train', rna/(4.809/3.46),rna))
   p1 <- ggplot(pred, aes(x = cellID, y = median))
   p1 <- p1 + geom_line() +
     geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25) +

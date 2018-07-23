@@ -1,5 +1,6 @@
 functions {
-  matrix construct_matrix(real th) {
+  matrix construct_matrix(real th, real gamma_scaled) {
+  //add decay at rate gamma
   real nu;
   matrix[16,16] B;
   nu = (1+th)/2;
@@ -51,7 +52,7 @@ functions {
   B[8,16] = 1-nu;
   B[16,16] = -nu;
 //need to return transpose
-  return B';
+  return   B' - diag_matrix(rep_vector(gamma_scaled, 16));
   }
 
   real[] mrnatransport(real t,
@@ -65,8 +66,7 @@ functions {
     vector[16] producers;
     producers = rep_vector(1,16);
     producers[1] = 0;
-//    B = to_matrix(x_r,16,16);
-    B = construct_matrix(x_r[1]);
+    B = construct_matrix(x_r[1],theta[3]);
     dydt = theta[1] * B * to_vector(y) + theta[2] * producers;
     return to_array_1d(dydt);
   }
@@ -79,33 +79,27 @@ data {
   real t0;
   real ts1[T1]; //times for 'training data'
   real ts2[T2];  //times for 'test' data
-  //real B[16*16];
   real nu;
+//  real gamma; //decay rate
 }
 transformed data {
   real x_r[1];
   int x_i[0];
-  //print(y);
   x_r[1]=nu;
+//  x_r[2]=gamma;
 }
 parameters {
   real<lower=0> sigma; //noise param
   real<lower=0,upper=1> phi; //difference between particles in NCs and in Oocyte
-//  real<lower=0> theta[2];
   real<lower=0> a;
   real<lower=0> b;
-
+  real<lower=0> gamma;
 }
 transformed parameters {
-/*
-  real a; //relate to parameters used in manuscript
-  real b;
-  a = theta[2];
-  b = theta[1];
-*/
-real theta[2];
+real theta[3];
 theta[1] = b;
 theta[2] = a;
+theta[3] = gamma;
 }
 model {
   real z[T1,16];
@@ -114,6 +108,7 @@ model {
   phi ~ normal(0.289,0.0285) T[0,1];
   a ~ normal(0,100) T[0,];
   b ~ normal(0,100) T[0,];
+  gamma ~normal(0,1) T[0,];
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
   cell_indices[1] = 1;
   cell_indices[2] = 2;
@@ -137,6 +132,14 @@ model {
 generated quantities {
   real y_pred[T2,16];
   real y_ode[T2,16];
+  real y_lik_ode[T1,16];
+  vector[T1] log_lik;
+  int cell_indices[16]; //only model these cells
+  cell_indices[1] = 1;
+  cell_indices[2] = 2;
+  cell_indices[3] = 3;
+  cell_indices[4] = 9;
+  cell_indices[5] = 5;
   y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta, x_r, x_i );
   for (t in 1:T2){
     for (j in 1:16){
@@ -148,6 +151,18 @@ generated quantities {
         //y_pred[t,j] = neg_binomial_2_rng(phi*y_ode[t,j], sigma);    
         //y_pred[t,j] = poisson_rng(phi*y_ode[t,j]);    
     	  y_pred[t,j] = normal_rng(phi*y_ode[t,j], sigma);
+      }
+    }
+  }
+    //compute log likelihood for model comparison via loo
+  log_lik = rep_vector(0,T1);
+  y_lik_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i );
+  for (t in 1:T1){
+    for (j in 1:5){
+      if (j>1) {
+        log_lik[t] = log_lik[t] + normal_lpdf(y[t,cell_indices[j]] | y_lik_ode[t,cell_indices[j]]/phi,sigma);
+      } else {
+        log_lik[t] = log_lik[t] + normal_lpdf(y[t,cell_indices[j]] | y_lik_ode[t,cell_indices[j]],sigma);
       }
     }
   }
