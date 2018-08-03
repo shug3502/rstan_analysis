@@ -24,7 +24,7 @@ extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE,test_on
       stages[nSamples+j] = temp[1,2] %>% as.numeric
     }
   } else {
-    for (j in (nsamples+1):(nSamples+nTest)){
+    for (j in (nSamples+1):(nSamples+nTest)){
       egg_chamber_areas[j] <- as.numeric(read.table(paste('data/Example',j,'/area.txt',sep='')))
       temp = read.table(file = paste('data/Example',j,'/','filenames.txt',sep='')) %>%
         unlist %>%
