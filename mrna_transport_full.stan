@@ -66,7 +66,7 @@ functions {
     vector[16] producers;
     producers = rep_vector(1,16);
     producers[1] = 0;
-    B = construct_matrix(x_r[1],theta[3]);
+    B = construct_matrix(theta[4],theta[3]);
     dydt = theta[1] * B * to_vector(y) + theta[2] * producers;
     return to_array_1d(dydt);
   }
@@ -79,13 +79,12 @@ data {
   real t0;
   real ts1[T1]; //times for 'training data'
   real ts2[T2];  //times for 'test' data
-  real nu;
 //  real gamma; //decay rate
 }
 transformed data {
-  real x_r[1];
+  real x_r[0];
   int x_i[0];
-  x_r[1]=nu;
+//  x_r[1]=nu;
 //  x_r[2]=gamma;
 }
 parameters {
@@ -94,12 +93,14 @@ parameters {
   real<lower=0> a;
   real<lower=0> b;
   real<lower=0> gamma;
+  real<lower=0,upper=1> nu;
 }
 transformed parameters {
-real theta[3];
+real theta[4];
 theta[1] = b;
 theta[2] = a;
 theta[3] = gamma;
+theta[4] = nu;
 }
 model {
   real z[T1,16];
@@ -108,16 +109,9 @@ model {
   phi ~ normal(0.289,0.0285) T[0,1];
   a ~ normal(0,100) T[0,];
   b ~ normal(0,100) T[0,];
-  gamma ~normal(0,1) T[0,];
+  gamma ~ normal(0,1) T[0,];
+  nu ~ beta(0.5,0.5) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
-  /*
-  try instead using all the cells
-  cell_indices[1] = 1;
-  cell_indices[2] = 2;
-  cell_indices[3] = 3;
-  cell_indices[4] = 9;
-  cell_indices[5] = 5;
-  */
   for (j in 1:16){
     cell_indices[j] = j;
     }

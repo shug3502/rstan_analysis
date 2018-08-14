@@ -37,7 +37,7 @@ Fig4: Characterisation of the bias in directionality of transport through ring c
 ![optional caption text](plots/fig4_schematic.eps){ width=30% }
 ```{r, Fig4, echo=FALSE,message=FALSE}
 source('run_model_comparison_stst.R')
-run_model_comparison_stst(identifier='MCv057',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE)
+run_model_comparison_stst(identifier='MCv057',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE)
 ```
 
 Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posterior predictive distribution, C) Sensitivity to a, b.

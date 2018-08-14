@@ -12,17 +12,17 @@ pred <- pred %>% bind_cols(xdata) %>%
         mutate(split = if_else(time %in% ts_test,'train','test'))
 
 if (neighbouring_ncs_only) pred <- pred %>% filter(cellID %in% c(1,2,3,5,9)) #only want to plot nieghbouring cells to oocyte
-
 p1 <- ggplot(pred, aes(x = time, y = median))
 p1 <- p1 + geom_line() +
   geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25) +
-  facet_wrap(~factor(cellID),scales='free') +  
+  facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
   labs(x = "time", y = "rna") +
   theme(text = element_text(size = 12), axis.text = element_text(size = 12),
         legend.position = "none", strip.text = element_text(size = 8))
 if (!is.na(raw_data[1])){
 p1 <- p1 + geom_point(aes(x = time, y = rna, colour = split))
 }
+print(p1)
 ggsave(paste(title_stem,identifier, '.eps',sep=''),device=cairo_ps)
 return(p1)
 }

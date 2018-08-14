@@ -64,6 +64,8 @@ if (use_real_data){
     test_data = test_data[!(times$sort_indices2 %in% times$sort_indices1),]
     #test_data[is.na(test_data)]=0 
   } else {
+    print(data)
+    print(times$sort_indices2)
     full_data = data[times$sort_indices2,]
     test_data = data[!(times$sort_indices2 %in% times$sort_indices1),]
   }
