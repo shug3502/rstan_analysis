@@ -4,7 +4,8 @@ run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run
                                       parametersToPlot = c('nu','xi','phi'),verbose=FALSE,
                                       compare_via_loo=FALSE,
                                       show_diagnostic_plots=FALSE,
-                                      test_on_mutant_data=TRUE){
+                                      test_on_mutant_data=TRUE, 
+                                      cell_indices = seq_len(16)){
 library(rstan)
 library(mvtnorm)
 library(dplyr)
@@ -50,7 +51,11 @@ if (use_real_data){
   if (verbose) print('using real data \n')
   #system('python ../custom_analysis/process_all_NCs.py',wait=TRUE)
   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
-  data = data[seq_len(nSamples),]
+  if (test_on_mutant_data){
+    data = data[seq_len(nSamples),]
+  } else {
+    data = data[seq_len(nTotal),]
+  }
   raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
   exp_data = raw_data
   exp_data = median_imputation(exp_data)
@@ -64,8 +69,6 @@ if (use_real_data){
     test_data = test_data[!(times$sort_indices2 %in% times$sort_indices1),]
     #test_data[is.na(test_data)]=0 
   } else {
-    print(data)
-    print(times$sort_indices2)
     full_data = data[times$sort_indices2,]
     test_data = data[!(times$sort_indices2 %in% times$sort_indices1),]
   }
@@ -119,13 +122,14 @@ if (use_real_data){
 
 ############################
 if (run_mcmc) {
-   normalised_data <- overexpression_data[times$sort_indices3,] %>% my_normaliser
-   print(normalised_data)
+   # normalised_data <- overexpression_data[times$sort_indices3,] %>% my_normaliser
+   # print(normalised_data)
   estimates <- stan(file = 'model_comparison_at_stst2.stan',
                     data = list (
-                      T1 = nTest,
-                      T2 = nSamples,
-                      y_obs = normalised_data
+                      T1 = nSamples,
+                      T2 = nTest,
+                      y_obs = normalised_data,
+                      cell_indices = cell_indices
                     ),
                     seed = 42,
                     chains = 4,

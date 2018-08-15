@@ -1,0 +1,113 @@
+---
+title: "Evaluating RNA localization model"
+output:
+  html_document:
+    df_print: paged
+    keep_tex: true
+---
+
+Ideas:
+
+1. fit steady state model on different cells to evaluate whether $\nu$, the transport bias parameter, is spatially varying across the tissue.
+2. aggregate into two boxes, 1 and 2. 
+3. try forward simulating with different $\nu$ 
+
+
+First look at fitting models for different numbers of cells.
+With only oocyte and nurse cell 2 we get:
+```{r}
+source('~/Documents/FISH_data/rstan_analysis/run_model_comparison_stst.R')
+out = run_model_comparison_stst(identifier='Ststv203',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(1,2,rep(0,14)))
+```
+
+With only oocyte and neighbouring nurse cells (1,2,3,5,9):
+```{r}
+out = run_model_comparison_stst(identifier='Ststv204',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(1,2,3,5,9,rep(0,11)))
+```
+
+With only oocyte and nurse cells within two teps from the oocyte (1,2,3,4,5,7,8,9,10,11,13):
+```{r}
+out = run_model_comparison_stst(identifier='Ststv205',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(1,2,3,4,5,7,8,9,10,11,13,rep(0,5)))
+```
+
+And with all the nurse cells in the tissue:
+```{r}
+out = run_model_comparison_stst(identifier='Ststv206',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = seq_len(16))
+```
+
+Just with the cells further away from the oocyte:
+```{r}
+out = run_model_comparison_stst(identifier='Ststv207',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(rep(0,11),6,12,14,15,16))
+```
+
+Everything except the neighbouring nurse cells:
+```{r}
+out = run_model_comparison_stst(identifier='Ststv208',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(rep(0,5),4,6,7,8,10,11,12,13,14,15,16))
+```
+
+Now see if we can summarise the distribution of values for $\nu$ that we get for fitting to each different choice of cells
+```{r}
+library(dplyr)
+library(ggplot2)
+stst_df = data.frame(nu=numeric(),xi=numeric(),phi=numeric(),which_cells=factor())
+for (id in seq(from=3,to=8)){
+  print(paste('fits/alt_save_MCStstv20',id,'.Rsave',sep=''))
+  load(paste('fits/alt_save_MCStstv20',id,'.Rsave',sep='')) #load in the results of fitting at stst for each choice of cells
+  e$which_cells = rep(id,length(e$nu))
+  stst_df = full_join(stst_df,as.data.frame(e))  
+}
+stst_df = stst_df %>% mutate(which_cells=factor(which_cells))
+h <- ggplot(data = stst_df,aes(x=nu,color=which_cells)) + geom_density() + theme_bw()
+h
+```
+
+This could certainly be interpreted as evidence of non-uniform bias in transport through ring canals spatially across the tissue.
+
+
+----------------------------------------------------------------------------
+** Two super-compartments
+
+To reduce stochastic variation due to small sample sizes, we further consider agreggating into two super-compartments.
+I assume well mixed concentrations of mRNA in each super-compartment:
+
+\begin{array}
+\frac{\text{d}x_1} = 7a - b*(1-\nu)x_1 + b\nu x_2, \\
+\frac{\text{d}x_1} = 8a - b\nu x_2 + b(1-\nu) x_1.
+\end{array}
+
+From the long time limit, we get $$ x_2 = \frac{8a + b(1-\nu) x_1}{b\nu}. $$
+
+```{r}
+library(rstan)
+library(mvtnorm)
+library(dplyr)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+#read in data on WT
+N=6 # sample size
+data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+data = data[seq_len(N),]
+#aggregate into two compartments
+x1_obs = data[,seq(from=1,to=16,by=2)] %>% apply(.,1,sum)
+x2_obs = data[,seq(from=2,to=16,by=2)] %>% apply(.,1,sum)
+
+  estimates <- stan(file = 'super_compartment_model.stan',
+                    data = list (
+                      N = N,
+                      x1_obs = x1_obs,
+                      x2_obs = x2_obs
+                      ),
+                    seed = 42,
+                    chains = 4,
+                    warmup = 1000,
+                    iter = 2000,
+                    control = list(adapt_delta = 0.99)
+  )
+print(estimates, pars = c('a','b','theta','sigma'))
+pairs(estimates, pars = c('a','b','theta','sigma'))
+```
+
+The results from the two super-compartment model contradict what we have found using the full data suggesting that transport through ring canals should be less biased than previously thought. However, these result rely upon an assumption of well mixed concentrations of mRNA within each super-compartment. This assumption does not hold. I would suggest that the results here may be misleading due to the inaccuracy of this assumption. 
+
+TODO: try forward simulating with different models, but particularly with different $\nu$ for single connection to oocyte. 
+Plus make predictions for WT and OE from full fits.

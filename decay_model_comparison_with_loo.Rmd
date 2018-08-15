@@ -25,11 +25,9 @@ We consider model comparison by fitting model 1 and model 2 at steady state and 
 The data used here are the normalised distributions of RNA across the cells in the egg chamber. Data from each egg chamber sampled is normalized here such that the number of particles in the oocyte is 1. As a result, we are unable to examine differences between the predicted linear growth and constant RNA levels in the long time limit predicted by each of the models.
 ```{r}
 source('mrna_transport_inference_input_B.R')
-r1 <- mrna_transport_inference_input_B(identifier='v105',use_real_data=TRUE,run_mcmc=TRUE,nSamples=15,nTest=5,
-                                      parametersToPlot = c("theta","phi","sigma","gamma"),verbose=TRUE,
-                                      show_diagnostic_plots=FALSE,compare_via_loo=TRUE)
-loo_1 <- r1[[3]]
-print(loo_1)
+mrna_transport_inference_input_B(identifier='v105',use_real_data=TRUE,run_mcmc=TRUE,nSamples=15,nTest=5,
+                                      parametersToPlot = c("theta","phi","sigma"),verbose=TRUE,
+                                      show_diagnostic_plots=FALSE)
 ```
 
 
