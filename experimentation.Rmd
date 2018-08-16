@@ -3,53 +3,52 @@ title: "Evaluating RNA localization model"
 output:
   html_document:
     df_print: paged
-    keep_tex: true
 ---
 
-Ideas:
+Ideas discussed at last meeting:
 
-1. fit steady state model on different cells to evaluate whether $\nu$, the transport bias parameter, is spatially varying across the tissue.
-2. aggregate into two boxes, 1 and 2. 
-3. try forward simulating with different $\nu$ 
+1. Fit steady state model on different cells to evaluate whether $\nu$, the transport bias parameter, is spatially varying across the tissue.
+2. Aggregate into two boxes, 1 and 2. 
+3. Try forward simulating with different $\nu$. 
 
-
+## Does $\nu$ vary spatially across the tissue?
 First look at fitting models for different numbers of cells.
 With only oocyte and nurse cell 2 we get:
 ```{r}
-source('~/Documents/FISH_data/rstan_analysis/run_model_comparison_stst.R')
-out = run_model_comparison_stst(identifier='Ststv203',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(1,2,rep(0,14)))
+source('run_model_comparison_stst.R')
+out = run_model_comparison_stst(identifier='Ststv203',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(1,2,rep(0,14)))
 ```
 
 With only oocyte and neighbouring nurse cells (1,2,3,5,9):
 ```{r}
-out = run_model_comparison_stst(identifier='Ststv204',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(1,2,3,5,9,rep(0,11)))
+out = run_model_comparison_stst(identifier='Ststv204',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(1,2,3,5,9,rep(0,11)))
 ```
 
 With only oocyte and nurse cells within two teps from the oocyte (1,2,3,4,5,7,8,9,10,11,13):
 ```{r}
-out = run_model_comparison_stst(identifier='Ststv205',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(1,2,3,4,5,7,8,9,10,11,13,rep(0,5)))
+out = run_model_comparison_stst(identifier='Ststv205',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(1,2,3,4,5,7,8,9,10,11,13,rep(0,5)))
 ```
 
 And with all the nurse cells in the tissue:
 ```{r}
-out = run_model_comparison_stst(identifier='Ststv206',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = seq_len(16))
+out = run_model_comparison_stst(identifier='Ststv206',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = seq_len(16))
 ```
 
 Just with the cells further away from the oocyte:
 ```{r}
-out = run_model_comparison_stst(identifier='Ststv207',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(rep(0,11),6,12,14,15,16))
+out = run_model_comparison_stst(identifier='Ststv207',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(rep(0,11),6,12,14,15,16))
 ```
 
 Everything except the neighbouring nurse cells:
 ```{r}
-out = run_model_comparison_stst(identifier='Ststv208',use_real_data=TRUE,run_mcmc=TRUE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=TRUE,test_on_mutant_data=FALSE, cell_indices = c(rep(0,5),4,6,7,8,10,11,12,13,14,15,16))
+out = run_model_comparison_stst(identifier='Ststv208',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(rep(0,5),4,6,7,8,10,11,12,13,14,15,16))
 ```
 
 Now see if we can summarise the distribution of values for $\nu$ that we get for fitting to each different choice of cells
 ```{r}
 library(dplyr)
 library(ggplot2)
-stst_df = data.frame(nu=numeric(),xi=numeric(),phi=numeric(),which_cells=factor())
+stst_df = data.frame(nu=numeric(),xi=numeric(),phi=numeric(),which_cells=integer())
 for (id in seq(from=3,to=8)){
   print(paste('fits/alt_save_MCStstv20',id,'.Rsave',sep=''))
   load(paste('fits/alt_save_MCStstv20',id,'.Rsave',sep='')) #load in the results of fitting at stst for each choice of cells
@@ -109,5 +108,173 @@ pairs(estimates, pars = c('a','b','theta','sigma'))
 
 The results from the two super-compartment model contradict what we have found using the full data suggesting that transport through ring canals should be less biased than previously thought. However, these result rely upon an assumption of well mixed concentrations of mRNA within each super-compartment. This assumption does not hold. I would suggest that the results here may be misleading due to the inaccuracy of this assumption. 
 
+--------------------------------------------------
+
 TODO: try forward simulating with different models, but particularly with different $\nu$ for single connection to oocyte. 
 Plus make predictions for WT and OE from full fits.
+
+Another possibility: assume the oocyte is an absorbing state. Currently we assume bidirectional transport through each ring canal. We could hypothesize that the connections directly to the oocyte are `special' in some way such that transport only occurs in one direction here. This should decrease the concentration of mRNA in the neighbouring nurse cells and increase in the oocyte in the model.
+
+*Might* be plausible for the full dynamic model.
+
+But at steady state, the absorbing oocyte case results in *qualitatively* different behaviour in the sense that for this case the eigenvector corresponding to the largest eigenvalue is [1,0 ... 0] irrespective of the transport bias $\nu$. 
+mRNA accumulates in the oocyte but not in the nurse cells, whereas assuming all the ring canals are bidirectional results in a distribution of mRNA across cells dependent on $\nu$ with nonzero values in the nurse cells.
+
+
+```{r}
+library(rstan)
+mc <- stan_model('model_comparison5.stan')
+expose_stan_functions(mc) #get hold of functions defined in the stan code
+nu = 0.72 #pick a vlaue for the bias from ring canals
+B = construct_matrix(0.72)
+set_oocyte_absorbing = function(B){
+  B[,1] = 0
+  return(B)
+}
+B = construct_matrix(nu)
+B_absorb = set_oocyte_absorbing(B)
+
+print(eigen(B))
+print(eigen(B_absorb))
+```
+
+Now try to visualise the effect of changing $\nu$ by forward simulating from the model. (For this we will assume bidirectional transport through all ring canals again).
+
+```{r}
+library(tidyr)
+#keep all other parameters constant during this experiment
+m0 = c(0, rep(1,15)) #initial condition
+th = c(4,300) #c(96.5,249)
+sig = 50
+phi = 0.289
+nSamples = 15
+nTest = 5
+nTotal = nSamples + nTest
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(nSamples,nTest,test_on_mutant_data=FALSE)
+data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+raw_data = data[times$sort_indices2,]
+#take a vector of transport bias values for nu to loop through
+nu_vec = seq(from=0.7, to=1, by=0.05)
+all_extracted_samples = data.frame(rna=numeric(),time=numeric())
+for (j in seq_along(nu_vec)){
+B = construct_matrix(nu_vec[j])
+samples <- stan(file = 'mrna_transport6.stan',
+                  data = list (
+                    T  = nTotal,
+                    y0 = m0,
+                    t0 = times$t0,
+                    ts = times$ts2,
+                    theta = array(th, dim = 2),
+                    sigma = sig,
+                    phi = phi,
+                    B = B %>% as.vector()
+                  ),
+                  algorithm="Fixed_param",
+                  seed = 42,
+                  chains = 1,
+                  iter =100, 
+                  refresh = -1
+  )
+estimates = rstan::extract(samples, pars='y_hat')
+#make the samples go in a 'nice' format
+pred <- as.data.frame(estimates, pars = 'y_hat') %>%
+  gather(factor_key = TRUE) %>%
+  group_by(key) %>%
+  summarize(lb = quantile(value, probs = 0.05),
+            median = quantile(value, probs = 0.5),
+            ub = quantile(value, probs = 0.95))
+xdata <- data.frame(rna = as.vector(raw_data),cellID = as.vector(matrix(rep(1:16,nTotal),nrow=nTotal,byrow=TRUE)),time = rep(times$ts2,16))
+pred <- pred %>% bind_cols(xdata) %>%
+        mutate(split = if_else(time %in% times$ts3,'train','test'),
+               nu = nu_vec[j])
+all_extracted_samples = full_join(all_extracted_samples, pred)
+}
+
+p1 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
+p1 <- p1 + geom_line() +
+  facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
+  labs(x = "time", y = "rna") +
+  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
+        strip.text = element_text(size = 8)) + 
+  scale_color_discrete(name = "nu") + 
+  scale_colour_brewer(palette=7) + 
+  geom_point(aes(x = time, y = rna))
+p1
+
+```
+
+And finally compare this to what happens when we change one the transport bias for ring canals to the oocyte, with bias $\nu$ for the other ring canals fixed at $0.9$. 
+
+```{r}
+B1 = construct_matrix(0.72) #we fix ring canals for all other nurse cells
+#take a vector of transport bias values for nu to loop through
+nu_vec = seq(from=0.7, to=1, by=0.05)
+all_extracted_samples = data.frame(rna=numeric(),time=numeric())
+for (j in seq_along(nu_vec)){
+#mess around with ring canals into oocyte 
+  B2 = construct_matrix(nu_vec[j])
+  B = B1
+  B[,1] = B2[,1]
+  B[1,] = B2[1,]
+  diag(B) = diag(B) - apply(B,2,sum)
+samples <- stan(file = 'mrna_transport6.stan',
+                  data = list (
+                    T  = nTotal,
+                    y0 = m0,
+                    t0 = times$t0,
+                    ts = times$ts2,
+                    theta = array(th, dim = 2),
+                    sigma = sig,
+                    phi = phi,
+                    B = B %>% as.vector()
+                  ),
+                  algorithm="Fixed_param",
+                  seed = 42,
+                  chains = 1,
+                  iter =100, 
+                  refresh = -1
+  )
+estimates = rstan::extract(samples, pars='y_hat')
+#make the samples go in a 'nice' format
+pred <- as.data.frame(estimates, pars = 'y_hat') %>%
+  gather(factor_key = TRUE) %>%
+  group_by(key) %>%
+  summarize(lb = quantile(value, probs = 0.05),
+            median = quantile(value, probs = 0.5),
+            ub = quantile(value, probs = 0.95))
+xdata <- data.frame(rna = as.vector(raw_data),cellID = as.vector(matrix(rep(1:16,nTotal),nrow=nTotal,byrow=TRUE)),time = rep(times$ts2,16))
+pred <- pred %>% bind_cols(xdata) %>%
+        mutate(split = if_else(time %in% times$ts3,'train','test'),
+               nu = nu_vec[j])
+all_extracted_samples = full_join(all_extracted_samples, pred)
+}
+
+p2 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
+p2 <- p2 + geom_line() +
+  facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
+  labs(x = "time", y = "rna") +
+  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
+        strip.text = element_text(size = 8)) + 
+  scale_color_discrete(name = "nu") + 
+  scale_colour_brewer(palette=7) + 
+  geom_point(aes(x = time, y = rna))
+p2
+
+```
+
+Changing the transport bias, $\nu$, for selected ring canals neighbouring the oocyte has limited effect relative to predictions from the simpler model where $\nu$ is assumed to be spatially uniform. 
+
+
+
+Seems possible though to look at fitting this model with spatially varying $\nu$ values based on whether cells are neighbouring the oocyte. Can then compare between the models to assess whether this is plausible.
+
+```{r}
+source('mrna_transport_full.R')
+mrna_transport_inference_full('full_spatial_nu_v201', use_real_data = TRUE, run_mcmc = FALSE, nSamples=6, nTest=14, show_diagnostic_plots = TRUE, test_on_mutant_data = FALSE)
+
+```
+
+Finally, make predictions for full model for WT and OE, with spatially uniform $\nu$ and spatially varying $\nu$.
+
+

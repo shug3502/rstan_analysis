@@ -53,13 +53,24 @@ functions {
 //need to return transpose
   return B';
   }
+  /* THis part was for looking at the oocyte as an absorbing state, but this is a qualitatively different problem
+  matrix set_oocyte_absorbing(matrix A){
+    matrix[16,16] B;
+    B = A;
+    //make the oocyte into an absorbing state, by making the first column zero
+    for (i in 1:16){
+      B[i,1] = 0;
+    }
+    return(B);
+  }
+*/  
  vector get_k2(real th){
     matrix[16,16] B;
     matrix[16,16] Q;
     vector[16] N;
     real s;
     //int r;
-    B = construct_matrix(th);    
+    B = construct_matrix(th); 
     Q = qr_Q(B'); //compute qr decomposition
   //take last n-r cols of Q as basis of null space
   //may need to also exclude case where null space has dim 0, ie r=16

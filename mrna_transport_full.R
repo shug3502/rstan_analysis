@@ -1,6 +1,6 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
 mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,
-                                             parametersToPlot = c("theta","phi","sigma"),verbose=FALSE,compare_via_loo=FALSE,
+                                             parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
                                              show_diagnostic_plots=FALSE, test_on_mutant_data=TRUE){
   library(rstan)
   library(mvtnorm)
@@ -86,7 +86,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   
   ##########################
   if (run_mcmc) {
-    estimates <- stan(file = 'mrna_transport_full.stan',
+    estimates <- stan(file = 'mrna_transport_full_nu_varying_spatially.stan',
                       data = list (
                         y = exp_data,
                         T1  = nSamples,
@@ -130,7 +130,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   #visualisation
   ###############################
   #cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
-  pairs(estimates, pars = parametersToPlot)
+  #pairs(estimates, pars = parametersToPlot)
   #dev.off()
   
   #look at posterior predictive distn
