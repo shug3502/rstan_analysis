@@ -7,3 +7,4 @@ old_files/
 .Rhistory
 *.old
 make_figures_mRNA_localization_files/
+.DS_Store
