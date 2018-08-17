@@ -74,11 +74,13 @@ functions {
 data {
   int<lower=1> T1;
   int<lower=1> T2;
+  int<lower=1> T3;
   int y[T1,16];
   real y0[16];
   real t0;
   real ts1[T1]; //times for 'training data'
   real ts2[T2];  //times for 'test' data
+  real ts3[T3]; //times for 'OE' test predictions
 }
 transformed data {
   real x_r[0];
@@ -120,10 +122,14 @@ model {
   }
 }
 generated quantities {
-  int y_pred[T2,16];
-  real y_ode[T2,16];
+  int y_pred[T2,16]; //predictions for WT
+  real y_ode[T2,16]; 
+  int y_pred_OE[T3,16]; //predictions for OE
+  real y_ode_OE[T3,16];  
+  real theta_OE[4];
   real y_lik_ode[T1,16];
   vector[T1] log_lik;
+  // for wild type
   y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta, x_r, x_i );
   for (t in 1:T2){
     for (j in 1:16){
@@ -131,6 +137,19 @@ generated quantities {
         y_pred[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
       } else {
         y_pred[t,j] = neg_binomial_2_rng(phi*y_ode[t,j], sigma);    
+      }
+    }
+  }
+  // for the overexpression mutant
+  theta_OE = theta;
+  theta_OE[2] = theta[2]*2; //double the rate of production in the overexpressor
+  y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta_OE, x_r, x_i );
+  for (t in 1:T3){
+    for (j in 1:16){
+      if (j>1){
+        y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j], sigma);
+      } else {
+        y_pred_OE[t,j] = neg_binomial_2_rng(phi*y_ode_OE[t,j], sigma);    
       }
     }
   }

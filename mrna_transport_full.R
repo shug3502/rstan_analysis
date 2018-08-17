@@ -1,5 +1,5 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
-mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,
+mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
                                              parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
                                              show_diagnostic_plots=FALSE, test_on_mutant_data=TRUE, is_nu_uniform=TRUE){
   library(rstan)
@@ -93,6 +93,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                         y = exp_data,
                         T1  = nSamples,
                         T2 = nSamples+nTest,
+                        T3 = 
                         y0 = m0,
                         t0 = times$t0,
                         ts1 = times$ts1,

@@ -237,7 +237,25 @@ a <- mrna_transport_inference_full('full_spatial_nu_v201', use_real_data = TRUE,
 
 Interpretation of results: by eye, the posterior predictive distribution seems to match better with observed data across all the cells, whereas with other simpler models a good fit could be obtained for some but not all the nurse cells. The bias in ring canals further from the oocyte is much lower (median around 0.25) than in the cells close to the oocyte (median around 0.92). The model used here is the full ODE system in time and includes RNA decay at rate $\gamma$. Estimates of $\gamma$ had previously been very close to 0 and model comparison suggested that decay was not important in the model. However, here estimates of the decay rate are higher (median around 0.8). This is very similar to the prior for $\gamma$ and it should be investigated what the influence of the prior for the decay rate is here.
 
-TODO: Finally, we should make predictions for the full model for Wild Type and Overexpression mutant, with spatially uniform $\nu$ and spatially varying $\nu$ and perform model comparison between the two models to assess whether this hypothesis that $\nu$ varies spatially is plausible and whether there is evidence for this compared to spatially uniform $\nu$.
+Finally, we should make predictions for the full model for Wild Type and Overexpression mutant, with spatially uniform $\nu$ and spatially varying $\nu$ and perform model comparison between the two models to assess whether this hypothesis that $\nu$ varies spatially is plausible and whether there is evidence for this compared to spatially uniform $\nu$.
+
+-----------------------------------------------
+## Comparing the spatially varying $\nu$ and spatially uniform $\nu$ models
+We use leave one out model comparison to evaluate whether the model with spatially varying bias $\nu$ is an improvement over the simpler model with uniform $\nu$. 
+
+```{r}
+
+res_uniform = mrna_transport_inference_full('full_nu_uniform_v223',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 6, nTest = 14, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = TRUE)
+
+res_varying = mrna_transport_inference_full('full_nu_uniform_v224',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 6, nTest = 14, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = FALSE)
+
+print(loo::compare(res_uniform[[2]],res_varying[[2]]))
+```
+
+The difference between these is positive and larger than twice the standard error which confirms that the spatially varying $\nu$ model is more predictive that the simpler uniform $\nu$ model. This suggests that the model with spatially varying bias in transport through ring canals is an improved model. 
+
+TODO: Next we will consider the predictive abilities of such a model on overexpression data.
+
 
 -----------------------------------------------
 
