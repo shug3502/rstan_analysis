@@ -79,13 +79,10 @@ data {
   real t0;
   real ts1[T1]; //times for 'training data'
   real ts2[T2];  //times for 'test' data
-//  real gamma; //decay rate
 }
 transformed data {
   real x_r[0];
   int x_i[0];
-//  x_r[1]=nu;
-//  x_r[2]=gamma;
 }
 parameters {
   real<lower=0> sigma; //noise param
@@ -117,7 +114,7 @@ model {
       if (j>1){
         y[t,j] ~ neg_binomial_2(z[t,j], sigma);
       } else {
-        y[t,j] ~ neg_binomial_2(phi*z[t,j], sigma);    
+        y[t,j] ~ neg_binomial_2(phi*z[t,j], sigma);  //treat observations in oocyte differently due to aggregation of rna complexes  
       }
     }
   }
@@ -141,11 +138,11 @@ generated quantities {
   log_lik = rep_vector(0,T1);
   y_lik_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i );
   for (t in 1:T1){
-    for (j in 1:5){
+    for (j in 1:16){
       if (j>1) {
-        log_lik[t] = log_lik[t] + normal_lpdf(y[t,j] | y_lik_ode[t,j]/phi,sigma);
+        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j],sigma);
       } else {
-        log_lik[t] = log_lik[t] + normal_lpdf(y[t,j] | y_lik_ode[t,j],sigma);
+        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j]*phi,sigma);
       }
     }
   }
