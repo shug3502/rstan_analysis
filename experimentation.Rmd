@@ -1,6 +1,7 @@
 ---
 title: "Evaluating RNA localization model"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -17,36 +18,13 @@ Ideas discussed at last meeting:
 
 ## Does $\nu$ vary spatially across the tissue?
 First look at fitting models for different numbers of cells.
-With only oocyte and nurse cell 2 we get:
-```{r}
-source('run_model_comparison_stst.R')
-out = run_model_comparison_stst(identifier='Ststv203',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(1,2,rep(0,14)))
-```
-
-With only oocyte and neighbouring nurse cells (1,2,3,5,9):
-```{r}
-out = run_model_comparison_stst(identifier='Ststv204',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(1,2,3,5,9,rep(0,11)))
-```
-
-With only oocyte and nurse cells within two teps from the oocyte (1,2,3,4,5,7,8,9,10,11,13):
-```{r}
-out = run_model_comparison_stst(identifier='Ststv205',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(1,2,3,4,5,7,8,9,10,11,13,rep(0,5)))
-```
-
-And with all the nurse cells in the tissue:
-```{r}
-out = run_model_comparison_stst(identifier='Ststv206',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = seq_len(16))
-```
-
-Just with the cells further away from the oocyte:
-```{r}
-out = run_model_comparison_stst(identifier='Ststv207',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(rep(0,11),6,12,14,15,16))
-```
-
-Everything except the neighbouring nurse cells:
-```{r}
-out = run_model_comparison_stst(identifier='Ststv208',use_real_data=TRUE,run_mcmc=FALSE,nSamples=6,nTest=14,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,test_on_mutant_data=FALSE, cell_indices = c(rep(0,5),4,6,7,8,10,11,12,13,14,15,16))
-```
+We consider the following combinations of cells:
+1. Only oocyte and nurse cell 2 (1,2)
+2. Oocyte and neighbouring nurse cells (1,2,3,5,9)
+3. Oocyte and nurse cells within two steps from the oocyte (1,2,3,4,5,7,8,9,10,11,13)
+4. All the nurse cells in the tissue (1:16)
+5. Just with the cells further away from the oocyte (6,12,14,15,16) 
+6. Everything except the oocyte and neighbouring nurse cells (4,6,7,8,10,11,12,13,14,15,16))
 
 Now see if we can summarise the distribution of values for $\nu$ that we get for fitting to each different choice of cells
 ```{r}
@@ -54,9 +32,8 @@ library(dplyr)
 library(ggplot2)
 stst_df = data.frame(nu=numeric(),xi=numeric(),phi=numeric(),which_cells=integer())
 for (id in seq(from=3,to=8)){
-  print(paste('fits/alt_save_MCStstv20',id,'.Rsave',sep=''))
   load(paste('fits/alt_save_MCStstv20',id,'.Rsave',sep='')) #load in the results of fitting at stst for each choice of cells
-  e$which_cells = rep(id,length(e$nu))
+  e$which_cells = rep(id-2,length(e$nu))
   stst_df = full_join(stst_df,as.data.frame(e))  
 }
 stst_df = stst_df %>% mutate(which_cells=factor(which_cells))
@@ -68,17 +45,17 @@ This could certainly be interpreted as evidence of non-uniform bias in transport
 
 
 ----------------------------------------------------------------------------
-** Two super-compartments
+## Two super-compartments
 
 To reduce stochastic variation due to small sample sizes, we further consider agreggating into two super-compartments.
-I assume well mixed concentrations of mRNA in each super-compartment:
+I assume well mixed concentrations of mRNA in each super-compartment.
+If $\mathbf{y}$ is the vector of RNA concentrations in the oocyte and nurse cells, let $x_1$ be the sum over cells in the LHS of the tissue, and $x_2$ be the sum over cells in the RHS. By summing the original ODEs over the appropriate cell indices, we get:
+\begin{eqnarray}
+\frac{\text{d}x_1}{\text{d}t} &= 7a - b*(1-\nu)x_1 + b\nu x_2, \\
+\frac{\text{d}x_2}{\text{d}t} &= 8a - b\nu x_2 + b(1-\nu) x_1.
+\end{eqnarray}
 
-\begin{array}
-\frac{\text{d}x_1} = 7a - b*(1-\nu)x_1 + b\nu x_2, \\
-\frac{\text{d}x_1} = 8a - b\nu x_2 + b(1-\nu) x_1.
-\end{array}
-
-From the long time limit, we get $$ x_2 = \frac{8a + b(1-\nu) x_1}{b\nu}. $$
+From behaviour in the long time limit, (assuming $\nu \neq 0$) we get $$ x_2 = \frac{8a + b(1-\nu) x_1}{b\nu}. $$
 
 ```{r}
 library(rstan)
@@ -106,46 +83,24 @@ x2_obs = data[,seq(from=2,to=16,by=2)] %>% apply(.,1,sum)
                     iter = 2000,
                     control = list(adapt_delta = 0.99)
   )
-print(estimates, pars = c('a','b','theta','sigma'))
-pairs(estimates, pars = c('a','b','theta','sigma'))
+print(estimates, pars = c('a','b','nu','sigma'))
+pairs(estimates, pars = c('a','b','nu','sigma'))
 ```
 
-The results from the two super-compartment model contradict what we have found using the full data suggesting that transport through ring canals should be less biased than previously thought. However, these result rely upon an assumption of well mixed concentrations of mRNA within each super-compartment. This assumption does not hold. I would suggest that the results here may be misleading due to the inaccuracy of this assumption. 
+The results from the two super-compartment model contradict what we have found using the full data suggesting that transport through ring canals should be less biased than previously thought, with median of $\nu=0.71$. However, these results rely upon an assumption of well mixed concentrations of mRNA within each super-compartment. This assumption does not hold. I would suggest that the results here may be misleading due to the inaccuracy of this assumption. 
 
---------------------------------------------------
 
-TODO: try forward simulating with different models, but particularly with different $\nu$ for single connection to oocyte. 
-Plus make predictions for WT and OE from full fits.
+----------------------------------
+## Forward simulating with spatially varying $\nu$
+We try forward simulating with different models, but particularly with different $\nu$ for the connections from neighbouring nurse cells to the oocyte. 
 
-Another possibility: assume the oocyte is an absorbing state. Currently we assume bidirectional transport through each ring canal. We could hypothesize that the connections directly to the oocyte are `special' in some way such that transport only occurs in one direction here. This should decrease the concentration of mRNA in the neighbouring nurse cells and increase in the oocyte in the model.
-
-*Might* be plausible for the full dynamic model.
-
-But at steady state, the absorbing oocyte case results in *qualitatively* different behaviour in the sense that for this case the eigenvector corresponding to the largest eigenvalue is [1,0 ... 0] irrespective of the transport bias $\nu$. 
-mRNA accumulates in the oocyte but not in the nurse cells, whereas assuming all the ring canals are bidirectional results in a distribution of mRNA across cells dependent on $\nu$ with nonzero values in the nurse cells.
-
+Now try to visualise the effect of changing $\nu$ by forward simulating from the model. (For this we will assume bidirectional transport through all ring canals again). We show the observed data as points, but the simulations use fixed values of the parameters and have not been fitted to these data. 
 
 ```{r}
 library(rstan)
+library(tidyr)
 mc <- stan_model('model_comparison5.stan')
 expose_stan_functions(mc) #get hold of functions defined in the stan code
-nu = 0.72 #pick a vlaue for the bias from ring canals
-B = construct_matrix(0.72)
-set_oocyte_absorbing = function(B){
-  B[,1] = 0
-  return(B)
-}
-B = construct_matrix(nu)
-B_absorb = set_oocyte_absorbing(B)
-
-print(eigen(B))
-print(eigen(B_absorb))
-```
-
-Now try to visualise the effect of changing $\nu$ by forward simulating from the model. (For this we will assume bidirectional transport through all ring canals again).
-
-```{r}
-library(tidyr)
 #keep all other parameters constant during this experiment
 m0 = c(0, rep(1,15)) #initial condition
 th = c(4,300) #c(96.5,249)
@@ -208,10 +163,10 @@ p1
 
 ```
 
-And finally compare this to what happens when we change one the transport bias for ring canals to the oocyte, with bias $\nu$ for the other ring canals fixed at $0.9$. 
+And finally compare this to what happens when we change one the transport bias for ring canals to the oocyte, with bias $\nu$ for the other ring canals fixed at $0.71$. 
 
 ```{r}
-B1 = construct_matrix(0.72) #we fix ring canals for all other nurse cells
+B1 = construct_matrix(0.71) #we fix ring canals for all other nurse cells
 #take a vector of transport bias values for nu to loop through
 nu_vec = seq(from=0.7, to=1, by=0.05)
 all_extracted_samples = data.frame(rna=numeric(),time=numeric())
@@ -269,16 +224,40 @@ p2
 
 Changing the transport bias, $\nu$, for selected ring canals neighbouring the oocyte has limited effect relative to predictions from the simpler model where $\nu$ is assumed to be spatially uniform. 
 
+--------------------------
+## Fitting model with spatially varying $\nu$
 
-
-Seems possible though to look at fitting this model with spatially varying $\nu$ values based on whether cells are neighbouring the oocyte. Can then compare between the models to assess whether this is plausible.
+Consider fitting this model with spatially varying $\nu$ values based on whether cells are neighbouring the oocyte. All that is different here to the full model considered previously is the construction of the matrix $B$. 
 
 ```{r}
 source('mrna_transport_full.R')
-mrna_transport_inference_full('full_spatial_nu_v201', use_real_data = TRUE, run_mcmc = FALSE, nSamples=6, nTest=14, show_diagnostic_plots = TRUE, test_on_mutant_data = FALSE)
+a <- mrna_transport_inference_full('full_spatial_nu_v201', use_real_data = TRUE, run_mcmc = FALSE, nSamples=6, nTest=14, show_diagnostic_plots = TRUE, parametersToPlot = c("a","b","phi","sigma","gamma","nu1","nu2"), test_on_mutant_data = FALSE)
 
 ```
 
-Finally, make predictions for full model for WT and OE, with spatially uniform $\nu$ and spatially varying $\nu$.
+Interpretation of results: by eye, the posterior predictive distribution seems to match better with observed data across all the cells, whereas with other simpler models a good fit could be obtained for some but not all the nurse cells. The bias in ring canals further from the oocyte is much lower (median around 0.25) than in the cells close to the oocyte (median around 0.92). The model used here is the full ODE system in time and includes RNA decay at rate $\gamma$. Estimates of $\gamma$ had previously been very close to 0 and model comparison suggested that decay was not important in the model. However, here estimates of the decay rate are higher (median around 0.8). This is very similar to the prior for $\gamma$ and it should be investigated what the influence of the prior for the decay rate is here.
+
+TODO: Finally, we should make predictions for the full model for Wild Type and Overexpression mutant, with spatially uniform $\nu$ and spatially varying $\nu$ and perform model comparison between the two models to assess whether this hypothesis that $\nu$ varies spatially is plausible and whether there is evidence for this compared to spatially uniform $\nu$.
+
+-----------------------------------------------
+
+## Assuming the oocyte is an absorbing state
+Another possibility: assume the oocyte is an absorbing state. Currently we assume bidirectional transport through each ring canal. We could hypothesize that the connections directly to the oocyte are `special' in some way such that transport only occurs in one direction here. This should decrease the concentration of mRNA in the neighbouring nurse cells and increase in the oocyte in the model.
+
+But at steady state, the absorbing oocyte case results in *qualitatively* different behaviour in the sense that for this case the eigenvector corresponding to the largest eigenvalue is [1,0 ... 0] irrespective of the transport bias $\nu$. 
+mRNA accumulates in the oocyte but not in the nurse cells, whereas assuming all the ring canals are bidirectional results in a distribution of mRNA across cells dependent on $\nu$ with nonzero values in the nurse cells.
 
 
+```{r}
+nu = 0.72 #pick a vlaue for the bias from ring canals
+B = construct_matrix(0.72)
+set_oocyte_absorbing = function(B){
+  B[,1] = 0
+  return(B)
+}
+B = construct_matrix(nu)
+B_absorb = set_oocyte_absorbing(B)
+
+print(eigen(B))
+print(eigen(B_absorb))
+```

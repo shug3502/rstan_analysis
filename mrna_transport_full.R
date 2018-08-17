@@ -1,7 +1,7 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
 mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,
                                              parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
-                                             show_diagnostic_plots=FALSE, test_on_mutant_data=TRUE){
+                                             show_diagnostic_plots=FALSE, test_on_mutant_data=TRUE, is_nu_uniform=TRUE){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
@@ -86,7 +86,9 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   
   ##########################
   if (run_mcmc) {
-    estimates <- stan(file = 'mrna_transport_full_nu_varying_spatially.stan',
+    stan_file = ifelse(is_nu_uniform, 'mrna_transport_full.stan',
+                       'mrna_transport_full_nu_varying_spatially.stan')
+    estimates <- stan(file = stan_file,
                       data = list (
                         y = exp_data,
                         T1  = nSamples,
@@ -135,7 +137,6 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   
   #look at posterior predictive distn
   source('post_pred_plot.R')
-  print(test_data)
   p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples,'y_pred',estimates,identifier,title_stem='plots/posterior_pred',ts_test=times$ts3)
   
   if (show_diagnostic_plots) {

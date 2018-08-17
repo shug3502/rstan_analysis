@@ -126,7 +126,6 @@ theta[5] = nu2;
 }
 model {
   real z[T1,16];
-  int cell_indices[16]; //only model these cells
   sigma ~ normal(0,100) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
   phi ~ normal(0.289,0.0285) T[0,1];
   a ~ normal(0,100) T[0,];
@@ -135,19 +134,12 @@ model {
   nu1 ~ beta(0.5,0.5) T[0,1];
   nu2 ~ beta(0.5,0.5) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
-  for (j in 1:16){
-    cell_indices[j] = j;
-    }
   for (t in 1:T1){
     for (j in 1:16) {
       if (j>1){
-        y[t,cell_indices[j]] ~ neg_binomial_2(z[t,cell_indices[j]], sigma);
-        //y[t,j] ~ poisson(z[t,cell_indices[j]]);
-	      //y[t,cell_indices[j]] ~ normal(z[t,cell_indices[j]], sigma);
+        y[t,j] ~ neg_binomial_2(z[t,j], sigma);
       } else {
-        y[t,cell_indices[j]] ~ neg_binomial_2(phi*z[t,cell_indices[j]], sigma);    
-        //y[t,j] ~ poisson(phi*z[t,cell_indices[j]]);    
-	      //y[t,j] ~ normal(phi*z[t,j], sigma);
+        y[t,j] ~ neg_binomial_2(phi*z[t,j], sigma);    
       }
     }
   }
@@ -157,23 +149,13 @@ generated quantities {
   real y_ode[T2,16];
   real y_lik_ode[T1,16];
   vector[T1] log_lik;
-  int cell_indices[16]; //only model these cells
-  cell_indices[1] = 1;
-  cell_indices[2] = 2;
-  cell_indices[3] = 3;
-  cell_indices[4] = 9;
-  cell_indices[5] = 5;
   y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta, x_r, x_i );
   for (t in 1:T2){
     for (j in 1:16){
       if (j>1){
         y_pred[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
-        //y_pred[t,j] = poisson_rng(y_ode[t,j]);
-    	  //y_pred[t,j] = normal_rng(y_ode[t,j], sigma);
       } else {
         y_pred[t,j] = neg_binomial_2_rng(phi*y_ode[t,j], sigma);    
-        //y_pred[t,j] = poisson_rng(phi*y_ode[t,j]);    
-    	  //y_pred[t,j] = normal_rng(phi*y_ode[t,j], sigma);
       }
     }
   }
@@ -183,9 +165,9 @@ generated quantities {
   for (t in 1:T1){
     for (j in 1:5){
       if (j>1) {
-        log_lik[t] = log_lik[t] + normal_lpdf(y[t,cell_indices[j]] | y_lik_ode[t,cell_indices[j]]/phi,sigma);
+        log_lik[t] = log_lik[t] + normal_lpdf(y[t,j] | y_lik_ode[t,j]/phi,sigma);
       } else {
-        log_lik[t] = log_lik[t] + normal_lpdf(y[t,cell_indices[j]] | y_lik_ode[t,cell_indices[j]],sigma);
+        log_lik[t] = log_lik[t] + normal_lpdf(y[t,j] | y_lik_ode[t,j],sigma);
       }
     }
   }
