@@ -1,5 +1,6 @@
 *.rds
-data/
+*/*/roi_coords/
+*/*/*.tif
 fits/
 plots/
 log_files/
