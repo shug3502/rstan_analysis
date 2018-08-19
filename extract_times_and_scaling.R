@@ -1,12 +1,14 @@
-extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE,test_on_mutant_data=TRUE){
+extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE,test_on_mutant_data=FALSE){
   #Get time series for egg chamber times and fit linear model 
   #Last Edited: 27/06/2018
   #JH
   #################################
   require(dplyr)
-  egg_chamber_areas <- rep(0,nSamples+nTest)
-  stages <- rep(0,nSamples+nTest) #don't need to extract estimated stages for each egg chamber example
-  for (j in 1:(nSamples)){
+  if (test_on_mutant_data){ warning('test_on_mutant_data is an argument no longer used by extract_times_and_scaling')}
+
+  egg_chamber_areas <- rep(0,nSamples+nTest+nTestOE)
+  stages <- rep(0,nSamples+nTest+nTestOE) #don't need to extract estimated stages for each egg chamber example
+  for (j in seq_len(nSamples+nTest)){
     egg_chamber_areas[j] <- as.numeric(read.table(paste('data/Example',j,'/area.txt',sep='')))
     temp = read.table(file = paste('data/Example',j,'/','filenames.txt',sep='')) %>%
       unlist %>%
@@ -14,25 +16,14 @@ extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE,test_on
       stringr::str_split(.,'stg',simplify=TRUE)
     stages[j] = temp[1,2] %>% as.numeric
   }
-  if (test_on_mutant_data){
-    for (j in seq_len(nTest)){
-      egg_chamber_areas[nSamples+j] <- as.numeric(read.table(paste('data/Overexpression',j,'/area.txt',sep='')))
-      temp = read.table(file = paste('data/Overexpression',j,'/','filenames.txt',sep='')) %>%
-        unlist %>%
-        stringr::str_extract(., 'stg.') %>%
-        stringr::str_split(.,'stg',simplify=TRUE)
-      stages[nSamples+j] = temp[1,2] %>% as.numeric
-    }
-  } else {
-    for (j in (nSamples+1):(nSamples+nTest)){
-      egg_chamber_areas[j] <- as.numeric(read.table(paste('data/Example',j,'/area.txt',sep='')))
-      temp = read.table(file = paste('data/Example',j,'/','filenames.txt',sep='')) %>%
-        unlist %>%
-        stringr::str_extract(., 'stg.') %>%
-        stringr::str_split(.,'stg',simplify=TRUE)
-      stages[j] = temp[1,2] %>% as.numeric
-    }
-    
+
+  for (j in seq_len(nTestOE)){
+    egg_chamber_areas[nSamples+nTest+j] <- as.numeric(read.table(paste('data/Overexpression',j,'/area.txt',sep='')))
+    temp = read.table(file = paste('data/Overexpression',j,'/','filenames.txt',sep='')) %>%
+      unlist %>%
+      stringr::str_extract(., 'stg.') %>%
+      stringr::str_split(.,'stg',simplify=TRUE)
+    stages[nSamples+nTest+j] = temp[1,2] %>% as.numeric
   }
     
   #take l0 = log(20) as initial time (when using length)
@@ -48,6 +39,9 @@ extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE,test_on
   ts3 = setdiff(ts2,ts1) 
   log_areas3 = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
   sort_indices3 = log_areas3$ix
+  log_areas4 = sort.int(log(egg_chamber_areas[(nSamples+nTest+1):(nSamples+nTest+nTestOE)]),index.return=TRUE)
+  sort_indices4 = log_areas4$ix
+  ts4 = log_areas4$x
 
   #######################################
   #fit linear models
@@ -63,7 +57,7 @@ extract_times_and_scaling <- function(nSamples,nTest,optional_plot=FALSE,test_on
   df <- df %>% mutate(pred_age_hrs = predict(lm_time_hrs,df))      
 ##########################################  
   if (optional_plot){
-    g <- ggplot(data =df, aes(x=stages,y=la)) +
+    g <- ggplot(data = df, aes(x=stages,y=la)) +
       geom_point() + 
       geom_line(color='red',aes(x=stages,y=pred_age)) +
       theme_bw() + 
