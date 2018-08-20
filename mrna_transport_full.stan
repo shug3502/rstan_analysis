@@ -143,7 +143,7 @@ generated quantities {
   // for the overexpression mutant
   theta_OE = theta;
   theta_OE[2] = theta[2]*2; //double the rate of production in the overexpressor
-  y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta_OE, x_r, x_i );
+  y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE, x_r, x_i );
   for (t in 1:T3){
     for (j in 1:16){
       if (j>1){

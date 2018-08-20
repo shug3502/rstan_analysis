@@ -1,4 +1,4 @@
-post_pred_plot <- function(raw_data,ts,nSamples,params,estimates,identifier,title_stem='plots/posterior_pred',ts_test=vector(),neighbouring_ncs_only=FALSE){
+post_pred_plot <- function(raw_data,ts,nSamples,params,estimates,identifier,title_stem='plots/posterior_pred',ts_test=vector(),OE_test=vector(),neighbouring_ncs_only=FALSE){
 require(tidyr)
 require(ggplot2)
 pred <- as.data.frame(estimates, pars = params) %>%
@@ -9,7 +9,9 @@ pred <- as.data.frame(estimates, pars = params) %>%
             ub = quantile(value, probs = 0.95))
 xdata <- data.frame(rna = as.vector(raw_data),cellID = as.vector(matrix(rep(1:16,nSamples),nrow=nSamples,byrow=TRUE)),time = rep(ts,16))
 pred <- pred %>% bind_cols(xdata) %>%
-        mutate(split = if_else(time %in% ts_test,'train','test'))
+        mutate(split = case_when(time %in% OE_test ~ 'overexpression',
+                                 time %in% ts_test ~ 'test',
+                                 TRUE ~ 'train'))
 
 if (neighbouring_ncs_only) pred <- pred %>% filter(cellID %in% c(1,2,3,5,9)) #only want to plot nieghbouring cells to oocyte
 p1 <- ggplot(pred, aes(x = time, y = median))

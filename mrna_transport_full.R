@@ -15,7 +15,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   #To get lengths read length.txt file in each folder
   
   source('extract_times_and_scaling.R')
-  times = extract_times_and_scaling(nSamples,nTest,test_on_mutant_data=test_on_mutant_data)
+  times = extract_times_and_scaling(nSamples,nTest,nTestOE,test_on_mutant_data=test_on_mutant_data)
   #############################################################
   m0 = c(0, rep(1,15)) #initial condition
   th = c(6.8,132.8)
@@ -37,17 +37,13 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
     exp_data = raw_data
     exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
-    #test_data = data[nSamples+sort_indices2,]
-    if (test_on_mutant_data){
-      overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
-      test_data = rbind(data,overexpression_data)
-      test_data = test_data[times$sort_indices2,]
-      test_data[is.na(test_data)]=0
-      # overexpression_data = overexpression_data[times$sort_indices3,] #need to sort time series and correspondingly reorder rows
-      # overexpression_data[is.na(overexpression_data)]=0 #stan can't deal with NAs
-    } else {
-      test_data = data[times$sort_indices2,]
-    }
+    overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+    overexpression_data = overexpression_data[times$sort_indices4,] #need to sort time series and correspondingly reorder rows
+    test_data = rbind(data,overexpression_data)
+    test_data = test_data[times$sort_indices2,]
+    test_data[is.na(test_data)]=0
+    WT_test_data = data[times$sort_indices3,]
+    WT_test_data[is.na(WT_test_data)]=0
   } else {
     #sample from the model to get fake data 
     mc <- stan_model('model_comparison_at_stst_with_decay.stan')  #('mrna_transport5.stan')
@@ -92,12 +88,13 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                       data = list (
                         y = exp_data,
                         T1  = nSamples,
-                        T2 = nSamples+nTest,
-                        T3 = 
+                        T2 = nSamples+nTest+nTestOE,
+                        T3 = nTestOE,
                         y0 = m0,
                         t0 = times$t0,
                         ts1 = times$ts1,
-                        ts2 = times$ts2
+                        ts2 = times$ts2,
+                        ts3 = times$ts4
                       ),
                       seed = 42,
                       chains = 4,
@@ -138,7 +135,13 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   
   #look at posterior predictive distn
   source('post_pred_plot.R')
-  p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples,'y_pred',estimates,identifier,title_stem='plots/posterior_pred',ts_test=times$ts3)
+  p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples+nTestOE,'y_pred',
+                       estimates,identifier,title_stem='plots/posterior_pred',
+                       ts_test=times$ts3,OE_test=times$ts4)
+  
+  p2 <- post_pred_plot(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
+                       estimates,identifier,title_stem='plots/posterior_pred_OE',
+                       ts_test=times$ts3,OE_test=times$ts4)
   
   if (show_diagnostic_plots) {
     source('mcmcDensity.R')
