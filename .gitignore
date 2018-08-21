@@ -1,5 +1,6 @@
 *.rds
 */*/*.tif
+*/*/*.pickle
 fits/
 plots/
 log_files/

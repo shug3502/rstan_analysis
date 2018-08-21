@@ -1,0 +1,13 @@
+Export_Individual_Channels:True
+Choose_Z_Section:Default-Z (last-viewed)
+Choose_T_Section:Default-T (last-viewed)
+Data_Type:Image
+Format:OME-TIFF
+IDs:[508225L]
+Zoom:100%
+Export_Merged_Image:True
+Folder_Name:Batch_Image_Export
+Individual_Channels_Grey:False
+Processing 1 images
+Processing image: ID 508225: 20180608_oocyte_stg6_phalloidin400_grk546_grkintron_647_30x_SI_gal_ave4__Z_016.oir
+  Saving file as: Batch_Image_Export/20180608_oocyte_stg6_phalloidin400_grk546_grkintron_647_30x_SI_gal_ave4__Z_016.oir.ome.tif
