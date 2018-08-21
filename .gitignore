@@ -1,5 +1,4 @@
 *.rds
-*/*/roi_coords/
 */*/*.tif
 fits/
 plots/
