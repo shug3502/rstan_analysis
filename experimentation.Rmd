@@ -64,7 +64,7 @@ library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 #read in data on WT
-N=6 # sample size
+N=8 # sample size
 data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
 data = data[seq_len(N),]
 #aggregate into two compartments
@@ -108,9 +108,10 @@ sig = 50
 phi = 0.289
 nSamples = 15
 nTest = 5
+nTestOE = 0
 nTotal = nSamples + nTest
 source('extract_times_and_scaling.R')
-times = extract_times_and_scaling(nSamples,nTest,test_on_mutant_data=FALSE)
+times = extract_times_and_scaling(nSamples,nTest,nTestOE,test_on_mutant_data=FALSE)
 data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
 raw_data = data[times$sort_indices2,]
 #take a vector of transport bias values for nu to loop through
@@ -245,9 +246,9 @@ We use leave one out model comparison to evaluate whether the model with spatial
 
 ```{r}
 source('mrna_transport_full.R')
-res_uniform = mrna_transport_inference_full('full_nu_uniform_v234',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = TRUE, test_on_mutant_data = FALSE, is_nu_uniform = TRUE)
+res_uniform = mrna_transport_inference_full('full_nu_uniform_v234',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = TRUE)
 
-res_varying = mrna_transport_inference_full('full_nu_uniform_v235',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = TRUE, test_on_mutant_data = FALSE, is_nu_uniform = FALSE)
+res_varying = mrna_transport_inference_full('full_nu_uniform_v235',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = FALSE)
 
 print(loo::compare(res_uniform[[2]],res_varying[[2]]))
 ```

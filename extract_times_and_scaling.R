@@ -45,8 +45,8 @@ extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE
 
   #######################################
   #fit linear models
-  lm_time <- lm(log(egg_chamber_areas[1:nSamples]) ~ stages[1:nSamples])
-  df <- data.frame(la = log(egg_chamber_areas[1:nSamples]), stages = stages[1:nSamples])
+  lm_time <- lm(log(egg_chamber_areas) ~ stages)
+  df <- data.frame(la = log(egg_chamber_areas), stages = stages)
   df <- df %>% mutate(pred_age = predict(lm_time,df))
   real_time <- c(8,6,5,3,6,6) #time for each stage from start of 3 to end of 8, according to jia 2016
   cum_time <- cumsum(real_time)
