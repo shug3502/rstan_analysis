@@ -244,10 +244,10 @@ Finally, we should make predictions for the full model for Wild Type and Overexp
 We use leave one out model comparison to evaluate whether the model with spatially varying bias $\nu$ is an improvement over the simpler model with uniform $\nu$. 
 
 ```{r}
+source('mrna_transport_full.R')
+res_uniform = mrna_transport_inference_full('full_nu_uniform_v234',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = TRUE, test_on_mutant_data = FALSE, is_nu_uniform = TRUE)
 
-res_uniform = mrna_transport_inference_full('full_nu_uniform_v223',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 6, nTest = 14, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = TRUE)
-
-res_varying = mrna_transport_inference_full('full_nu_uniform_v224',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 6, nTest = 14, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = FALSE)
+res_varying = mrna_transport_inference_full('full_nu_uniform_v235',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = TRUE, test_on_mutant_data = FALSE, is_nu_uniform = FALSE)
 
 print(loo::compare(res_uniform[[2]],res_varying[[2]]))
 ```
