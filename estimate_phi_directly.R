@@ -65,12 +65,43 @@ make_plot_comparing_phenotypes <- function(){
   a <- out_OE[[1]] %>% mutate(phenotype = 'OE')
   b <- out_WT[[1]] %>% mutate(phenotype = 'WT')
   d <- out_UE[[1]] %>% mutate(phenotype = 'UE')
-  full_join(a,b) %>%
+  h <- full_join(a,b) %>%
     full_join(.,d) %>% ggplot(.,aes(Region,BgdSubtract/MeanByRegion[Region=='nurse_cells'],color=phenotype)) +
      geom_violin(draw_quantiles = c(0.5)) + 
      geom_jitter(alpha=0.3) +
      theme_bw() +
      scale_x_discrete("Region", labels = c("background" = "BGD","oocyte" = "OO","nurse_cells" = "NC")) +
      ylab('Normalised intensity')
+  print(h)
   ggsave('plots/pheno_temp.eps',device = cairo_ps)
 }
+
+get_mean_and_std <- function(q){
+  q %>% mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
+    summarise(av = mean(phi), std = sd(phi))
+}
+
+plot_distn_of_norm_int <- function(){
+  get_phi <- function(q) q %>% mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
+    mutate(phi = 1/phi)
+  a <- out_OE[[1]] %>% mutate(phenotype = 'OE')
+  b <- out_WT[[1]] %>% mutate(phenotype = 'WT')
+  d <- out_UE[[1]] %>% mutate(phenotype = 'UE')
+  
+  full_join(a,b) %>%
+  full_join(.,d) %>%
+  get_phi %>%
+  filter(Region=='oocyte') %>% 
+#      filter(phi>0 ) %>%
+  ggplot(aes(x = Region,y = phi)) + 
+  geom_violin(draw_quantiles = c(0.25,0.5,0.75)) +
+  geom_jitter(aes(color=factor(Sample)),alpha=0.5) + 
+  facet_wrap(~phenotype) + 
+  coord_cartesian(ylim = c(0, 20)) 
+  
+}
+
+out_OE <- estimate_phi_directly(is_wildtype = FALSE, v=seq_len(8)[-3])
+out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq_len(11)[-1])
+out_UE <- estimate_phi_directly(is_wildtype = FALSE, is_overexpressor=FALSE, v=seq_len(1))
+

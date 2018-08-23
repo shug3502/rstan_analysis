@@ -1,0 +1,51 @@
+---
+title: "Lab notes"
+author: "Jonathan Harrison"
+date: "23/08/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+#Notes for week beginning 20th August 2018. 
+
+Have been working on manual segmentation of cells within egg chambers and quantification of RNA-protein complexes to assess the aggregation of complexes in the oocyte. 
+
+This allows us to make predictions for WT and OE behaviour. 
+We fit the ODE model to data from a limited selection of egg chambers using data from all cells in these egg chambers and inferring all the parameters of our model. We do place a strong informative prior on the aggregation parameter $\phi$ 
+
+
+## Predictions fitted to 8 example egg chambers
+
+```{r}
+source('mrna_transport_full.R')
+res_uniform = mrna_transport_inference_full('full_nu_uniform_v234',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = TRUE)
+
+res_varying = mrna_transport_inference_full('full_nu_uniform_v235',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = FALSE)
+
+print(loo::compare(res_uniform[[2]],res_varying[[2]]))
+```
+
+The model with spatially varying transport bias is favoured over the model with uniform transport bias. Both models fit well for the wild type data. For the overexpression mutant data, we assume that the rate of production $a$ is twice as large, but all other parameters are the same. under this assumption, we make predictions as shown in the plots. The predictions match well for the oocyte and nurse cells close to the oocyte. However, for the nurse cells furthest from the oocyte, the measured RNA levels are higher than the predictions from either model. This suggests that there is still something that we are not capturing well at present. 
+
+## Revisiting aggregation in oocyte
+
+I had previously found evidence to suggest that in the overexpression mutant there is more aggregation of RNA complexes in the oocyte than in the wildtype, and less in an underexpression mutant. This finding is not included currently in the predictions from the model. To account for this, I first manually labelled some more data to get better estimates of the aggregation parameter, $\phi$. The results of this are shown below.
+```{r}
+source('estimate_phi_directly.R')
+make_plot_comparing_phenotypes()
+plot_distn_of_norm_int()
+```
+
+
+I then changed the predictions made by the mode such that for the overexpression predictions, I use an aggregation parameter $\phi_2/ \phi_1 $ times the parameter sampled from the joint posterior distribution.  
+
+```{r}
+plot(cars)
+```
+
+
+
