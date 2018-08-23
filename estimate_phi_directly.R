@@ -57,9 +57,9 @@ return(list(q,hh))
 }
 
 make_plot_comparing_phenotypes <- function(){
-  out_OE <- estimate_phi_directly(is_wildtype = FALSE, v=c(1,2,5))
-  out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq(from=2,to=6))
-  out_UE <- estimate_phi_directly(is_wildtype = FALSE, is_overexpressor=FALSE, v=c(1))
+  out_OE <- estimate_phi_directly(is_wildtype = FALSE, v=seq_len(8)[-3])
+  out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq_len(8)[-1])
+  out_UE <- estimate_phi_directly(is_wildtype = FALSE, is_overexpressor=FALSE, v=seq_len(3))
   a <- out_OE[[1]] %>% mutate(phenotype = 'OE')
   b <- out_WT[[1]] %>% mutate(phenotype = 'WT')
   d <- out_UE[[1]] %>% mutate(phenotype = 'UE')
