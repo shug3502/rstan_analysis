@@ -16,17 +16,19 @@ particles <- data.frame(Area=numeric(),Mean=numeric(),Min=numeric(),Max=numeric(
 for (r in seq_along(regions)){
   #get list of files for all examples, and extract results for a given region
   #returns a list of results for all examples for a given region
-  if (is_wildtype){
-    root <- 'Example'
-    temp <- list.files(path = paste('data/',root,v,'/',sep=''), pattern = "\\.xls$",full.names=TRUE) %>%
-      grep(regions[r],. , value=TRUE) %>% 
-      lapply(.,read.table)
-  } else {
-  root <- ifelse(is_overexpressor,'Overexpression','Underexpression')
+  # if (is_wildtype){
+  #   root <- 'Example'
+  #   temp <- list.files(path = paste('data/',root,v,'/',sep=''), pattern = "\\.xls$",full.names=TRUE) %>%
+  #     grep(regions[r],. , value=TRUE) %>% 
+  #     lapply(.,read.table)
+
+  root <- case_when(is_wildtype ~ 'Example',
+                    is_overexpressor ~ 'Overexpression',
+                    TRUE ~ 'Underexpression')
   temp <- list.files(path = paste('data/',root,v,'/',sep=''), pattern = "\\.xls$",full.names=TRUE) %>%
     grep(regions[r],. , value=TRUE) %>% 
     lapply(.,read.csv) #somehow stored data in different formats
-  }  
+    
   #take results for each example and add to data frame  
   for (j in seq_along(temp)){
     Region <- rep(regions[r],nrow(temp[[j]]))
@@ -46,7 +48,7 @@ q <- processed %>%
   mutate(MeanByRegion = mean(BgdSubtract),StdByRegion = sd(BgdSubtract))
 q <- q %>%
   mutate(Ratio = MeanByRegion/median(q$MeanByRegion))
-hh <- ggplot(q,aes(Region,BgdSubtract/MeanByRegion[Region=='nurse_cells'])) +
+hh <- ggplot(q,aes(Region,BgdSubtract/MeanByRegion[Region=='nurse_cells'],color=factor(Sample))) +
   geom_violin() + 
   geom_jitter() +
   theme_bw() +
@@ -58,17 +60,17 @@ return(list(q,hh))
 
 make_plot_comparing_phenotypes <- function(){
   out_OE <- estimate_phi_directly(is_wildtype = FALSE, v=seq_len(8)[-3])
-  out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq_len(8)[-1])
-  out_UE <- estimate_phi_directly(is_wildtype = FALSE, is_overexpressor=FALSE, v=seq_len(3))
+  out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq_len(11)[-1])
+  out_UE <- estimate_phi_directly(is_wildtype = FALSE, is_overexpressor=FALSE, v=seq_len(1))
   a <- out_OE[[1]] %>% mutate(phenotype = 'OE')
   b <- out_WT[[1]] %>% mutate(phenotype = 'WT')
   d <- out_UE[[1]] %>% mutate(phenotype = 'UE')
   full_join(a,b) %>%
     full_join(.,d) %>% ggplot(.,aes(Region,BgdSubtract/MeanByRegion[Region=='nurse_cells'],color=phenotype)) +
-     geom_violin() + 
-     geom_jitter() +
+     geom_violin(draw_quantiles = c(0.5)) + 
+     geom_jitter(alpha=0.3) +
      theme_bw() +
      scale_x_discrete("Region", labels = c("background" = "BGD","oocyte" = "OO","nurse_cells" = "NC")) +
      ylab('Normalised intensity')
-  ggsave('pheno_temp.eps')
+  ggsave('plots/pheno_temp.eps',device = cairo_ps)
 }
