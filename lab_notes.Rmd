@@ -58,9 +58,24 @@ We consider these different sources of heterogeneity.
 ## Hierarchical full model
 ```{r}
 source('mrna_transport_full.R')
-res_hierarchical = mrna_transport_inference_full('full_nu_uniform_hierarchical_v242',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, use_hierarchical_model = TRUE, is_nu_uniform = TRUE)
+res_hierarchical = mrna_transport_inference_full('full_nu_uniform_hierarchical_v242',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, use_hierarchical_model = TRUE, use_prior_predictive = FALSE, is_nu_uniform = TRUE)
 
 ```
+
+Predictions are actually similar to the simple model.
+In actual fact, the hierarchical model has computational difficulties in fitting it via MCMC. The pairs plot below shows many divergent transitions indicating that the posterior distribution is highly curved and is not being explored fully by the MCMC algorithm.
+```{r}
+estimates = readRDS(paste('fits/mrna_transport_estimatesfull_nu_uniform_hierarchical_v242.rds'))
+pairs(estimates,pars = c('log_a','log_b','log_gamma','logit_nu'))                    
+```
+
+
+Try different priors:
+```{r}
+source('mrna_transport_full.R')
+res_hierarchical = mrna_transport_inference_full('full_nu_uniform_hierarchical_v244',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, use_hierarchical_model = TRUE, use_prior_predictive = FALSE, is_nu_uniform = TRUE)
+```
+
 
 
 ## Prior predictive distribution

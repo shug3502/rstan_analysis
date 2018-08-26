@@ -112,14 +112,14 @@ transformed parameters{
 model {
   real z[T1,16];
   real aux[T1,16];
-  sigma ~ normal(0,10) T[0,]; 
+  sigma ~ normal(0,5) T[0,]; 
   phi ~ normal(0.289,0.0285) T[0,1];
-  log_a ~ normal(0,1);
-  log_b ~ normal(0,1);
-  log_gamma ~ normal(0,1);
-  logit_nu ~ normal(0,1);
+  log_a ~ normal(5,2);
+  log_b ~ normal(1,2);
+  log_gamma ~ normal(-2,2);
+  logit_nu ~ normal(2,2);
   for (i in 1:4){
-    tau[i] ~ normal(0,0.1) T[0,];
+    tau[i] ~ normal(0,1) T[0,];
   }
   for (t in 1:T1){
     transformed_theta[t,1] ~ normal(log_b,tau[1]);
@@ -166,7 +166,7 @@ generated quantities {
   // for the overexpression mutant
   for (t in 1:T3){
     theta_OE[t,1] = exp(normal_rng(log_b,tau[1]));
-    theta_OE[t,2] = exp(normal_rng(log_a,tau[2]));    
+    theta_OE[t,2] = 2*exp(normal_rng(log_a,tau[2]));    
     theta_OE[t,3] = exp(normal_rng(log_gamma,tau[3]));
     theta_OE[t,4] = inv_logit(normal_rng(logit_nu,tau[4]));
     aux_gq[1:T3] = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE[t], to_array_1d(OE_producers[t,]), x_i);
