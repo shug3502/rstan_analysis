@@ -22,9 +22,9 @@ We fit the ODE model to data from a limited selection of egg chambers using data
 
 ```{r}
 source('mrna_transport_full.R')
-res_uniform = mrna_transport_inference_full('full_nu_uniform_v234',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = TRUE)
+res_uniform = mrna_transport_inference_full('full_nu_uniform_v234',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE, is_nu_uniform = TRUE)
 
-res_varying = mrna_transport_inference_full('full_nu_uniform_v235',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, test_on_mutant_data = FALSE, is_nu_uniform = FALSE)
+res_varying = mrna_transport_inference_full('full_nu_uniform_v235',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE  , is_nu_uniform = FALSE)
 
 print(loo::compare(res_uniform[[2]],res_varying[[2]]))
 ```
@@ -47,5 +47,29 @@ I then changed the predictions made by the mode such that for the overexpression
 plot(cars)
 ```
 
+## Heterogeneity 
+It is clear we should introduce heterogeneity into the model on some level to achieve a better fit. A key question is where is this hetergeneity most appropriate?
+1. Spatially heterogeneous transport bias, $\nu$,
+2. Heterogeneous production in OE mutant via production vector, $\mathbf{v}$,
+3. Population heterogeneity via a heirarchical model.
+
+We consider these different sources of heterogeneity.
+
+## Hierarchical full model
+```{r}
+source('mrna_transport_full.R')
+res_hierarchical = mrna_transport_inference_full('full_nu_uniform_hierarchical_v242',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, use_hierarchical_model = TRUE, is_nu_uniform = TRUE)
+
+```
+
+
+## Prior predictive distribution
+Sample from prior predictive for hierarchical distribution.
+
+```{r}
+source('mrna_transport_full.R')
+res_pp = mrna_transport_inference_full('full_nu_uniform_hierarchical_v243',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = FALSE, show_diagnostic_plots = FALSE, use_hierarchical_model = TRUE, use_prior_predictive =TRUE, is_nu_uniform = TRUE)
+
+```
 
 

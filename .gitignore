@@ -3,8 +3,7 @@
 */*/*.pickle
 fits/
 plots/
-log_files/
-old_files/
+*_files/
 .Rhistory
 *.old
 make_figures_mRNA_localization_files/

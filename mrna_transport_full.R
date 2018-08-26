@@ -1,7 +1,8 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
 mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
                                              parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
-                                             show_diagnostic_plots=FALSE, test_on_mutant_data=TRUE, is_nu_uniform=TRUE){
+                                             show_diagnostic_plots=FALSE, use_hierarchical_model=FALSE, use_prior_predictive=TRUE,
+                                             is_nu_uniform=TRUE){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
@@ -15,7 +16,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   #To get lengths read length.txt file in each folder
   
   source('extract_times_and_scaling.R')
-  times = extract_times_and_scaling(nSamples,nTest,nTestOE,test_on_mutant_data=test_on_mutant_data)
+  times = extract_times_and_scaling(nSamples,nTest,nTestOE)
   #############################################################
   m0 = c(0, rep(1,15)) #initial condition
   th = c(6.8,132.8)
@@ -44,7 +45,10 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     test_data[is.na(test_data)]=0
     WT_test_data = data[times$sort_indices3,]
     WT_test_data[is.na(WT_test_data)]=0
+    source('get_producers.R')
+    producers = get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
   } else {
+    warning('TODO: update simulated data for full model')
     #sample from the model to get fake data 
     mc <- stan_model('model_comparison_at_stst_with_decay.stan')  #('mrna_transport5.stan')
     expose_stan_functions(mc)
@@ -82,8 +86,13 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   
   ##########################
   if (run_mcmc) {
-    stan_file = ifelse(is_nu_uniform, 'mrna_transport_full.stan',
-                       'mrna_transport_full_nu_varying_spatially.stan')
+    if (!is_nu_uniform & use_hierarchical_model) warning('Not yet implemented a non uniform hierarchical model. Using normal non-uniform model')
+    stan_file = case_when( 
+      use_prior_predictive ~ 'hierarchical_prior_predictive.stan',
+      !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
+      use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
+      TRUE ~ 'mrna_transport_full.stan')
+    print(stan_file)
     estimates <- stan(file = stan_file,
                       data = list (
                         y = exp_data,
@@ -94,7 +103,8 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                         t0 = times$t0,
                         ts1 = times$ts1,
                         ts2 = times$ts2,
-                        ts3 = times$ts4
+                        ts3 = times$ts4,
+                        OE_producers = producers
                       ),
                       seed = 42,
                       chains = 4,
@@ -135,14 +145,16 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   
   #look at posterior predictive distn
   source('post_pred_plot.R')
-  p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples+nTestOE,'y_pred',
-                       estimates,identifier,title_stem='plots/posterior_pred',
-                       ts_test=times$ts3,OE_test=times$ts4)
-  
-  p2 <- post_pred_plot(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
-                       estimates,identifier,title_stem='plots/posterior_pred_OE',
-                       ts_test=times$ts3,OE_test=times$ts4)
-  
+  if (use_prior_predictive) {
+    p1 <- post_pred_plot(exp_data, times$ts1, nSamples, 'y_pred', estimates, identifier, title_stem='plots/prior_pred')
+  } else {
+    p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples+nTestOE,'y_pred',
+                         estimates,identifier,title_stem='plots/posterior_pred',
+                         ts_test=times$ts3,OE_test=times$ts4)
+    p2 <- post_pred_plot(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
+                         estimates,identifier,title_stem='plots/posterior_pred_OE',
+                         ts_test=times$ts3,OE_test=times$ts4)
+  }  
   if (show_diagnostic_plots) {
     source('mcmcDensity.R')
     mcmcDensity(estimates, parametersToPlot, byChain = TRUE)

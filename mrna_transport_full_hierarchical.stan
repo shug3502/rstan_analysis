@@ -91,28 +91,43 @@ transformed data {
 parameters {
   real<lower=0> sigma; //noise param
   real<lower=0,upper=1> phi; //difference between particles in NCs and in Oocyte
-  real<lower=0> a;
-  real<lower=0> b;
-  real<lower=0> gamma;
-  real<lower=0,upper=1> nu;
+  real log_a; //use this as popn mean
+  real log_b; //use this as popn mean
+  real log_gamma; //use this as popn mean
+  real logit_nu; //use as popn mean
+  real<lower=0> tau[4];
+  real transformed_theta[T1,4];
 }
-transformed parameters {
-real theta[4];
-theta[1] = b;
-theta[2] = a;
-theta[3] = gamma;
-theta[4] = nu;
+
+transformed parameters{
+  real theta[T1,4];
+  for (i in 1:T1){
+    for (j in 1:3){
+      theta[i,j] = exp(transformed_theta[i,j]);
+    }
+    theta[i,4] = inv_logit(transformed_theta[i,4]);
+  }
 }
+
 model {
   real z[T1,16];
-  sigma ~ normal(0,100) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
+  real aux[T1,16];
+  sigma ~ normal(0,10) T[0,]; 
   phi ~ normal(0.289,0.0285) T[0,1];
-  a ~ normal(0,100) T[0,];
-  b ~ normal(0,100) T[0,];
-  gamma ~ normal(0,1) T[0,];
-  nu ~ beta(0.5,0.5) T[0,1];
-  z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
+  log_a ~ normal(0,1);
+  log_b ~ normal(0,1);
+  log_gamma ~ normal(0,1);
+  logit_nu ~ normal(0,1);
+  for (i in 1:4){
+    tau[i] ~ normal(0,0.1) T[0,];
+  }
   for (t in 1:T1){
+    transformed_theta[t,1] ~ normal(log_b,tau[1]);
+    transformed_theta[t,2] ~ normal(log_a,tau[2]);    
+    transformed_theta[t,3] ~ normal(log_gamma,tau[3]);
+    transformed_theta[t,4] ~ normal(logit_nu,tau[4]);    
+    aux = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta[t], x_r, x_i);
+    z[t] = aux[t];
     for (j in 1:16) {
       if (j>1){
         y[t,j] ~ neg_binomial_2(z[t,j], sigma);
@@ -125,14 +140,21 @@ model {
 generated quantities {
   int y_pred[T2,16]; //predictions for WT
   real y_ode[T2,16]; 
+  real theta_wt[T2,4]; //parameters for each WT egg chamber
   int y_pred_OE[T3,16]; //predictions for OE
   real y_ode_OE[T3,16];  
-  real theta_OE[4];
+  real theta_OE[T3,4]; //parameters for each OE egg chamber
   real y_lik_ode[T1,16];
   vector[T1] log_lik;
+  real aux_gq[max(max(T1,T2),T3),16];
   // for wild type
-  y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta, x_r, x_i );
   for (t in 1:T2){
+    theta_wt[t,1] = exp(normal_rng(log_b,tau[1]));
+    theta_wt[t,2] = exp(normal_rng(log_a,tau[2]));    
+    theta_wt[t,3] = exp(normal_rng(log_gamma,tau[3]));
+    theta_wt[t,4] = inv_logit(normal_rng(logit_nu,tau[4]));    
+    aux_gq[1:T2] = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta_wt[t], x_r, x_i);
+    y_ode[t] = aux_gq[t];
     for (j in 1:16){
       if (j>1){
         y_pred[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
@@ -142,11 +164,13 @@ generated quantities {
     }
   }
   // for the overexpression mutant
-  theta_OE = theta;
-  theta_OE[2] = theta[2]; //double the rate of production in the overexpressor
-//  y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE, x_r, x_i ); //to use OE producers need to solve ODE separately for each egg chamber
   for (t in 1:T3){
-    y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i ); //use overexpression producers
+    theta_OE[t,1] = exp(normal_rng(log_b,tau[1]));
+    theta_OE[t,2] = exp(normal_rng(log_a,tau[2]));    
+    theta_OE[t,3] = exp(normal_rng(log_gamma,tau[3]));
+    theta_OE[t,4] = inv_logit(normal_rng(logit_nu,tau[4]));
+    aux_gq[1:T3] = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE[t], to_array_1d(OE_producers[t,]), x_i);
+    y_ode_OE[t] = aux_gq[t];
     for (j in 1:16){
       if (j>1){
         y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j], sigma);
@@ -157,8 +181,9 @@ generated quantities {
   }
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
-  y_lik_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i );
   for (t in 1:T1){
+    aux_gq[1:T1] = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta[t], x_r, x_i );
+    y_lik_ode[t] = aux_gq[t];
     for (j in 1:16){
       if (j>1) {
         log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j],sigma);
