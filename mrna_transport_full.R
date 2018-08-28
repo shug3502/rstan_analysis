@@ -2,7 +2,7 @@
 mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
                                              parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
                                              show_diagnostic_plots=FALSE, use_hierarchical_model=FALSE, use_prior_predictive=TRUE,
-                                             is_nu_uniform=TRUE){
+                                             use_binary_producers=FALSE, is_nu_uniform=TRUE){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
@@ -45,8 +45,13 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     test_data[is.na(test_data)]=0
     WT_test_data = data[times$sort_indices3,]
     WT_test_data[is.na(WT_test_data)]=0
-    source('get_producers.R')
-    producers = get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
+    if (use_binary_producers){
+      source('get_producers.R') #use heterogeneous production information
+      producers = get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
+    } else {
+      producers = matrix(rep(1,nTestOE*16),ncol=16)
+      producers[1,] = 0
+    }
   } else {
     warning('TODO: update simulated data for full model')
     #sample from the model to get fake data 

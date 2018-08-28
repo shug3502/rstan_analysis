@@ -89,15 +89,35 @@ make_plot_comparing_phenotypes <- function(){
   ggsave('plots/pheno_temp.eps',device = cairo_ps)
 }
 
-get_mean_and_std <- function(q){
-  q %>% mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
+process_for_phi <- function(q){
+  z<- q %>% 
+    mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
     ungroup() %>%
     filter(Region=="oocyte") %>%
     filter(phi>-1 & phi<10) %>%
-    group_by(phenotype) %>%
+    group_by(phenotype)
+  return(z)
+}
+
+get_mean_and_std <- function(q){
+ q %>% process_for_phi()
     add_tally() %>%
     summarise(av = mean(phi), std = sd(phi), av_median=median(phi), stnd_error=sd(phi)/n[1])
 }
+
+#attempt to fit gamma distribution to use as prior for phi
+fit_gamma_to_phi_data <- function(q){
+  library(fitdistrplus)
+  z <- q %>%
+    process_for_phi() %>% 
+    summarise(shape = fitdist(phi, distr = "gamma", method = "mle")$estimate[1], rate = fitdist(phi, distr = "gamma", method = "mle")$estimate[2])
+  # fit.gamma <- fitdist(z$phi, distr = "gamma", method = "mle")
+  # summary(fit.gamma)
+  # plot(fit.gamma)
+  
+  return(z)
+}
+
 
 plot_distn_of_norm_int <- function(){
   get_phi <- function(q) q %>% mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
@@ -130,28 +150,11 @@ b <- out_WT[[1]] %>% mutate(phenotype = 'WT')
 d <- out_UE[[1]] %>% mutate(phenotype = 'UE')
 q <- full_join(a,b) %>%
   full_join(.,d)
-q %>% get_mean_and_std() %>% print()
-
+get_mean_and_std(q) %>% print()
+fit_gamma_to_phi_data(q)
 
 q %>%
-  mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
-  ungroup() %>%
-  filter(phi>-1 & phi<10) %>%
-  filter(Region=="oocyte") %>%
+  process_for_phi() %>%
   group_by(phenotype) %>% 
   ggplot(aes(phi,color=phenotype)) +
   geom_density() 
-
-#attempt to fit gamma distribution to use as prior for phi
-library(fitdistrplus)
-z <- q %>%
-  mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
-  ungroup() %>%
-  filter(phi>0) %>%
-  filter(Region=="oocyte") %>%
-  group_by(phenotype) %>% 
-  summarise(shape = fitdist(phi, distr = "gamma", method = "mle")$estimate[1], rate = fitdist(phi, distr = "gamma", method = "mle")$estimate[2])
-
-fit.gamma <- fitdist(z$phi, distr = "gamma", method = "mle")
-summary(fit.gamma)
-plot(fit.gamma)

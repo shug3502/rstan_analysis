@@ -88,3 +88,14 @@ res_pp = mrna_transport_inference_full('full_nu_uniform_hierarchical_v243',use_r
 ```
 
 
+#############################
+## Priors
+
+After collecting more data on aggregation of RNA complexes in the oocyte and re-analysing some of this data, it seems there is more uncertainty in the aggregation data than I was capturing previously. 
+Previously I was using a very specific prior based on the mean value found for the aggregation parameter $\phi$ with uncertainty for the mean rather than the distribution itself. 
+```{r}
+source('mrna_transport_full.R')
+res_new_priors = mrna_transport_inference_full('full_nu_uniform_v246',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE, use_prior_predictive =FALSE, is_nu_uniform = TRUE)
+```
+
+
