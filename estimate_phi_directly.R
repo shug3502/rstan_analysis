@@ -46,11 +46,14 @@ for (r in seq_along(regions)){
     particles <- rbind(particles,cbind(cbind(cbind(temp[[j]],Region),Sample),Stage))  
   }
 }
+gg<- particles %>% filter(Region=="background") %>% ggplot(aes(x=RawIntDen, y=Region, color=factor(Sample))) + geom_jitter()
+print(gg)
 #########################
 #process by subtracting background values and valculating ratio
 processed <- particles %>% 
+  filter(Region!="background" | RawIntDen<10000) %>% 
   group_by(Sample) %>% 
-  mutate(MeanBgd = mean(RawIntDen[Region=='background']),BgdSubtract = RawIntDen-MeanBgd)
+  mutate(MeanBgd = median(RawIntDen[Region=='background']),BgdSubtract = RawIntDen-MeanBgd)
 
 q <- processed %>%
   dplyr::select(BgdSubtract,Region,Sample,Stage) %>% #be careful of clash with select in MASS package
@@ -69,16 +72,16 @@ return(list(q,hh))
 }
 
 make_plot_comparing_phenotypes <- function(){
-  out_OE <- estimate_phi_directly(is_wildtype = FALSE, v=seq_len(8)[-3])
-  out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq_len(11)[-1])
-  out_UE <- estimate_phi_directly(is_wildtype = FALSE, is_overexpressor=FALSE, v=seq_len(5))
+  out_OE <- estimate_phi_directly(is_wildtype = FALSE, v=seq_len(13))
+  out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq_len(12))
+  out_UE <- estimate_phi_directly(is_wildtype = FALSE, is_overexpressor=FALSE, v=seq_len(5)[-1])
   a <- out_OE[[1]] %>% mutate(phenotype = 'OE')
   b <- out_WT[[1]] %>% mutate(phenotype = 'WT')
   d <- out_UE[[1]] %>% mutate(phenotype = 'UE')
   h <- full_join(a,b) %>%
     full_join(.,d) %>% ggplot(.,aes(Region,BgdSubtract/MeanByRegion[Region=='nurse_cells'],color=phenotype)) +
-     geom_violin(draw_quantiles = c(0.5)) + 
-     geom_jitter(alpha=0.3) +
+     geom_violin(draw_quantiles = c(0.5), scale="width") + 
+     geom_jitter(alpha=0.1) +
      theme_bw() +
      scale_x_discrete("Region", labels = c("background" = "BGD","oocyte" = "OO","nurse_cells" = "NC")) +
      ylab('Normalised intensity')
@@ -88,14 +91,19 @@ make_plot_comparing_phenotypes <- function(){
 
 get_mean_and_std <- function(q){
   q %>% mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
-    summarise(av = mean(phi), std = sd(phi))
+    ungroup() %>%
+    filter(Region=="oocyte") %>%
+    filter(phi>-1 & phi<10) %>%
+    group_by(phenotype) %>%
+    add_tally() %>%
+    summarise(av = mean(phi), std = sd(phi), av_median=median(phi), stnd_error=sd(phi)/n[1])
 }
 
 plot_distn_of_norm_int <- function(){
   get_phi <- function(q) q %>% mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
     mutate(phi = 1/phi)
-  out_OE <- estimate_phi_directly(is_wildtype = FALSE, v=seq_len(8))
-  out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq_len(11))
+  out_OE <- estimate_phi_directly(is_wildtype = FALSE, v=seq_len(13))
+  out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq_len(12))
   out_UE <- estimate_phi_directly(is_wildtype = FALSE, is_overexpressor=FALSE, v=seq_len(5)[-1])
   a <- out_OE[[1]] %>% mutate(phenotype = 'OE')
   b <- out_WT[[1]] %>% mutate(phenotype = 'WT')
@@ -107,9 +115,43 @@ plot_distn_of_norm_int <- function(){
   filter(Region=='oocyte') %>% 
 #      filter(phi>0 ) %>%
   ggplot(aes(x = Region,y = phi)) + 
-  geom_violin(draw_quantiles = c(0.25,0.5,0.75)) +
-  geom_jitter(aes(color=factor(Stage)),alpha=0.5) + 
+  geom_violin(draw_quantiles = c(0.25,0.5,0.75), scale="width") +
+  geom_jitter(aes(color=factor(Sample)),alpha=0.5) + 
   facet_wrap(~phenotype) + 
   coord_cartesian(ylim = c(0, 20)) 
   
 }
+
+out_OE <- estimate_phi_directly(is_wildtype = FALSE, v=seq_len(13))
+out_WT <- estimate_phi_directly(is_wildtype = TRUE, v=seq_len(12))
+out_UE <- estimate_phi_directly(is_wildtype = FALSE, is_overexpressor=FALSE, v=seq_len(5)[-1])
+a <- out_OE[[1]] %>% mutate(phenotype = 'OE')
+b <- out_WT[[1]] %>% mutate(phenotype = 'WT')
+d <- out_UE[[1]] %>% mutate(phenotype = 'UE')
+q <- full_join(a,b) %>%
+  full_join(.,d)
+q %>% get_mean_and_std() %>% print()
+
+
+q %>%
+  mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
+  ungroup() %>%
+  filter(phi>-1 & phi<10) %>%
+  filter(Region=="oocyte") %>%
+  group_by(phenotype) %>% 
+  ggplot(aes(phi,color=phenotype)) +
+  geom_density() 
+
+#attempt to fit gamma distribution to use as prior for phi
+library(fitdistrplus)
+z <- q %>%
+  mutate(phi = median(q$MeanByRegion) / BgdSubtract) %>%
+  ungroup() %>%
+  filter(phi>0) %>%
+  filter(Region=="oocyte") %>%
+  group_by(phenotype) %>% 
+  summarise(shape = fitdist(phi, distr = "gamma", method = "mle")$estimate[1], rate = fitdist(phi, distr = "gamma", method = "mle")$estimate[2])
+
+fit.gamma <- fitdist(z$phi, distr = "gamma", method = "mle")
+summary(fit.gamma)
+plot(fit.gamma)
