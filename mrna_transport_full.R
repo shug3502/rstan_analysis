@@ -2,7 +2,7 @@
 mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
                                              parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
                                              show_diagnostic_plots=FALSE, use_hierarchical_model=FALSE, use_prior_predictive=TRUE,
-                                             use_binary_producers=FALSE, is_nu_uniform=TRUE){
+                                             use_binary_producers=FALSE, train_on_OE=FALSE, is_nu_uniform=TRUE){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
@@ -45,6 +45,22 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     test_data[is.na(test_data)]=0
     WT_test_data = data[times$sort_indices3,]
     WT_test_data[is.na(WT_test_data)]=0
+    if (train_on_OE){
+      swap <- function(name1, name2, envir = parent.env(environment()))
+      {
+        temp <- get(name1, pos = envir)
+        assign(name1, get(name2, pos = envir), pos = envir)
+        assign(name2, temp, pos = envir)
+      }
+      swap('exp_data','overexpression_data')
+      swap('nSamples','nTestOE')
+      temp <- list(times$ts1,times$ts4)
+      times$ts1 <- temp[[2]]
+      times$ts4 <- temp[[1]]
+      print('swapped')
+      print(times$ts1)
+      print(nSamples)
+    }
     if (use_binary_producers){
       source('get_producers.R') #use heterogeneous production information
       producers = get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
@@ -98,23 +114,25 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
       use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
       TRUE ~ 'mrna_transport_full.stan')
     print(stan_file)
+    stan_list = list(y = exp_data,
+                     T1  = nSamples,
+                     T2 = nSamples+nTest+nTestOE,
+                     T3 = nTestOE,
+                     y0 = m0,
+                     t0 = times$t0,
+                     ts1 = times$ts1,
+                     ts2 = times$ts2,
+                     ts3 = times$ts4,
+                     OE_producers = producers
+                     )
+    initF <- function() list(nu=0.92, gamma=0.1, sigma=1, b=250)
     estimates <- stan(file = stan_file,
-                      data = list (
-                        y = exp_data,
-                        T1  = nSamples,
-                        T2 = nSamples+nTest+nTestOE,
-                        T3 = nTestOE,
-                        y0 = m0,
-                        t0 = times$t0,
-                        ts1 = times$ts1,
-                        ts2 = times$ts2,
-                        ts3 = times$ts4,
-                        OE_producers = producers
-                      ),
+                      data = stan_list,
                       seed = 42,
                       chains = 4,
                       warmup = 500,
-                      iter = 1000
+                      iter = 1000,
+                      init = initF
     )
     
     tryCatch({

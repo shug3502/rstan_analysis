@@ -90,7 +90,7 @@ transformed data {
 }
 parameters {
   real<lower=0> sigma; //noise param
-  real<lower=0> phi; //difference between particles in NCs and in Oocyte
+  real<lower=0,upper=1> phi; //difference between particles in NCs and in Oocyte
   real<lower=0> a;
   real<lower=0> b;
   real<lower=0> gamma;
@@ -105,11 +105,11 @@ theta[4] = nu;
 }
 model {
   real z[T1,16];
-  sigma ~ normal(0,10) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
-  phi ~ gamma(1.49,2.65) T[0,]; //normal(0.289,0.0285) T[0,1];
+  sigma ~ normal(0,10) T[0,];  
+  phi ~ normal(0.57,0.118) T[0,1];
   a ~ normal(0,100) T[0,];
   b ~ normal(0,100) T[0,];
-  gamma ~ normal(0,100) T[0,];
+  gamma ~ normal(0,1) T[0,]; //since this is scaled: gamma_tilde = gamma/b
   nu ~ beta(1,1) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
   for (t in 1:T1){

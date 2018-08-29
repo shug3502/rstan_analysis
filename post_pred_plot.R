@@ -4,9 +4,9 @@ require(ggplot2)
 pred <- as.data.frame(estimates, pars = params) %>%
   gather(factor_key = TRUE) %>%
   group_by(key) %>%
-  summarize(lb = quantile(value, probs = 0.05),
+  summarize(lb = quantile(value, probs = 0.025),
             median = quantile(value, probs = 0.5),
-            ub = quantile(value, probs = 0.95))
+            ub = quantile(value, probs = 0.975))
 xdata <- data.frame(rna = as.vector(raw_data),cellID = as.vector(matrix(rep(1:16,nSamples),nrow=nSamples,byrow=TRUE)),time = rep(ts,16))
 pred <- pred %>% bind_cols(xdata) %>%
         mutate(split = case_when(time %in% OE_test ~ 'overexpression',
