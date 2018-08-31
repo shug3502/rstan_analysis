@@ -73,7 +73,7 @@ pairs(estimates,pars = c('log_a','log_b','log_gamma','logit_nu'))
 Try different priors:
 ```{r}
 source('mrna_transport_full.R')
-res_hierarchical = mrna_transport_inference_full('full_nu_uniform_hierarchical_v244',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, use_hierarchical_model = TRUE, use_prior_predictive = FALSE, is_nu_uniform = TRUE)
+res_hierarchical = mrna_transport_inference_full('full_nu_uniform_hierarchical_v244',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = TRUE, show_diagnostic_plots = FALSE, use_hierarchical_model = TRUE, use_prior_predictive = FALSE, is_nu_uniform = TRUE)
 ```
 
 
@@ -95,7 +95,26 @@ After collecting more data on aggregation of RNA complexes in the oocyte and re-
 Previously I was using a very specific prior based on the mean value found for the aggregation parameter $\phi$ with uncertainty for the mean rather than the distribution itself. 
 ```{r}
 source('mrna_transport_full.R')
-res_new_priors = mrna_transport_inference_full('full_nu_uniform_v246',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE, use_prior_predictive =FALSE, is_nu_uniform = TRUE)
+res_new_priors = mrna_transport_inference_full('full_nu_uniform_v247',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE, use_prior_predictive =FALSE, is_nu_uniform = TRUE)
 ```
 
+Since our model is a continuous model with well mixed compartments, and the aggregation paramter $\phi$ is relating to the mean field.
+Idea: for the calculated phi values, take an average for each cample and look ath the distribution of these averages.
+
+
+Investigate training model on OE data to see what parameter estimates we obtain with these data.
+
+```{r}
+source('mrna_transport_full.R')
+res_new_priors = mrna_transport_inference_full('full_OE_data_nu_uniform_v249',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE, use_prior_predictive =FALSE, train_on_OE=TRUE, is_nu_uniform = TRUE)
+```
+
+```{r}
+source('mrna_transport_full.R')
+res1 = mrna_transport_inference_full('full_nu_uniform_v250',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE, use_prior_predictive =FALSE, train_on_OE=FALSE, is_nu_uniform = TRUE)
+
+res2 = mrna_transport_inference_full('full_OE_data_nu_uniform_v251',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE, use_prior_predictive =FALSE, train_on_OE=TRUE, is_nu_uniform = TRUE)
+
+res3 = mrna_transport_inference_full('full_nu_uniform_v252',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE, use_prior_predictive =FALSE, train_on_OE=FALSE, is_nu_uniform = TRUE) #with initialisation
+```
 

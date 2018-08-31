@@ -100,7 +100,8 @@ process_for_phi <- function(q){
 }
 
 get_mean_and_std <- function(q){
- q %>% process_for_phi()
+ q %>%
+    process_for_phi() %>%
     add_tally() %>%
     summarise(av = mean(phi), std = sd(phi), av_median=median(phi), stnd_error=sd(phi)/n[1])
 }
@@ -151,10 +152,26 @@ d <- out_UE[[1]] %>% mutate(phenotype = 'UE')
 q <- full_join(a,b) %>%
   full_join(.,d)
 get_mean_and_std(q) %>% print()
-fit_gamma_to_phi_data(q)
+fit_gamma_to_phi_data(q) %>% print()
 
 q %>%
   process_for_phi() %>%
   group_by(phenotype) %>% 
   ggplot(aes(phi,color=phenotype)) +
   geom_density() 
+
+q %>% process_for_phi() %>%
+  group_by(Sample,phenotype) %>%
+  summarise(av=mean(phi)) %>%
+  ggplot(aes(x=phenotype,y=av)) +
+  geom_violin(draw_quantiles = c(0.5), scale="width") +
+  geom_jitter() + 
+  labs(y="phi") + 
+  theme_bw()
+
+q %>% process_for_phi() %>%
+  group_by(Sample,phenotype) %>%
+  summarise(av=mean(phi)) %>%
+  group_by(phenotype) %>%
+  add_tally() %>%
+  summarise(ss=mean(av),std_err=sd(av)/sqrt(n[1]))
