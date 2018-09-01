@@ -108,12 +108,18 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   ##########################
   if (run_mcmc) {
     if (!is_nu_uniform & use_hierarchical_model) warning('Not yet implemented a non uniform hierarchical model. Using normal non-uniform model')
+    if (use_prior_predictive){
+      stan_file = case_when( 
+        !is_nu_uniform ~ 'prior_predictive_nu_varying_spatially.stan',
+        use_hierarchical_model ~ 'prior_predictive_hierarchical.stan',
+        TRUE ~ 'prior_predictive_full.stan')
+    } else {
     stan_file = case_when( 
-      use_prior_predictive ~ 'hierarchical_prior_predictive.stan',
       !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
       use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
       TRUE ~ 'mrna_transport_full.stan')
-    print(stan_file)
+    }
+    print(paste('Using the following stan file: ', stan_file, sep=''))
     stan_list = list(y = exp_data,
                      T1  = nSamples,
                      T2 = nSamples+nTest+nTestOE,

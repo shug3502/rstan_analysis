@@ -1,6 +1,9 @@
-function B = construct_matrix(th,gamma)
-%    B = zeros(16);
-    B = sym(zeros(16, 16));
+function B = construct_matrix(th,gamma,is_symbolic)
+if is_symbolic
+    B = sym(zeros(16, 16)); %symbolic computation
+else
+    B = zeros(16); %evaluate numerically
+end    
     nu = (1+th)/2;
   B(1,1) = -4*(1-nu);
   B(2,1) = nu;
