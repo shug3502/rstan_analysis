@@ -109,7 +109,7 @@ model {
   phi ~ normal(0.57,0.118) T[0,1];
   a ~ normal(0,100) T[0,];
   b ~ normal(0,100) T[0,];
-  gamma ~ normal(0,1) T[0,]; //since this is scaled: gamma_tilde = gamma/b
+  gamma ~ normal(0,0.1/b) T[0,]; //since this is scaled: gamma_tilde = gamma/b
   nu ~ beta(1,1) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
   for (t in 1:T1){

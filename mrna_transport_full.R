@@ -18,7 +18,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   source('extract_times_and_scaling.R')
   times = extract_times_and_scaling(nSamples,nTest,nTestOE)
   #############################################################
-  m0 = c(0, rep(1,15)) #initial condition
+  m0 = c(0, rep(0,15)) #initial condition
   th = c(6.8,132.8)
   sig = 1.080
   phi = 0.23
@@ -117,7 +117,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     stan_file = case_when( 
       !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
       use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
-      TRUE ~ 'mrna_transport_full.stan')
+      TRUE ~ 'mrna_transport_reparametrised.stan')   #'mrna_transport_full.stan')
     }
     print(paste('Using the following stan file: ', stan_file, sep=''))
     stan_list = list(y = exp_data,
@@ -137,8 +137,8 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                       seed = 42,
                       chains = 4,
                       warmup = 500,
-                      iter = 1000,
-                      init = initF
+                      iter = 1000
+#                      init = initF
     )
     
     tryCatch({
@@ -174,6 +174,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   
   #look at posterior predictive distn
   source('post_pred_plot.R')
+  source('post_pred_animation.R')
   if (use_prior_predictive) {
     p1 <- post_pred_plot(exp_data, times$ts1, nSamples, 'y_pred', estimates, identifier, title_stem='plots/prior_pred')
   } else {
@@ -183,6 +184,12 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     p2 <- post_pred_plot(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
                          estimates,identifier,title_stem='plots/posterior_pred_OE',
                          ts_test=times$ts3,OE_test=times$ts4)
+    # p3 <- post_pred_animation(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
+    #                      estimates,identifier,title_stem='plots/posterior_pred_OE',
+    #                      ts_test=times$ts3,OE_test=times$ts4)
+    # p4 <- post_pred_animation(test_data,times$ts2,nTest+nSamples+nTestOE,'y_pred',
+    #                      estimates,identifier,title_stem='plots/posterior_pred',
+    #                      ts_test=times$ts3,OE_test=times$ts4)
   }  
   if (show_diagnostic_plots) {
     source('mcmcDensity.R')

@@ -124,13 +124,13 @@ theta[5] = nu2;
 }
 model {
   real z[T1,16];
-  sigma ~ normal(0,100) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
-  phi ~ normal(0.289,0.0285) T[0,1];
+  sigma ~ normal(0,10) T[0,];  
+  phi ~ normal(0.57,0.118) T[0,1]; //normal(0.289,0.0285) T[0,1];
   a ~ normal(0,100) T[0,];
   b ~ normal(0,100) T[0,];
-  gamma ~ normal(0,1) T[0,];
-  nu1 ~ beta(0.5,0.5) T[0,1];
-  nu2 ~ beta(0.5,0.5) T[0,1];
+  gamma ~ normal(0,0.1) T[0,];
+  nu1 ~ beta(1,1) T[0,1];
+  nu2 ~ beta(1,1) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {

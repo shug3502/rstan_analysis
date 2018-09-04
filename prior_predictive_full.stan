@@ -104,24 +104,20 @@ generated quantities {
   real nu;
   real sigma;
   real phi;
-
+  
   // for wild type
   
-  b = fabs(normal_rng(0,1000));
-  a = fabs(normal_rng(0,1000));
-  gamma = 0; //fabs(normal_rng(0,0.1))/b;
+  b = fabs(normal_rng(0,1));
+  a = fabs(normal_rng(0,100));
+  gamma = fabs(normal_rng(0,0.01));
   nu = beta_rng(1,1);
-  sigma = fabs(normal_rng(0,1)); 
+  sigma = fabs(normal_rng(0,10)); 
   phi = fabs(normal_rng(0.57,0.118));
   theta[1]=b;
   theta[2]=a;
-  theta[3]=nu;
-  theta[4]=gamma;
-  print(theta);
-  print(ts1);
-  print(x_r);
+  theta[3]=gamma;
+  theta[4]=nu;
   y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
-  print(y_ode);
   for (t in 1:T1){
     for (j in 1:16) {
       if (j>1){
