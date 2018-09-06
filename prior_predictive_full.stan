@@ -118,20 +118,22 @@ generated quantities {
   sigma = fabs(normal_rng(0,1)); 
   phi = fabs(normal_rng(0.57,0.118));
   b = exp(normal_rng(1,2));
-  a = exp(normal_rng(3,2));
-  gamma = exp(normal_rng(-4,2));
+  a = exp(normal_rng(2,2));
+  gamma = exp(normal_rng(-2,2));
   nu = inv_logit(normal_rng(2,2));
   theta[1]=b;
   theta[2]=a;
   theta[3]=gamma;
   theta[4]=nu;
-  y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
+  y_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {
+/*
       if (debug>0 & y_ode[t,j]==0){
         print(y_ode);
         print(theta);
       }
+*/
       if (j>1){
         y_pred[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
       } else {

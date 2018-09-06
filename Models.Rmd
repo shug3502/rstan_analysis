@@ -22,16 +22,26 @@ We will consider these models, attempt to fit them to data, and perform model co
 Importantly, we will begin with simulating from the models to give samples from the prior predictive distribution.
 This should demonstrate the flexibility of each of the models and help evaluate our choice of prior distributions. 
 
+The priors we choose are:
+
+##Prior predictive for full ODE model
 ```{r}
 source('mrna_transport_full.R')
-res = mrna_transport_inference_full('prior_pred_full_v261',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = FALSE, show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE, use_prior_predictive = TRUE, train_on_OE=FALSE, is_nu_uniform = TRUE)
+res = mrna_transport_inference_full('prior_pred_full_v261',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 9, nTest = 11, nTestOE = 7, verbose = FALSE, compare_via_loo = FALSE, show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE, use_prior_predictive = TRUE, train_on_OE=FALSE, is_nu_uniform = TRUE)
 ```
-
+##Prior predictive for spatially varying $\nu$ model
 ```{r}
 source('mrna_transport_full.R')
-res = mrna_transport_inference_full('prior_pred_full_v262',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = FALSE, compare_via_loo = FALSE, show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE, use_prior_predictive = TRUE, train_on_OE=FALSE, is_nu_uniform = FALSE)
+res = mrna_transport_inference_full('prior_pred_full_nu_varying_spatially_v262',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 9, nTest = 11, nTestOE = 7, verbose = FALSE, compare_via_loo = FALSE, show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE, use_prior_predictive = TRUE, train_on_OE=FALSE, is_nu_uniform = FALSE)
 ```
 
+##Prior predictive for hierarchical model
+```{r}
+source('mrna_transport_full.R')
+res = mrna_transport_inference_full('prior_pred_full_hierarchical_v263',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 9, nTest = 11, nTestOE = 7, verbose = FALSE, compare_via_loo = FALSE, show_diagnostic_plots = FALSE, use_hierarchical_model = TRUE, use_prior_predictive = TRUE, train_on_OE=FALSE, is_nu_uniform = TRUE)
+```
+
+##Now try to train the models again
 
 ```{r}
 source('mrna_transport_full.R')

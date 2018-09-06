@@ -141,7 +141,7 @@ generated quantities {
   theta[3]=gamma;
   theta[4]=nu1;
   theta[5]=nu2;
-  y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
+  y_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {
       if (j>1){

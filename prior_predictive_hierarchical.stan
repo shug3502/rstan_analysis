@@ -107,22 +107,22 @@ generated quantities {
   real sigma;
   real phi;
   // for wild type
-  log_b = normal_rng(0,5);
-  log_a = normal_rng(0,5);
-  log_gamma = normal_rng(0,5);
-  logit_nu = normal_rng(0,2);
+  log_b = normal_rng(1,2);
+  log_a = normal_rng(2,2);
+  log_gamma = normal_rng(-2,2);
+  logit_nu = normal_rng(2,2);
   for (i in 1:4){
     tau[i] = fabs(normal_rng(0,1));
   }
   sigma = fabs(normal_rng(0,10)); 
-  phi = fabs(normal_rng(0.289,0.0285));
+  phi = fabs(normal_rng(0.57,0.118));
   if (phi>1) {phi = 2 - phi;}
   for (t in 1:T1){
     theta_wt[t,1] = exp(normal_rng(log_b,tau[1]));
     theta_wt[t,2] = exp(normal_rng(log_a,tau[2]));    
     theta_wt[t,3] = exp(normal_rng(log_gamma,tau[3]));
     theta_wt[t,4] = inv_logit(normal_rng(logit_nu,tau[4]));    
-    aux_gq[1:T1] = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta_wt[t], x_r, x_i);
+    aux_gq[1:T1] = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta_wt[t], x_r, x_i);
     y_ode[t] = fabs(aux_gq[t]);
     for (j in 1:16){
       if (j>1){
