@@ -20,7 +20,7 @@ LoG_sigma=1
 
 # PRE-DETECTION
 Detect_Mode=nonMaxSupr
-Detect_Thresh_int=97
+Detect_Thresh_int=138
 Detect_Score=Standard deviation
 Detect_Thresh_score=0
 Detect_Region_XY=2

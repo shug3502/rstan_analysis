@@ -15,8 +15,10 @@ if is_symbolic
     % incorporate initial conditions
     c = V\(y0 - k1);
     y =  V*expm(D*t)*c + k1;
-    diff(y,a)
-    
+    dyda = diff(y,a);
+    dydb = diff(y,b);
+    dydnu = diff(y,nu);
+    dydg = diff(y,gamma);
     %%%%%%%%%%%%%%%%%%%%%%%
 else
     %set or sample model parameters
