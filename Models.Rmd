@@ -35,7 +35,7 @@ res = mrna_transport_inference_full('prior_pred_full_v262',use_real_data = TRUE,
 
 ```{r}
 source('mrna_transport_full.R')
-res1 = mrna_transport_inference_full('full_nu_uniform_v234',use_real_data = TRUE, run_mcmc = FALSE, nSamples = 8, nTest = 12, nTestOE = 7, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE, use_prior_predictive = FALSE, train_on_OE = FALSE, is_nu_uniform = TRUE)
+res1 = mrna_transport_inference_full('full_nu_uniform_v271',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 9, nTest = 11, nTestOE = 9, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE, use_prior_predictive = FALSE, train_on_OE = FALSE, is_nu_uniform = TRUE)
 
 ```
 
