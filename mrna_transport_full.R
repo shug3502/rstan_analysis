@@ -117,7 +117,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     stan_file = case_when( 
       !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
       use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
-      TRUE ~ 'mrna_transport_reparametrised.stan')   #'mrna_transport_full.stan')
+      TRUE ~ 'mrna_transport_full.stan')   #'mrna_transport_reparametrised.stan')
     }
     print(paste('Using the following stan file: ', stan_file, sep=''))
     stan_list = list(y = exp_data,
@@ -125,11 +125,14 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                      T2 = nSamples+nTest+nTestOE,
                      T3 = nTestOE,
                      y0 = m0,
-                     t0 = times$t0,
+                     t0_ts1 = times$t0$estimate[3],
+                     t0_ts2 = times$t0$estimate[3],
+                     t0_ts3 = times$t0$estimate[1],                     
                      ts1 = times$ts1,
                      ts2 = times$ts2,
                      ts3 = times$ts4,
-                     OE_producers = producers
+                     OE_producers = producers,
+                     debug = 1
                      )
     initF <- function() list(nu=0.92, gamma=0.1, sigma=1, b=250)
     estimates <- stan(file = stan_file,
@@ -137,8 +140,8 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                       seed = 42,
                       chains = 4,
                       warmup = 500,
-                      iter = 1000
-#                      init = initF
+                      iter = 1000,
+                      init = initF
     )
     
     tryCatch({

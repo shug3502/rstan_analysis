@@ -79,6 +79,7 @@ data {
   real ts2[T2];  //times for 'test' data
   real ts3[T3]; //times for 'OE' test predictions
   matrix[T3,16] OE_producers; //matrix of how much RNA each cell produces in OE mutant, for predictions only
+  int<lower=0> debug;
 }
 transformed data {
   real x_r[16];
@@ -106,13 +107,20 @@ generated quantities {
   real phi;
   
   // for wild type
-  
+  /*
   b = fabs(normal_rng(0,1));
   a = fabs(normal_rng(0,100));
   gamma = fabs(normal_rng(0,0.01));
   nu = beta_rng(1,1);
   sigma = fabs(normal_rng(0,10)); 
   phi = fabs(normal_rng(0.57,0.118));
+  */
+  sigma = fabs(normal_rng(0,1)); 
+  phi = fabs(normal_rng(0.57,0.118));
+  b = exp(normal_rng(1,2));
+  a = exp(normal_rng(3,2));
+  gamma = exp(normal_rng(-4,2));
+  nu = inv_logit(normal_rng(2,2));
   theta[1]=b;
   theta[2]=a;
   theta[3]=gamma;
@@ -120,6 +128,10 @@ generated quantities {
   y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {
+      if (debug>0 & y_ode[t,j]==0){
+        print(y_ode);
+        print(theta);
+      }
       if (j>1){
         y_pred[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
       } else {

@@ -4,8 +4,15 @@ extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE
   #JH
   #################################
   require(dplyr)
+  require(broom)
+  require(purrr)
   if (test_on_mutant_data){ warning('test_on_mutant_data is an argument no longer used by extract_times_and_scaling')}
 
+rescale_time <- function(log_area, tau, t0, tol=10^-5){
+  t_hat = 1/tau*(log_area - t0)
+  return(max(t_hat,tol)) #not sure what to do about the times that turn out negative
+}
+  
   egg_chamber_areas <- rep(0,nSamples+nTest+nTestOE)
   stages <- rep(0,nSamples+nTest+nTestOE) #don't need to extract estimated stages for each egg chamber example
   for (j in seq_len(nSamples+nTest)){
@@ -46,7 +53,7 @@ extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE
   #######################################
   #fit linear models
   lm_time <- lm(log(egg_chamber_areas) ~ stages)
-  df <- data.frame(la = log(egg_chamber_areas), stages = stages)
+  df <- data.frame(la = log(egg_chamber_areas), stages = stages, split = c(rep('train',nSamples),rep('test',nTest),rep('Overexpression',nTestOE)))
   df <- df %>% mutate(pred_age = predict(lm_time,df))
   real_time <- c(8,6,5,3,6,6) #time for each stage from start of 3 to end of 8, according to jia 2016
   cum_time <- cumsum(real_time)
@@ -55,6 +62,8 @@ extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE
   #fit another model to time in hours
   lm_time_hrs = lm(la ~ time_hrs,data=df)
   df <- df %>% mutate(pred_age_hrs = predict(lm_time_hrs,df))      
+  # fit linear models grouped by split of data. Flies fed at separate times so grew differently
+  lm_by_split <- df %>% group_by(split) %>%  do(tidy(lm(la ~ time_hrs, data = .)))
 ##########################################  
   if (optional_plot){
     g <- ggplot(data = df, aes(x=stages,y=la)) +
@@ -71,13 +80,35 @@ extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE
       labs(x='age (hrs)',y='log(area)')
     print(g) 
     ggsave('plots/timescale_model.eps')
+    
+    h <- ggplot(data=df,aes(x=time_hrs,y=la,color=split)) + 
+      geom_point() +
+      geom_smooth(method='lm') +
+      theme_bw() +
+      labs(x='time (hrs)',y='log(area)')
+    print(h)
+    ggsave('plots/timescale_model.eps',device=cairo_ps)
   }
  #########################################
 ##use coefficients of linear model
-#   t0 = coef(lm_time)[1] #log(400)
-#   time_scaling = coef(lm_time)[2]
-##or 
-  t0 = coef(lm_time_hrs)[1] #log(400)
-  time_scaling = coef(lm_time_hrs)[2]
-  return(list(t0=t0,ts1=ts1,ts2=ts2,ts3=ts3,ts4=ts4,sort_indices1=sort_indices1,sort_indices2=sort_indices2,sort_indices3=sort_indices3,sort_indices4=sort_indices4,time_scaling=time_scaling))
+  # t0 = coef(lm_time_hrs)[1] #log(400)
+  # time_scaling = coef(lm_time_hrs)[2]
+  t0 = lm_by_split %>%
+    ungroup() %>%
+    filter(grepl('Intercept',term)) %>%
+    select(split,estimate) 
+  time_scaling = lm_by_split %>%
+    ungroup %>%
+    filter(grepl('time_hrs',term)) %>%
+    select(split,estimate)
+  return(list(t0=t0,
+              ts1=purrr::map_dbl(ts1,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate)),
+              ts2=purrr::map_dbl(ts2,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate)),
+              ts3=purrr::map_dbl(ts3,function(x) rescale_time(x,time_scaling %>% filter(grepl('test',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('test',split)) %>% select(estimate) %>% .$estimate)),
+              ts4=purrr::map_dbl(ts4,function(x) rescale_time(x,time_scaling %>% filter(grepl('Overexpression',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('Overexpression',split)) %>% select(estimate) %>% .$estimate)),
+              sort_indices1=sort_indices1,
+              sort_indices2=sort_indices2,
+              sort_indices3=sort_indices3,
+              sort_indices4=sort_indices4,
+              time_scaling=time_scaling))
 }

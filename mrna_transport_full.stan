@@ -74,7 +74,9 @@ data {
   int<lower=1> T3;
   int y[T1,16];
   real y0[16];
-  real t0;
+  real t0_ts1;
+  real t0_ts2;
+  real t0_ts3;
   real ts1[T1]; //times for 'training data'
   real ts2[T2];  //times for 'test' data
   real ts3[T3]; //times for 'OE' test predictions
@@ -105,13 +107,21 @@ theta[4] = nu;
 }
 model {
   real z[T1,16];
+  /*
   sigma ~ normal(0,10) T[0,];  
   phi ~ normal(0.57,0.118) T[0,1];
   a ~ normal(0,100) T[0,];
   b ~ normal(0,100) T[0,];
   gamma ~ normal(0,0.1/b) T[0,]; //since this is scaled: gamma_tilde = gamma/b
   nu ~ beta(1,1) T[0,1];
-  z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
+  */
+  sigma ~ normal(0,100) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
+  phi ~ normal(0.289,0.0285) T[0,1];
+  a ~ normal(0,100) T[0,];
+  b ~ normal(0,100) T[0,];
+  gamma ~ normal(0,1) T[0,];
+  nu ~ beta(0.5,0.5) T[0,1];
+  z = integrate_ode_rk45(mrnatransport, y0, t0_ts1, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {
       if (j>1){
@@ -131,7 +141,7 @@ generated quantities {
   real y_lik_ode[T1,16];
   vector[T1] log_lik;
   // for wild type
-  y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta, x_r, x_i );
+  y_ode = integrate_ode_rk45(mrnatransport, y0, t0_ts2, ts2, theta, x_r, x_i );
   for (t in 1:T2){
     for (j in 1:16){
       if (j>1){
@@ -146,7 +156,7 @@ generated quantities {
   theta_OE[2] = theta[2]; //double the rate of production in the overexpressor
 //  y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE, x_r, x_i ); //to use OE producers need to solve ODE separately for each egg chamber
   for (t in 1:T3){
-    y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i ); //use overexpression producers
+    y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0_ts3, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i ); //use overexpression producers
     for (j in 1:16){
       if (j>1){
         y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j], sigma);
@@ -157,7 +167,7 @@ generated quantities {
   }
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
-  y_lik_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i );
+  y_lik_ode = integrate_ode_rk45(mrnatransport, y0, t0_ts1, ts1, theta, x_r, x_i );
   for (t in 1:T1){
     for (j in 1:16){
       if (j>1) {

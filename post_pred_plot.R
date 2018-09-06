@@ -14,8 +14,8 @@ pred <- pred %>% bind_cols(xdata) %>%
                                  TRUE ~ 'train'))
 
 if (neighbouring_ncs_only) pred <- pred %>% filter(cellID %in% c(1,2,3,5,9)) #only want to plot nieghbouring cells to oocyte
-p1 <- ggplot(pred, aes(x = time, y = median))
-p1 <- p1 + geom_line() +
+p1 <- ggplot(pred, aes(x = time, y = median)) +
+  geom_line() +
   geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25) +
   facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
   labs(x = "time", y = "rna") +
