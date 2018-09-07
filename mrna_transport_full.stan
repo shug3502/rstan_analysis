@@ -63,8 +63,11 @@ functions {
   ) {
     vector[16] dydt;
     matrix[16,16] B;
+    vector[16] producers;
+    producers = rep_vector(1,16);
+    producers[1] = 0;
     B = construct_matrix(theta[4],theta[3]);
-    dydt = theta[1] * B * to_vector(y) + theta[2] * to_vector(x_r);
+    dydt = theta[1] * B * to_vector(y) + theta[2] * producers;
     return to_array_1d(dydt);
   }
 }
@@ -81,23 +84,29 @@ data {
   matrix[T3,16] OE_producers; //matrix of how much RNA each cell produces in OE mutant, for predictions only
 }
 transformed data {
-  real x_r[16];
+  real x_r[0];
   int x_i[0];
+  /*
   x_r[1] = 0;
   for (j in 2:16){
     x_r[j] = 1; //in WT,assume all nurse cells produce RNA equally, but none from oocyte
   }
+  */
 }
 parameters {
   real<lower=0> sigma; //noise param
   real<lower=0,upper=1> phi; //difference between particles in NCs and in Oocyte
   real<lower=0> a;
   real<lower=0> b;
-  real<lower=0> gamma;
-  real<lower=0,upper=1> nu;
+//  real<lower=0> gamma;
+//  real<lower=0,upper=1> nu;
 }
 transformed parameters {
 real theta[4];
+real gamma;
+real nu;
+gamma=0;
+nu=0.92;
 theta[1] = b;
 theta[2] = a;
 theta[3] = gamma;
@@ -113,18 +122,20 @@ model {
   gamma ~ normal(0,0.1/b) T[0,]; //since this is scaled: gamma_tilde = gamma/b
   nu ~ beta(1,1) T[0,1];
   */
-  sigma ~ normal(0,100) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
-  phi ~ normal(0.289,0.0285) T[0,1];
-  a ~ normal(0,100) T[0,];
-  b ~ normal(0,100) T[0,];
-  gamma ~ normal(0,1) T[0,];
-  nu ~ beta(0.5,0.5) T[0,1];
+  sigma ~ normal(0,10) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
+  phi ~ normal(0.57,0.0118) T[0,1];
+  a ~ normal(0,10) T[0,];
+  b ~ normal(0,10) T[0,];
+//  gamma ~ normal(0,0.01) T[0,];
+//  nu ~ beta(1,1) T[0,1];
+//  print(theta);
   z = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {
       if (j>1){
         y[t,j] ~ neg_binomial_2(z[t,j], sigma);
       } else {
+//        print(phi*z[t,j]);
         y[t,j] ~ neg_binomial_2(phi*z[t,j], sigma);  //treat observations in oocyte differently due to aggregation of rna complexes  
       }
     }

@@ -9,6 +9,11 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   rstan_options(auto_write = TRUE)
   options(mc.cores = parallel::detectCores())
 
+  if (use_hierarchical_model & (length(which(parametersToPlot=='a')) | length(which(parametersToPlot=='b')))){
+    parametersToPlot[which(parametersToPlot=='a')] = 'log_a' #replace these for hierarchical model
+    parametersToPlot[which(parametersToPlot=='b')] = 'log_b'
+  } 
+  
   #############################################################
   #Fit linear model to log(length) of egg chambers to get time of development.
   #Could use area or volume of egg chamber. Compare to Jia 2016 Sci Reports.
@@ -18,7 +23,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   source('extract_times_and_scaling.R')
   times = extract_times_and_scaling(nSamples,nTest,nTestOE)
   #############################################################
-  m0 = c(0, rep(0,15)) #initial condition
+  m0 = c(0, rep(1,15)) #initial condition
   th = c(6.8,132.8)
   sig = 1.080
   phi = 0.23
@@ -129,16 +134,16 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                      ts1 = times$ts1,
                      ts2 = times$ts2,
                      ts3 = times$ts4,
-                     OE_producers = producers,
-                     debug = 1
+                     OE_producers = producers
                      )
-    initF <- function() list(nu=0.92, gamma=0.1, sigma=1, b=250)
+    #initF <- function() list(nu=0.92, sigma=1)
+    initF <- function() list(a=10, b=0.2, sigma=1)    
     estimates <- stan(file = stan_file,
                       data = stan_list,
                       seed = 42,
                       chains = 4,
-                      warmup = 500,
-                      iter = 1000,
+                      warmup = 200,
+                      iter = 500,
                       init = initF
     )
     

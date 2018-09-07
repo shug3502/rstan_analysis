@@ -131,7 +131,7 @@ model {
   gamma ~ normal(0,0.1) T[0,];
   nu1 ~ beta(1,1) T[0,1];
   nu2 ~ beta(1,1) T[0,1];
-  z = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i);
+  z = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {
       if (j>1){
@@ -150,7 +150,7 @@ generated quantities {
   real theta_OE[5];
   real y_lik_ode[T1,16];
   vector[T1] log_lik;
-  y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta, x_r, x_i );
+  y_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts2, theta, x_r, x_i );
   for (t in 1:T2){
     for (j in 1:16){
       if (j>1){
@@ -163,7 +163,7 @@ generated quantities {
     // for the overexpression mutant
   theta_OE = theta;
   theta_OE[2] = theta[2]*2; //double the rate of production in the overexpressor
-  y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE, x_r, x_i );
+  y_ode_OE = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE, x_r, x_i );
   for (t in 1:T3){
     for (j in 1:16){
       if (j>1){
@@ -175,7 +175,7 @@ generated quantities {
   }
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
-  y_lik_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta, x_r, x_i );
+  y_lik_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i );
   for (t in 1:T1){
     for (j in 1:16){
       if (j>1) {
