@@ -45,7 +45,7 @@ res = mrna_transport_inference_full('prior_pred_full_hierarchical_v263',use_real
 ###Full ODE model
 ```{r}
 source('mrna_transport_full.R')
-res1 = mrna_transport_inference_full('full_nu_uniform_v271',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 9, nTest = 11, nTestOE = 7, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE, use_prior_predictive = FALSE, train_on_OE = FALSE, is_nu_uniform = TRUE)
+res1 = mrna_transport_inference_full('full_nu_uniform_v275',use_real_data = TRUE, run_mcmc = TRUE, nSamples = 9, nTest = 11, nTestOE = 9, verbose = TRUE, compare_via_loo = FALSE, show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE, use_prior_predictive = FALSE, train_on_OE = FALSE, is_nu_uniform = TRUE)
 
 ```
 

@@ -137,7 +137,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                      OE_producers = producers
                      )
     #initF <- function() list(nu=0.92, sigma=1)
-    initF <- function() list(a=10, b=0.2, sigma=1)    
+    initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.57)    
     estimates <- stan(file = stan_file,
                       data = stan_list,
                       seed = 42,

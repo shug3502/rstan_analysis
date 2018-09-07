@@ -98,19 +98,15 @@ parameters {
   real<lower=0,upper=1> phi; //difference between particles in NCs and in Oocyte
   real<lower=0> a;
   real<lower=0> b;
-//  real<lower=0> gamma;
-//  real<lower=0,upper=1> nu;
+  real<lower=0> gamma;
+  real<lower=0,upper=1> nu;
 }
 transformed parameters {
-real theta[4];
-real gamma;
-real nu;
-gamma=0;
-nu=0.92;
-theta[1] = b;
-theta[2] = a;
-theta[3] = gamma;
-theta[4] = nu;
+  real theta[4];
+  theta[1] = b;
+  theta[2] = a;
+  theta[3] = gamma;
+  theta[4] = nu;
 }
 model {
   real z[T1,16];
@@ -126,16 +122,14 @@ model {
   phi ~ normal(0.57,0.0118) T[0,1];
   a ~ normal(0,10) T[0,];
   b ~ normal(0,10) T[0,];
-//  gamma ~ normal(0,0.01) T[0,];
-//  nu ~ beta(1,1) T[0,1];
-//  print(theta);
+  gamma ~ normal(0,0.1) T[0,];
+  nu ~ beta(1,1) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {
       if (j>1){
         y[t,j] ~ neg_binomial_2(z[t,j], sigma);
       } else {
-//        print(phi*z[t,j]);
         y[t,j] ~ neg_binomial_2(phi*z[t,j], sigma);  //treat observations in oocyte differently due to aggregation of rna complexes  
       }
     }
@@ -163,7 +157,6 @@ generated quantities {
   // for the overexpression mutant
   theta_OE = theta;
   theta_OE[2] = theta[2]; //double the rate of production in the overexpressor
-//  y_ode_OE = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE, x_r, x_i ); //to use OE producers need to solve ODE separately for each egg chamber
   for (t in 1:T3){
     y_ode_OE = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i ); //use overexpression producers
     for (j in 1:16){

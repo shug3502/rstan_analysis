@@ -26,5 +26,5 @@ p1 <- p1 + geom_point(aes(x = time, y = rna, colour = split))
 }
 print(p1)
 ggsave(paste(title_stem,identifier, '.eps',sep=''),device=cairo_ps)
-return(p1)
+return(pred)
 }
