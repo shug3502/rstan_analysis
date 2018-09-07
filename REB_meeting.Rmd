@@ -42,3 +42,44 @@ Tried to assess identifiability of the full model using the symbolic computing c
 ### Notation for manuscript
 
 
+### Switch off ring canals
+Simulate from a model where we switch off selected ring canals and look at the effect of this on accumulation of RNA (eg. in cells far from the oocyte).
+```{r}
+nSamples=9
+nTest=11
+nTestOE=9
+y0 = rep(1,16); y0[1]=0
+  real ts1[T1]; //times for 'training data'
+  real a;
+  real b;
+  real gamma;
+  real nu;
+  real sigma;
+  real phi;
+  int alter_matrix; //logical whether to alter matrix
+  int b_i;
+  int b_j
+stan_list = list(y = exp_data,
+                     T1  = nSamples,
+                     T2 = nSamples+nTest+nTestOE,
+                     T3 = nTestOE,
+                     y0 = m0,
+                     t0 = times$t0$estimate[3],
+                     ts1 = times$ts1,
+                     ts2 = times$ts2,
+                     ts3 = times$ts4,
+                     OE_producers = producers
+                     )
+    #initF <- function() list(nu=0.92, sigma=1)
+    initF <- function() list(a=10, b=0.2, sigma=1)    
+    estimates <- stan(file = stan_file,
+                      data = stan_list,
+                      seed = 42,
+                      chains = 4,
+                      warmup = 200,
+                      iter = 500,
+                      init = initF
+    )
+```
+
+
