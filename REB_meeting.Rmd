@@ -48,38 +48,30 @@ Simulate from a model where we switch off selected ring canals and look at the e
 nSamples=9
 nTest=11
 nTestOE=9
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(nSamples,nTest,nTestOE)
 y0 = rep(1,16); y0[1]=0
-  real ts1[T1]; //times for 'training data'
-  real a;
-  real b;
-  real gamma;
-  real nu;
-  real sigma;
-  real phi;
-  int alter_matrix; //logical whether to alter matrix
-  int b_i;
-  int b_j
-stan_list = list(y = exp_data,
-                     T1  = nSamples,
-                     T2 = nSamples+nTest+nTestOE,
-                     T3 = nTestOE,
-                     y0 = m0,
-                     t0 = times$t0$estimate[3],
-                     ts1 = times$ts1,
-                     ts2 = times$ts2,
-                     ts3 = times$ts4,
-                     OE_producers = producers
-                     )
-    #initF <- function() list(nu=0.92, sigma=1)
-    initF <- function() list(a=10, b=0.2, sigma=1)    
-    estimates <- stan(file = stan_file,
-                      data = stan_list,
-                      seed = 42,
-                      chains = 4,
-                      warmup = 200,
-                      iter = 500,
-                      init = initF
-    )
+stan_file = 'switch_off_RCs.stan'
+stan_list = list(y0=y0,
+                 T1  = nSamples,                 
+                 t0 = times$t0$estimate[3],
+                 ts1 = times$ts1,                 
+                 a = 9,
+                 b = 0.2,
+                 gamma = 0.01,
+                 nu = 0.9,
+                 sigma = 1.25,
+                 phi = 0.57,
+                 alter_matrix = 1,
+                 b_i = 8,
+                 b_j = 16)
+estimates <- stan(file = stan_file,
+                  data = stan_list,
+                  seed = 42,
+                  chains = 4,
+                  warmup = 1000,
+                  iter = 2000
+)
 ```
 
 
