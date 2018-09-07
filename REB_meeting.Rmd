@@ -1,0 +1,44 @@
+---
+title: "Meeting with REB"
+author: "Jonathan Harrison"
+date: "07/09/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# RNA localization
+## Big picture
+
+* Developed ODE model for RNA transport and fitted this full model to data to estimate parameters $(a, b, \gamma, \phi, \nu, \sigma)$
+* Gained bioloical insight from parameter estimates
+* Predictions from fitted model for wild type (WT) behaviour match well
+* Predictions from fitted model for overexpression (OE) behaviour agree for nurse cells close to oocyte but disagree for more distant cells
+
+## How can we change the model so that it agrees better for cells further from oocyte?
+I have considered alternative models as follows:
+
+* Spatially varying transport bias, $\nu$
+* Spatially varying production in OE mutant
+* Hierarchical model
+
+Additional suggestion from Richard:
+* Perturbations to entries of matrix $B$
+
+## Details to discuss
+### Timescales via exponential growth model
+Need a precise age for each egg chamber. Can roughly estimate age via developmental time (eg. stage 7) by observing presence of distinctive features. Each stage is a large time window and would prefer a more precise age. By fitting an exponential growth model (independently shown to be a good description at these ages in other work, Jia et al 2016), we can use $\log(A)$, where $A$ is the area of a section through the egg chamber, as a proxy for time.
+
+Do we need a separate exponential growth model for data from different experiments, or for different mutants?
+
+### Assembly/aggregation parameter $\phi$
+There is (at least one) structural unidentifiability in the full model (I think?).  
+
+### Identifiability
+Tried to assess identifiability of the full model using the symbolic computing capabilities in MATLAB. This involves solving matrix equations involving parameters ($\nu$ and $\gamma$), and was prohibitively slow. Could there be better ways to parameterise the model? Nondimensionalising allows us to remove a parameter, such as transport rate $b$, but to fit to data need to relate to dimensional quantities and dimensional time.  
+
+### Notation for manuscript
+
+
