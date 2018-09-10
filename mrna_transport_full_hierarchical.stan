@@ -91,10 +91,7 @@ transformed data {
 parameters {
   real<lower=0> sigma; //noise param
   real<lower=0,upper=1> phi; //difference between particles in NCs and in Oocyte
-  real log_a; //use this as popn mean
-  real log_b; //use this as popn mean
-  real log_gamma; //use this as popn mean
-  real logit_nu; //use as popn mean
+  real mu[4]; //use this as popn mean
   real<lower=0> tau[4];
   real transformed_theta[T1,4];
 }
@@ -103,30 +100,30 @@ transformed parameters{
   real theta[T1,4];
   for (i in 1:T1){
     for (j in 1:3){
-      theta[i,j] = exp(transformed_theta[i,j]);
+      theta[i,j] = fabs(mu[j] + tau[j]*transformed_theta[i,j]); //truncated normal
     }
-    theta[i,4] = inv_logit(transformed_theta[i,4]);
+    theta[i,4] = inv_logit(mu[4] + tau[4]*transformed_theta[i,4]);
   }
 }
 
 model {
   real z[T1,16];
   real aux[T1,16];
-  sigma ~ normal(0,5) T[0,]; 
-  phi ~ normal(0.289,0.0285) T[0,1];
-  log_a ~ normal(5,2);
-  log_b ~ normal(1,2);
-  log_gamma ~ normal(-2,2);
-  logit_nu ~ normal(2,2);
+  sigma ~ normal(0,10) T[0,]; 
+  phi ~ normal(0.57,0.0118) T[0,1];
+  for (i in 1:3){
+    mu[i] ~ normal(0,10) T[0,];    
+  }
+  mu[4] ~ normal(2,2);
   for (i in 1:4){
     tau[i] ~ normal(0,1) T[0,];
   }
   for (t in 1:T1){
-    transformed_theta[t,1] ~ normal(log_b,tau[1]);
-    transformed_theta[t,2] ~ normal(log_a,tau[2]);    
-    transformed_theta[t,3] ~ normal(log_gamma,tau[3]);
-    transformed_theta[t,4] ~ normal(logit_nu,tau[4]);    
-    aux = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta[t], x_r, x_i);
+    transformed_theta[t,1] ~ normal(0,1);
+    transformed_theta[t,2] ~ normal(0,1);    
+    transformed_theta[t,3] ~ normal(0,1);
+    transformed_theta[t,4] ~ normal(0,1); //logit for nu   
+    aux = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta[t], x_r, x_i);
     z[t] = aux[t];
     for (j in 1:16) {
       if (j>1){
@@ -149,11 +146,11 @@ generated quantities {
   real aux_gq[max(max(T1,T2),T3),16];
   // for wild type
   for (t in 1:T2){
-    theta_wt[t,1] = exp(normal_rng(log_b,tau[1]));
-    theta_wt[t,2] = exp(normal_rng(log_a,tau[2]));    
-    theta_wt[t,3] = exp(normal_rng(log_gamma,tau[3]));
-    theta_wt[t,4] = inv_logit(normal_rng(logit_nu,tau[4]));    
-    aux_gq[1:T2] = integrate_ode_rk45(mrnatransport, y0, t0, ts2, theta_wt[t], x_r, x_i);
+    for (j in 1:3){
+      theta_wt[t,j] = fabs(normal_rng(mu[j],tau[j]));
+    }
+    theta_wt[t,4] = inv_logit(normal_rng(mu[4],tau[4]));    
+    aux_gq[1:T2] = integrate_ode_rk45(mrnatransport, y0, 0, ts2, theta_wt[t], x_r, x_i);
     y_ode[t] = aux_gq[t];
     for (j in 1:16){
       if (j>1){
@@ -165,11 +162,11 @@ generated quantities {
   }
   // for the overexpression mutant
   for (t in 1:T3){
-    theta_OE[t,1] = exp(normal_rng(log_b,tau[1]));
-    theta_OE[t,2] = 2*exp(normal_rng(log_a,tau[2]));    
-    theta_OE[t,3] = exp(normal_rng(log_gamma,tau[3]));
-    theta_OE[t,4] = inv_logit(normal_rng(logit_nu,tau[4]));
-    aux_gq[1:T3] = integrate_ode_rk45(mrnatransport, y0, t0, ts3, theta_OE[t], to_array_1d(OE_producers[t,]), x_i);
+    theta_OE[t,1] = fabs(normal_rng(mu[1],tau[1]));
+    theta_OE[t,2] = 2*fabs(normal_rng(mu[2],tau[2]));    
+    theta_OE[t,3] = fabs(normal_rng(mu[3],tau[3]));
+    theta_OE[t,4] = inv_logit(normal_rng(mu[4],tau[4]));
+    aux_gq[1:T3] = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE[t], to_array_1d(OE_producers[t,]), x_i);
     y_ode_OE[t] = aux_gq[t];
     for (j in 1:16){
       if (j>1){
@@ -182,7 +179,7 @@ generated quantities {
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
   for (t in 1:T1){
-    aux_gq[1:T1] = integrate_ode_rk45(mrnatransport, y0, t0, ts1, theta[t], x_r, x_i );
+    aux_gq[1:T1] = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta[t], x_r, x_i );
     y_lik_ode[t] = aux_gq[t];
     for (j in 1:16){
       if (j>1) {
