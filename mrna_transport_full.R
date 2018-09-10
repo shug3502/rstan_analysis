@@ -136,14 +136,13 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                      ts3 = times$ts4,
                      OE_producers = producers
                      )
-    #initF <- function() list(nu=0.92, sigma=1)
     initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.57)    
     estimates <- stan(file = stan_file,
                       data = stan_list,
                       seed = 42,
                       chains = 4,
-                      warmup = 200,
-                      iter = 500,
+                      warmup = 1000,
+                      iter = 2000,
                       init = initF
     )
     
