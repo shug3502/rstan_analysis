@@ -45,6 +45,10 @@ Tried to assess identifiability of the full model using the symbolic computing c
 ### Switch off ring canals
 Simulate from a model where we switch off selected ring canals and look at the effect of this on accumulation of RNA (eg. in cells far from the oocyte).
 ```{r}
+library(rstan)
+library(broom)
+library(dplyr)
+identifier = 'testv002'
 nSamples=9
 nTest=11
 nTestOE=9
@@ -59,10 +63,9 @@ stan_list = list(y0=y0,
                  a = 9,
                  b = 0.2,
                  gamma = 0.01,
-                 nu = 0.9,
+                 nu = 0.95,
                  sigma = 1.25,
                  phi = 0.57,
-                 alter_matrix = 1,
                  b_i = 8,
                  b_j = 16)
 estimates <- stan(file = stan_file,
@@ -72,6 +75,43 @@ estimates <- stan(file = stan_file,
                   warmup = 1000,
                   iter = 2000
 )
+tryCatch({
+  #estimates@stanmodel@dso <- new("cxxdso") #seems have to do this to be able to save :S
+  saveRDS(estimates, file = paste('fits/switch_off_RCs_',identifier,'.rds',sep='')) # to load use readRDS("fit.rds")
+}, warning = function(war) {  
+  # warning handler picks up where error was generated
+  print(paste("WARNING:  ",war))
+}, error = function(err) {  
+  # error handler picks up where error was generated
+  print(paste("NOT SAVED ERROR:  ",err))
+}) # END tryCatch
+source('compare_RC_preds.R')
+comparison_df <- compare_RC_preds(times$ts1,estimates,identifier)
+
 ```
+
+## Simple full ODE model: differences between WT and OE
+Suppose we take the simple, full ODE model (now parameterised with scaled $\tilde{\gamma} = \gamma/b$) and fit via MCMC to both the WT data and the overexpression data. What does this tell us about the biological model parameters and the differences between these phenotypes?
+
+```{r, echo=TRUE}
+source('mrna_transport_full.R')
+res_WT = mrna_transport_inference_full('full_nu_uniform_WT_v301',
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						is_nu_uniform = TRUE)
+
+res_OE = mrna_transport_inference_full('full_nu_uniform_OE_v302',
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = TRUE,
+						is_nu_uniform = TRUE)
+```
+
+
 
 

@@ -9,9 +9,9 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   rstan_options(auto_write = TRUE)
   options(mc.cores = parallel::detectCores())
 
-  if (use_hierarchical_model & (length(which(parametersToPlot=='a')) | length(which(parametersToPlot=='b')))){
-    parametersToPlot[which(parametersToPlot=='a')] = 'log_a' #replace these for hierarchical model
-    parametersToPlot[which(parametersToPlot=='b')] = 'log_b'
+  if (use_hierarchical_model & (length(which(parametersToPlot=='a'))==0 | length(which(parametersToPlot=='b'))==0)){
+    parametersToPlot[which(parametersToPlot=='a')] = 'mu' #replace these for hierarchical model
+    parametersToPlot[which(parametersToPlot=='b')] = 'mu'
   } 
   
   #############################################################
@@ -136,7 +136,11 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                      ts3 = times$ts4,
                      OE_producers = producers
                      )
-    initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.57)    
+    if (!use_hierarchical_model){
+      initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.57)    
+    } else {
+      initF <- function() list(mu=c(9, 0.18, 0.5, 2.2), sigma=1.25, phi=0.57)    
+    }
     estimates <- stan(file = stan_file,
                       data = stan_list,
                       seed = 42,

@@ -69,6 +69,17 @@ functions {
     dydt = theta[1] * B * to_vector(y) + theta[2] * to_vector(x_r);
     return to_array_1d(dydt);
   }
+  matrix alter_matrix(matrix A,
+                      int[] x_i) {
+     // alter the matrix to remove a certain entry
+     //argument x_i are the ring canal indices
+    matrix[16,16] B = A;
+    B[x_i[2],x_i[2]] = B[x_i[2],x_i[2]] + B[x_i[1],x_i[2]]; 
+    B[x_i[1],x_i[1]] = B[x_i[1],x_i[1]] + B[x_i[2],x_i[1]]; 
+    B[x_i[1],x_i[2]] = 0;
+    B[x_i[2],x_i[1]] = 0;    
+    return(B); 
+  }
   real[] mrnatransport_altered(real t,
                        real[] y,
                        real[] theta,
@@ -78,11 +89,7 @@ functions {
     vector[16] dydt;
     matrix[16,16] B;
     B = construct_matrix(theta[4],theta[3]);
-    // alter the matrix to remove a certain entry
-    B[x_i[2],x_i[2]] = B[x_i[2],x_i[2]] + B[x_i[1],x_i[2]]; 
-    B[x_i[1],x_i[1]] = B[x_i[1],x_i[1]] + B[x_i[2],x_i[1]]; 
-    B[x_i[1],x_i[2]] = 0;
-    B[x_i[2],x_i[1]] = 0;    
+    B = alter_matrix(B,x_i);
     dydt = theta[1] * B * to_vector(y) + theta[2] * to_vector(x_r);
     return to_array_1d(dydt);
   }
@@ -98,13 +105,17 @@ data {
   real nu;
   real sigma;
   real phi;
-  int alter_matrix; //logical whether to alter matrix
   int b_i;
   int b_j;
 }
 transformed data {
   real x_r[16];
   int x_i[2];
+  real theta[4]; //parameters for each WT egg chamber
+  theta[1]=b;
+  theta[2]=a;
+  theta[3]=gamma;
+  theta[4]=nu;
   x_r[1] = 0;
   for (j in 2:16){
     x_r[j] = 1; //in WT,assume all nurse cells produce RNA equally, but none from oocyte
@@ -121,13 +132,9 @@ model {
 generated quantities {
   int y_pred[T1,16]; //predictions for WT
   real y_ode[T1,16]; 
-  real theta[4]; //parameters for each WT egg chamber
-  
-  // for wild type
-  theta[1]=b;
-  theta[2]=a;
-  theta[3]=gamma;
-  theta[4]=nu;
+  int y_pred_altered[T1,16]; //predictions for WT
+  real y_ode_altered[T1,16];   
+
   y_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {
@@ -138,7 +145,15 @@ generated quantities {
       }
     }
   }
+  y_ode_altered = integrate_ode_rk45(mrnatransport_altered, y0, 0, ts1, theta, x_r, x_i);
+  for (t in 1:T1){
+    for (j in 1:16) {
+      if (j>1){
+        y_pred_altered[t,j] = neg_binomial_2_rng(y_ode_altered[t,j], sigma);
+      } else {
+        y_pred_altered[t,j] = neg_binomial_2_rng(y_ode_altered[t,j]*phi, sigma);  //treat observations in oocyte differently due to aggregation of rna complexes  
+      }
+    }
+  }
 }
- 
-
  

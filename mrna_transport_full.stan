@@ -100,7 +100,7 @@ transformed parameters {
   real theta[4];
   theta[1] = b;
   theta[2] = a;
-  theta[3] = gamma;
+  theta[3] = gamma/b;
   theta[4] = nu;
 }
 model {
