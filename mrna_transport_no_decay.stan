@@ -63,7 +63,7 @@ functions {
   ) {
     vector[16] dydt;
     matrix[16,16] B;
-    B = construct_matrix(theta[4],theta[3]);
+    B = construct_matrix(theta[3],0);
     dydt = theta[1] * B * to_vector(y) + theta[2] * to_vector(x_r);
     return to_array_1d(dydt);
   }
@@ -91,41 +91,25 @@ transformed data {
 parameters {
   real<lower=0> sigma; //noise param
   real<lower=0,upper=1> phi; //difference between particles in NCs and in Oocyte
-  real mu[3]; //use this as popn mean
-  real<lower=0> tau[3];
-  real transformed_theta[T1,3];
+  real<lower=0> a;
+  real<lower=0> b;
+  real<lower=0,upper=1> nu;
 }
-
-transformed parameters{
-  real theta[T1,4];
-  for (i in 1:T1){
-    for (j in 1:2){
-      theta[i,j] = fabs(mu[j] + tau[j]*transformed_theta[i,j]); //truncated normal
-    }
-    theta[i,3] = 0;
-    theta[i,4] = inv_logit(mu[3] + tau[3]*transformed_theta[i,3]);
-  }
+transformed parameters {
+  real theta[3];
+  theta[1] = b;
+  theta[2] = a;
+  theta[3] = nu;
 }
-
 model {
   real z[T1,16];
-  real aux[T1,16];
-  sigma ~ normal(0,10) T[0,]; 
-  phi ~ normal(0.57,0.0118) T[0,1];
-  for (i in 1:2){
-    mu[i] ~ normal(0,10) T[0,];    
-  }
-  mu[3] ~ normal(2,2);
-  for (i in 1:3){
-    tau[i] ~ normal(0,1) T[0,];
-  }
+  sigma ~ normal(0,10) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
+  phi ~ normal(0.57,0.118) T[0,1];
+  a ~ normal(0,10) T[0,];
+  b ~ normal(0,10) T[0,];
+  nu ~ beta(1,1) T[0,1];
+  z = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
-    transformed_theta[t,1] ~ normal(0,1);
-    transformed_theta[t,2] ~ normal(0,1);    
-//    transformed_theta[t,3] ~ normal(0,1);
-    transformed_theta[t,3] ~ normal(0,1); //logit for nu   
-    aux = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta[t], x_r, x_i);
-    z[t] = aux[t];
     for (j in 1:16) {
       if (j>1){
         y[t,j] ~ neg_binomial_2(z[t,j], sigma);
@@ -138,22 +122,14 @@ model {
 generated quantities {
   int y_pred[T2,16]; //predictions for WT
   real y_ode[T2,16]; 
-  real theta_wt[T2,4]; //parameters for each WT egg chamber
   int y_pred_OE[T3,16]; //predictions for OE
   real y_ode_OE[T3,16];  
-  real theta_OE[T3,4]; //parameters for each OE egg chamber
+  real theta_OE[3];
   real y_lik_ode[T1,16];
   vector[T1] log_lik;
-  real aux_gq[max(max(T1,T2),T3),16];
   // for wild type
+  y_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts2, theta, x_r, x_i );
   for (t in 1:T2){
-    for (j in 1:2){
-      theta_wt[t,j] = fabs(normal_rng(mu[j],tau[j]));
-    }
-    theta_wt[t,3] = 0;
-    theta_wt[t,4] = inv_logit(normal_rng(mu[3],tau[3]));    
-    aux_gq[1:T2] = integrate_ode_rk45(mrnatransport, y0, 0, ts2, theta_wt[t], x_r, x_i);
-    y_ode[t] = aux_gq[t];
     for (j in 1:16){
       if (j>1){
         y_pred[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
@@ -163,14 +139,10 @@ generated quantities {
     }
   }
   // for the overexpression mutant
+  theta_OE = theta;
+  theta_OE[2] = theta[2]; //double the rate of production in the overexpressor
   for (t in 1:T3){
-    theta_OE[t,1] = fabs(normal_rng(mu[1],tau[1]));
-    theta_OE[t,2] = 2*fabs(normal_rng(mu[2],tau[2]));    
-//    theta_OE[t,3] = fabs(normal_rng(mu[3],tau[3]));
-    theta_OE[t,3] = 0;
-    theta_OE[t,4] = inv_logit(normal_rng(mu[3],tau[3]));
-    aux_gq[1:T3] = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE[t], to_array_1d(OE_producers[t,]), x_i);
-    y_ode_OE[t] = aux_gq[t];
+    y_ode_OE = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i ); //use overexpression producers
     for (j in 1:16){
       if (j>1){
         y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j], sigma);
@@ -181,9 +153,8 @@ generated quantities {
   }
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
+  y_lik_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i );
   for (t in 1:T1){
-    aux_gq[1:T1] = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta[t], x_r, x_i );
-    y_lik_ode[t] = aux_gq[t];
     for (j in 1:16){
       if (j>1) {
         log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j],sigma);

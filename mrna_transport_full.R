@@ -2,7 +2,7 @@
 mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
                                              parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
                                              show_diagnostic_plots=FALSE, use_hierarchical_model=FALSE, use_prior_predictive=TRUE,
-                                             use_binary_producers=FALSE, train_on_OE=FALSE, is_nu_uniform=TRUE){
+                                             use_binary_producers=FALSE, train_on_OE=FALSE, is_nu_uniform=TRUE, no_decay_model=FALSE){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
@@ -120,6 +120,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
         TRUE ~ 'prior_predictive_full.stan')
     } else {
     stan_file = case_when( 
+      no_decay_model ~ 'mrna_transport_no_decay.stan',
       !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
       use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
       TRUE ~ 'mrna_transport_full.stan')   #'mrna_transport_reparametrised.stan')
@@ -139,7 +140,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     if (!use_hierarchical_model){
       initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.57)    
     } else {
-      initF <- function() list(mu=c(9, 0.18, 0.5, 2.2), sigma=1.25, phi=0.57)    
+      initF <- function() list(mu=c(9, 0.18, 2.2), sigma=1.25, phi=0.57)    
     }
     estimates <- stan(file = stan_file,
                       data = stan_list,

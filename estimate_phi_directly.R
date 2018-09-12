@@ -175,3 +175,32 @@ q %>% process_for_phi() %>%
   group_by(phenotype) %>%
   add_tally() %>%
   summarise(ss=mean(av),std_err=sd(av)/sqrt(n[1]))
+
+a %>% 
+  mutate(Normalised_intensity = BgdSubtract / median(a$MeanByRegion)) %>%
+  ggplot(aes(x=Region,y=Normalised_intensity)) +
+  geom_violin(draw_quantiles = c(0.5)) +
+  geom_jitter(alpha=0.3) +
+  labs(y='Normalised intensity') +
+  scale_x_discrete("Region", labels = c("background" = "BGD","oocyte" = "OO","nurse_cells" = "NC")) +
+  theme_bw()
+ggsave('plots/fig3d.eps',device=cairo_ps)
+
+a %>% 
+  mutate(Normalised_intensity = BgdSubtract / median(a$MeanByRegion)) %>%
+  filter(Region=='oocyte') %>%
+  ggplot(aes(Normalised_intensity)) +
+  geom_density() +
+  labs(x='Normalised intensity', y='Density') +
+#  scale_x_discrete("Region", labels = c("background" = "BGD","oocyte" = "OO","nurse_cells" = "NC")) +
+  theme_bw()
+
+#distribution is not normal as shown by a density plot
+a %>% 
+  mutate(Normalised_intensity = BgdSubtract / median(a$MeanByRegion)) %>%
+  summarise(ava=mean(Normalised_intensity),meda=median(Normalised_intensity))
+
+a %>% 
+  mutate(phi = median(a$MeanByRegion)/BgdSubtract) %>%
+  summarise(ava=mean(phi),meda=median(phi))
+
