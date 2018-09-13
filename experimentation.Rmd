@@ -103,9 +103,9 @@ mc <- stan_model('model_comparison5.stan')
 expose_stan_functions(mc) #get hold of functions defined in the stan code
 #keep all other parameters constant during this experiment
 m0 = c(0, rep(1,15)) #initial condition
-th = c(4,300) #c(96.5,249)
-sig = 50
-phi = 0.289
+th = c(0.2,10) #c(96.5,249)
+sig = 1
+phi = 0.3
 nSamples = 15
 nTest = 5
 nTestOE = 0
@@ -123,7 +123,7 @@ samples <- stan(file = 'mrna_transport6.stan',
                   data = list (
                     T  = nTotal,
                     y0 = m0,
-                    t0 = times$t0,
+                    t0 = times$t0$estimate[2],
                     ts = times$ts2,
                     theta = array(th, dim = 2),
                     sigma = sig,
@@ -136,9 +136,9 @@ samples <- stan(file = 'mrna_transport6.stan',
                   iter =100, 
                   refresh = -1
   )
-estimates = rstan::extract(samples, pars='y_hat')
+estimates = rstan::extract(samples, pars='y_ode')
 #make the samples go in a 'nice' format
-pred <- as.data.frame(estimates, pars = 'y_hat') %>%
+pred <- as.data.frame(estimates, pars = 'y_ode') %>%
   gather(factor_key = TRUE) %>%
   group_by(key) %>%
   summarize(lb = quantile(value, probs = 0.05),
@@ -154,13 +154,27 @@ all_extracted_samples = full_join(all_extracted_samples, pred)
 p1 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
 p1 <- p1 + geom_line() +
   facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
-  labs(x = "time", y = "rna") +
+  labs(x = "Time (hrs)", y = "mRNA") +
   theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-        strip.text = element_text(size = 8)) + 
+        strip.text = element_text(size = 8), legend.position = 'None') + 
   scale_color_discrete(name = "nu") + 
   scale_colour_brewer(palette=7) + 
-  geom_point(aes(x = time, y = rna))
+#  geom_point(aes(x = time, y = rna)) +
+  NULL
 p1
+
+p2 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95), aes(x = time, y = median, group=factor(nu))) +
+  geom_line() +
+  facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
+  labs(x = "Time (hrs)", y = "mRNA") +
+  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
+        strip.text = element_text(size = 8), legend.position = 'None') + 
+  scale_color_discrete(name = "nu") + 
+  scale_colour_brewer(palette=7) + 
+#  geom_point(aes(x = time, y = rna)) +
+  NULL
+p2
+ggsave('plots/ODE_sims.eps',device=cairo_ps)
 
 ```
 
