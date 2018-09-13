@@ -98,6 +98,12 @@ parameters {
 
 transformed parameters{
   real theta[T1,4];
+  real a; //want these for ease of plotting
+  real b;
+  real nu;
+  a = mu[2];
+  b = mu[1];
+  nu = (1+inv_logit(mu[3]))/2;
   for (i in 1:T1){
     for (j in 1:2){
       theta[i,j] = fabs(mu[j] + tau[j]*transformed_theta[i,j]); //truncated normal

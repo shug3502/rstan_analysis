@@ -141,17 +141,33 @@ Can do the same with the OE data.
 ```{r}
 source('mrna_transport_full.R')
 res_no_decay = mrna_transport_inference_full('no_decay_v304',
-						use_real_data = TRUE, run_mcmc = TRUE,
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
 						verbose = TRUE, compare_via_loo = TRUE,
 						show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = TRUE,
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
-res_WT = mrna_transport_inference_full('full_nu_uniform_OE_v302',
+res_OE = mrna_transport_inference_full('full_nu_uniform_OE_v302',
 						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
 						verbose = TRUE, compare_via_loo = TRUE,
 						show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = TRUE,
 						is_nu_uniform = TRUE, no_decay_model = FALSE)
+loo::compare(res_OE[[2]], res_no_decay[[2]])
 ```
+
+
+Results from the hierarchical model without RNA decay. The MCMC has not converged. May need to consider abandoning the hierarchical model. Could try using the posterior for the simpler model as a prior for the hierarchical model. Think that the data driven prior for $\phi$ could be confusing it a little. 
+```{r}
+source('mrna_transport_full.R')
+res_WT = mrna_transport_inference_full('full_nu_uniform_v291',
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = TRUE, use_hierarchical_model = TRUE,
+						parametersToPlot = c('mu','phi','sigma'),
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						is_nu_uniform = TRUE, no_decay_model = FALSE)
+```
+

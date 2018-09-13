@@ -115,6 +115,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     if (!is_nu_uniform & use_hierarchical_model) warning('Not yet implemented a non uniform hierarchical model. Using normal non-uniform model')
     if (use_prior_predictive){
       stan_file = case_when( 
+        no_decay_model ~ 'prior_predictive_no_decay.stan',
         !is_nu_uniform ~ 'prior_predictive_nu_varying_spatially.stan',
         use_hierarchical_model ~ 'prior_predictive_hierarchical.stan',
         TRUE ~ 'prior_predictive_full.stan')
