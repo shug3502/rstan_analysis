@@ -110,7 +110,7 @@ generated quantities {
   a = fabs(normal_rng(0,10));
   nu = beta_rng(1,1);
   sigma = fabs(normal_rng(0,1)); 
-  phi = fabs(normal_rng(0.57,0.118));
+  phi = fabs(normal_rng(3,1));
 
   theta[1]=b;
   theta[2]=a;
