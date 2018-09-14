@@ -104,7 +104,7 @@ transformed parameters {
 model {
   real z[T1,16];
   sigma ~ normal(0,10) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
-  phi ~ normal(0,1) T[0,]; //normal(0.3,0.036) T[0,1];
+  phi ~ normal(0.3,0.036) T[0,];
   a ~ normal(0,10) T[0,];
   b ~ normal(0,10) T[0,];
   nu ~ beta(1,1) T[0,1];

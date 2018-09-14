@@ -1,32 +1,19 @@
 #setwd('~/Documents/FISH_data/rstan_analysis')
 #write as function, may need to think about what to do if want to run from command line again
-run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,
+run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=9,nTest=11,nTestOE=9,
                                       parametersToPlot = c('nu','xi','phi'),verbose=FALSE,
                                       compare_via_loo=FALSE,
                                       show_diagnostic_plots=FALSE,
-                                      test_on_mutant_data=TRUE, 
-                                      cell_indices = seq_len(16)){
+                                      train_on_OE=FALSE){
+  #steady state analysis only for the simplest model without decay or other complications
 library(rstan)
 library(mvtnorm)
 library(dplyr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-# identifier = 'MCv056' #run identifier
-# use_real_data <- TRUE
-# run_mcmc <- FALSE
-# nSamples = 15 #how many egg chambers segmented
-# nTest = 5 #how many to test on
-nTotal = nSamples + nTest
-
-#############################################################
-#Fit linear model to log(length) of egg chambers to get time of development.
-#Could use area or volume of egg chamber. Compare to Jia 2016 Sci Reports.
-#Area may be better as in some examples egg chambers are quite squashed.
-#To get lengths read length.txt file in each folder
 
 source('extract_times_and_scaling.R')
-times = extract_times_and_scaling(nSamples,nTest,test_on_mutant_data=test_on_mutant_data)
-
+times = extract_times_and_scaling(nSamples,nTest,nTestOE)
 #############################################################
 m0 = c(0, rep(1,15)) #initial condition
 th = c(6.8,132.8)
@@ -36,100 +23,50 @@ phi = 0.289 #careful can cause issues if phi is not 1 when looking at stst
 #############################################################
 my_normaliser <- function(dataset) apply(dataset,1,function(x)x/x[1]) %>% t()
 #########
-median_imputation <- function(exp_data){
-  #impute missing data
-  chambers_to_impute = apply(exp_data,1,function(x) any(is.na(x)))
-  imputed_median_values = apply(exp_data,2,function(x) median(x, na.rm=TRUE))
-  exp_data[chambers_to_impute,-c(1,2,3,5,9)] = matrix(rep(imputed_median_values[-c(1,2,3,5,9)],sum(chambers_to_impute)),byrow=TRUE,ncol=11) #impute only for cells that aren't neighbouring the oocyte
-  return(exp_data)
-}
-#########
-
 
 if (use_real_data){
   #data taken from spot detection on 3 egg chambers
   if (verbose) print('using real data \n')
   #system('python ../custom_analysis/process_all_NCs.py',wait=TRUE)
   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
-  if (test_on_mutant_data){
-    data = data[seq_len(nSamples),]
-  } else {
-    data = data[seq_len(nTotal),]
-  }
   raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
   exp_data = raw_data
-  exp_data = median_imputation(exp_data)
-#  exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
-  normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
-  if (test_on_mutant_data){
-    overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
-    overexpression_data = overexpression_data[seq_len(nTest),]
-    test_data = rbind(data,overexpression_data)
-    full_data = test_data[times$sort_indices2,]
-    test_data = test_data[!(times$sort_indices2 %in% times$sort_indices1),]
-    #test_data[is.na(test_data)]=0 
-  } else {
-    full_data = data[times$sort_indices2,]
-    test_data = data[!(times$sort_indices2 %in% times$sort_indices1),]
+  exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
+  overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+  overexpression_data = overexpression_data[times$sort_indices4,] #need to sort time series and correspondingly reorder rows
+  test_data = rbind(data,overexpression_data)
+  test_data = test_data[times$sort_indices2,]
+  test_data[is.na(test_data)]=0
+  WT_test_data = data[times$sort_indices3,]
+  WT_test_data[is.na(WT_test_data)]=0
+  if (train_on_OE){
+    swap <- function(name1, name2, envir = parent.env(environment()))
+    {
+      temp <- get(name1, pos = envir)
+      assign(name1, get(name2, pos = envir), pos = envir)
+      assign(name2, temp, pos = envir)
+    }
+    swap('exp_data','overexpression_data')
+    swap('nSamples','nTestOE')
+    temp <- list(times$ts1,times$ts4)
+    times$ts1 <- temp[[2]]
+    times$ts4 <- temp[[1]]
+    print('swapped')
+    print(times$ts1)
+    print(nSamples)
   }
-} else {
-  #sample from the model to get fake data
-  print('using fake generated data')
-  #############################################################
-  source('get_nc_transition_matrix.R')
-  B1 = get_nc_transition_matrix(0) %>% as.vector
-  B2 = get_nc_transition_matrix(1) %>% as.vector
-  
-  mc <- stan_model('model_comparison_at_stst2.stan')
-  expose_stan_functions(mc)
-  nu = 0.72
-  # set_oocyte_absorbing = function(B){
-  #   B[,1] = 0
-  #   return(B)
-  # }
-  #currently will not be using the absorbing oocyte fn
-  B = construct_matrix(nu) %>% as.vector
-  #############################################################
-  samples <- stan(file = 'mrna_transport6.stan',
-                  data = list (
-                    T  = nTotal,
-                    y0 = m0,
-                    t0 = (times$t0)*10,
-                    ts = (times$ts2)*10,
-                    theta = array(th, dim = 2),
-                    sigma = sig,
-                    phi = phi,
-                    B = B
-                  ),
-                  algorithm="Fixed_param",
-                  seed = 42,
-                  chains = 1,
-                  iter =100, 
-                  refresh = -1
-  )  
-  s <- rstan::extract(samples,permuted=FALSE)
-  plot(s[1,1,seq(from=1, to=(nTotal*16-1), by=nTotal)])
-  plot(s[1,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
-  boxplot(s[,1,seq(from=nSamples, to=(nTotal*16), by=nTotal)])
-  #   exp_data = matrix(s[1,1,1:(16*nSamples)],nrow=nSamples,byrow=FALSE) #this is our fake data
-  full_data = matrix(s[1,1,1:(16*(nTotal))],nrow=(nTotal),byrow=FALSE) #this is our fake data
-  exp_data = full_data[!(times$ts2 %in% times$ts3),] 
   normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
-  boxplot(normalised_data)
-  test_data = full_data[(times$ts2 %in% times$ts3),]
-  #test_data = apply(test_data,1,function(x)x/x[1]) %>% t()
+} else {
+  warning('TODO: update simulated data for full model')
+  return(0)
 }
-
 ############################
 if (run_mcmc) {
-   # normalised_data <- overexpression_data[times$sort_indices3,] %>% my_normaliser
-   # print(normalised_data)
   estimates <- stan(file = 'model_comparison_at_stst2.stan',
                     data = list (
                       T1 = nSamples,
-                      T2 = nTest,
-                      y_obs = normalised_data,
-                      cell_indices = cell_indices
+                      T2 = nTest+nTestOE,
+                      y_obs = normalised_data
                     ),
                     seed = 42,
                     chains = 4,
@@ -152,7 +89,6 @@ if (run_mcmc) {
   estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
 }
 
-#parametersToPlot = c('nu','sigma','phi') #c('mu','tau','zeta','xi') 
 if (verbose) print(estimates, pars = parametersToPlot)
 
 #######################
@@ -166,7 +102,7 @@ pairs(estimates, pars = parametersToPlot)
 #look at posterior predictive distn
 source('post_pred_plot_at_stst.R')
 #post_pred_plot_at_stst((test_data %>% my_normaliser),times$ts3,nTest,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
-p1 <- post_pred_plot_at_stst((full_data %>% my_normaliser),times$ts2,nTotal,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst',ts_test=times$ts3)
+p1 <- post_pred_plot_at_stst((test_data %>% my_normaliser),times$ts2,nSamples+nTest+nTestOE,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst',ts_test=times$ts3,OE_test=times$ts4)
 
 if (compare_via_loo){
   library(loo)

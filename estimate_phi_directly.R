@@ -1,3 +1,4 @@
+## TODO: clean up this script
 library(dplyr)
 library(ggplot2)
 
@@ -46,8 +47,8 @@ for (r in seq_along(regions)){
     particles <- rbind(particles,cbind(cbind(cbind(temp[[j]],Region),Sample),Stage))  
   }
 }
-gg<- particles %>% filter(Region=="background") %>% ggplot(aes(x=RawIntDen, y=Region, color=factor(Sample))) + geom_jitter()
-print(gg)
+# gg<- particles %>% filter(Region=="background") %>% ggplot(aes(x=RawIntDen, y=Region, color=factor(Sample))) + geom_jitter()
+# print(gg)
 #########################
 #process by subtracting background values and valculating ratio
 processed <- particles %>% 
@@ -103,7 +104,7 @@ get_mean_and_std <- function(q){
  q %>%
     process_for_phi() %>%
     add_tally() %>%
-    summarise(av = mean(phi), std = sd(phi), av_median=median(phi), stnd_error=sd(phi)/n[1])
+    summarise(av = mean(phi), std = sd(phi), av_median=median(phi), stnd_error=sd(phi)/sqrt(n[1]))
 }
 
 #attempt to fit gamma distribution to use as prior for phi
@@ -152,7 +153,7 @@ d <- out_UE[[1]] %>% mutate(phenotype = 'UE')
 q <- full_join(a,b) %>%
   full_join(.,d)
 get_mean_and_std(q) %>% print()
-fit_gamma_to_phi_data(q) %>% print()
+#fit_gamma_to_phi_data(q) %>% print()
 
 q %>%
   process_for_phi() %>%

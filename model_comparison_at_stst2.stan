@@ -53,23 +53,12 @@ functions {
 //need to return transpose
   return B';
   }
-  /* THis part was for looking at the oocyte as an absorbing state, but this is a qualitatively different problem
-  matrix set_oocyte_absorbing(matrix A){
-    matrix[16,16] B;
-    B = A;
-    //make the oocyte into an absorbing state, by making the first column zero
-    for (i in 1:16){
-      B[i,1] = 0;
-    }
-    return(B);
-  }
-*/  
+
  vector get_k2(real th){
     matrix[16,16] B;
     matrix[16,16] Q;
     vector[16] N;
     real s;
-    //int r;
     B = construct_matrix(th); 
     Q = qr_Q(B'); //compute qr decomposition
   //take last n-r cols of Q as basis of null space
@@ -86,38 +75,36 @@ data {
   int<lower=1> T1;
   int<lower=0> T2;
   real y_obs[T1,16];
-  int cell_indices[16]; //use this to feed in which cells you want to use for fitting
 }
 parameters {
   real<lower=0,upper=1> nu;
-  real<lower=0> xi;
+  real<lower=0,upper=0.5> xi;
   real<lower=0,upper=1> phi;
 }
 model {
-//  int cell_indices[16]; //only model these cells
   real y_stst[T1,16];
-  xi ~ normal(0,0.1) T[0,];
+  xi ~ normal(0,0.1) T[0,]; //ommitting this should give uniform on [0,0.5]
   nu ~ beta(1,1) T[0,1];
-  phi ~ normal(0.289,0.0285) T[0,1]; //normal(0.208,0.05) T[0,1]; //
-//for (j in 1:16){ cell_indices[j] = j; }
-/*
-  cell_indices[1] = 1;
-  cell_indices[2] = 2;
-  cell_indices[3] = 3;
-  cell_indices[4] = 9;
-  cell_indices[5] = 5;
-  */
+  phi ~ normal(0.30,0.036) T[0,1]; 
 for (t in 1:T1){
   //relying on the fact that in practice dim of null space is 1, unless nu=0 (unidirectional backward transport)
   y_stst[t] = to_array_1d(get_k2(nu));
-  for (j in 1:16){
-    if (cell_indices[j]>0){ //use this as a way of inputing only data from certain cells
-      if (j>1) {
-        y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]]/phi,xi) T[0,];
-      } else {
-        y_obs[t,cell_indices[j]] ~ normal(y_stst[t,cell_indices[j]],xi) T[0,];
-      }
-    }
+  for (j in 2:16){
+//    if (j>1) {
+  // see https://stats.stackexchange.com/questions/12232/calculating-the-parameters-of-a-beta-distribution-using-the-mean-and-variance
+  /*
+    mu = y_stst[t,j]/phi;
+    one_minus_mu = 1-mu;
+    alpha = (one_minus_mu/xi^2 - 1/mu)*mu^2;
+    print(alpha);
+    beta = alpha*(1/mu - 1);
+    print(beta);
+    y_obs[t,j] ~ beta(alpha,beta) T[0,1];
+    */
+    y_obs[t,j] ~ normal(y_stst[t,j],xi) T[0,1];
+//    } else {
+//      y_obs[t,j] ~ normal(y_stst[t,j],xi) T[0,];
+//    }
   }
 }
 }
@@ -125,37 +112,24 @@ generated quantities {
   real y_pred[(T1+T2),16];
   real y_sim[(T1+T2),16];
   vector[T1] log_lik;
-//  int cell_indices[16]; //only model these cells
   real y_stst[T1,16];
-  /*
-  cell_indices[1] = 1;
-  cell_indices[2] = 2;
-  cell_indices[3] = 3;
-  cell_indices[4] = 9;
-  cell_indices[5] = 5;
-  */
   for (t in 1:(T1+T2)) {
     y_pred[t] = to_array_1d(get_k2(nu));
-    for (i in 1:16){
-      if (i>1) {
-        y_sim[t,i] = fabs(normal_rng(y_pred[t,i]/phi,xi));
-      } else {
-        y_sim[t,i] = fabs(normal_rng(y_pred[t,i],xi));
-      }
+    y_sim[t,1] = 1; 
+    for (j in 2:16){
+      /*
+      mu_pred = y_pred[t,j]/phi;
+      one_min_pred = 1-mu_pred;
+      alpha_pred = (one_min_pred/xi^2 - 1/mu_pred)*mu_pred^2;
+      beta_pred = alpha_pred*(1/mu_pred - 1);
+      y_sim[t,j] = beta_rng(alpha_pred,beta_pred);
+      */
+      y_sim[t,j] = fabs(normal_rng(y_pred[t,j]/phi, xi));
     }
   }
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
   for (t in 1:T1){
     y_stst[t] = to_array_1d(get_k2(nu));
-    /*
-    for (j in 1:5){ //TODO: fix if you want to use for model comparison again
-      if (j>1) {
-        log_lik[t] = log_lik[t] + normal_lpdf(y_obs[t,cell_indices[j]] | y_stst[t,cell_indices[j]]/phi,xi);
-      } else {
-        log_lik[t] = log_lik[t] + normal_lpdf(y_obs[t,cell_indices[j]] | y_stst[t,cell_indices[j]],xi);
-      }
-    }
-  */
   }
 }

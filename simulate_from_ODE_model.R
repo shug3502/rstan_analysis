@@ -52,17 +52,17 @@ pred <- pred %>% bind_cols(xdata) %>%
 all_extracted_samples = full_join(all_extracted_samples, pred)
 }
 
-p1 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
-p1 <- p1 + geom_line() +
-  facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
-  labs(x = "Time (hrs)", y = "mRNA") +
-  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-        strip.text = element_text(size = 8), legend.position = 'None') + 
-  scale_color_discrete(name = "nu") + 
-  scale_colour_brewer(palette=7) + 
-#  geom_point(aes(x = time, y = rna)) +
-  NULL
-p1
+# p1 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
+# p1 <- p1 + geom_line() +
+#   facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
+#   labs(x = "Time (hrs)", y = "mRNA") +
+#   theme(text = element_text(size = 12), axis.text = element_text(size = 12),
+#         strip.text = element_text(size = 8), legend.position = 'None') + 
+#   scale_color_discrete(name = "nu") + 
+#   scale_colour_brewer(palette=7) + 
+# #  geom_point(aes(x = time, y = rna)) +
+#   NULL
+# p1
 
 p2 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95), aes(x = time, y = median, group=factor(nu))) +
   geom_line() +
@@ -74,5 +74,5 @@ p2 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95), aes(x = time, 
   scale_colour_brewer(palette=7) + 
 #  geom_point(aes(x = time, y = rna)) +
   NULL
-p2
+print(p2)
 ggsave('plots/ODE_sims.eps',device=cairo_ps)
