@@ -191,10 +191,10 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   } else {
     p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples+nTestOE,'y_pred',
                          estimates,identifier,title_stem='plots/posterior_pred',
-                         ts_test=times$ts3,OE_test=times$ts4)
+                         ts_test=times$ts3,OE_test=times$ts4,filter_out_wt=TRUE)
     p2 <- post_pred_plot(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
                          estimates,identifier,title_stem='plots/posterior_pred_OE',
-                         ts_test=times$ts3,OE_test=times$ts4)
+                         ts_test=times$ts3,OE_test=times$ts4,filter_out_wt=FALSE)
     # p3 <- post_pred_animation(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
     #                      estimates,identifier,title_stem='plots/posterior_pred_OE',
     #                      ts_test=times$ts3,OE_test=times$ts4)
