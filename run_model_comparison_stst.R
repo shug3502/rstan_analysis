@@ -66,8 +66,7 @@ if (run_mcmc) {
                     data = list (
                       T1 = nSamples,
                       T2 = nTest+nTestOE,
-                      y_obs = normalised_data,
-                      x_i = c(2,4)
+                      y_obs = normalised_data
                     ),
                     seed = 42,
                     chains = 4,

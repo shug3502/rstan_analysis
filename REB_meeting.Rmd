@@ -113,7 +113,7 @@ Try out a different version of inference at steady state with blocked ring canal
 ```{r}
 source('run_model_comparison_stst.R')
 identifier = 'MCv352'
-res <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,train_on_OE=TRUE) 
+res <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,train_on_OE=TRUE) 
 ```
 
 

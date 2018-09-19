@@ -142,37 +142,91 @@ functions {
  }
   return(N_bar);
   }
+  
+  int[] get_RC_from_dict(int w){
+    int RCs[32];
+    int blocked_cells[2];
+    RCs[1] = 0;
+    RCs[2] = 0;
+    RCs[3] = 1;
+    RCs[4] = 2;
+    RCs[5] = 1;
+    RCs[6] = 3;
+    RCs[7] = 1;
+    RCs[8] = 5;
+    RCs[9] = 1;
+    RCs[10] = 9;    
+    RCs[11] = 2;
+    RCs[12] = 4;
+    RCs[13] = 2;
+    RCs[14] = 6;    
+    RCs[15] = 2;
+    RCs[16] = 10;
+    RCs[17] = 3;
+    RCs[18] = 7;
+    RCs[19] = 3;
+    RCs[20] = 11;
+    RCs[21] = 4;
+    RCs[22] = 8;
+    RCs[23] = 4;
+    RCs[24] = 12;    
+    RCs[25] = 5;
+    RCs[26] = 13;
+    RCs[27] = 6;
+    RCs[28] = 14;    
+    RCs[29] = 7;
+    RCs[30] = 15;
+    RCs[31] = 8;
+    RCs[32] = 16;        
+    blocked_cells[1] = RCs[2*w - 1];    
+    blocked_cells[2] = RCs[2*w];        
+    return(blocked_cells);
+  }
 }
 data {
   int<lower=1> T1;
   int<lower=0> T2;
   real y_obs[T1,16];
-  int x_i[2];
+  //int x_i[2];
 }
 parameters {
+  simplex[16] theta; //probability of blocking for each ring canal
   real<lower=0,upper=1> nu;
   real<lower=0> xi;
   real<lower=0> phi;
 }
 model {
   real y_stst[T1,16];
+  vector[16] alpha;
+  int z[T1];
+  int blocked_cells[2];
+  alpha = rep_vector(1,16);
+  print(alpha);
+  theta ~ dirichlet(alpha);
+  print(theta);
   xi ~ normal(0,0.1) T[0,]; 
   nu ~ beta(1,1) T[0,1];
   phi ~ normal(0.30,0.036) T[0,1]; 
-for (t in 1:T1){
-  y_stst[t] = to_array_1d(get_k2(nu,x_i));
-  for (j in 2:16){
-    y_obs[t,j] ~ normal(y_stst[t,j]/phi,xi) T[0,];
+  for (t in 1:T1){
+    z[t] ~ categorical(theta);
+    blocked_cells = get_RC_from_dict(z[t]);
+    y_stst[t] = to_array_1d(get_k2(nu,blocked_cells));
+    for (j in 2:16){
+      y_obs[t,j] ~ normal(y_stst[t,j]/phi,xi) T[0,];
+    }
   }
-}
 }
 generated quantities {
   real y_pred[(T1+T2),16];
   real y_sim[(T1+T2),16];
   vector[T1] log_lik;
   real y_stst[T1,16];
+  int z_sim[T1];
+  int blocked_cells_sim[2];
   for (t in 1:(T1+T2)) {
-    y_pred[t] = to_array_1d(get_k2(nu,x_i));
+    z_sim[t] = categorical_rng(theta);    
+    blocked_cells_sim = get_RC_from_dict(z_sim[t]);
+    y_pred[t] = to_array_1d(get_k2(nu,blocked_cells_sim));
     y_sim[t,1] = 1; 
     for (j in 2:16){
       y_sim[t,j] = fabs(normal_rng(y_pred[t,j]/phi, xi));
@@ -181,6 +235,6 @@ generated quantities {
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
   for (t in 1:T1){
-    y_stst[t] = to_array_1d(get_k2(nu,x_i));
+    y_stst[t] = to_array_1d(get_k2(nu,blocked_cells_sim));
   }
 }
