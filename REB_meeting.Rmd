@@ -5,8 +5,9 @@ date: "07/09/2018"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
 # RNA localization
@@ -65,9 +66,9 @@ stan_list = list(y0=y0,
                  gamma = 0.01,
                  nu = 0.95,
                  sigma = 1.25,
-                 phi = 0.57,
-                 b_i = 8,
-                 b_j = 16)
+                 phi = 0.3,
+                 b_i = 3,
+                 b_j = 7)
 estimates <- stan(file = stan_file,
                   data = stan_list,
                   seed = 42,
@@ -89,6 +90,33 @@ source('compare_RC_preds.R')
 comparison_df <- compare_RC_preds(times$ts1,estimates,identifier)
 
 ```
+
+```{r}
+expose_stan_functions('switch_off_RCs.stan')
+B = construct_matrix(0.95,0)
+B_tilde = alter_matrix(B,c(8,16)) #note when this blocks a ring canal this increases the null spcae of the matrix by one
+B %>% MASS::Null()
+alter_matrix(B,c(3,7)) %>% MASS::Null()
+
+qr(B)
+B %>% t() %>% qr %>% qr.Q
+B %>% alter_matrix(c(2,4)) %>% t() %>% qr %>% qr.Q
+
+expose_stan_functions('model_comparison_at_stst2.stan')
+get_k2(0.5)
+
+k2 = qr.Q(qr(t(B)))[,16]; k2=k2/k2[1]
+B 
+```
+
+Try out a different version of inference at steady state with blocked ring canals
+```{r}
+source('run_model_comparison_stst.R')
+identifier = 'MCv352'
+res <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,train_on_OE=TRUE) 
+```
+
+
 
 ## Simple full ODE model: differences between WT and OE
 Suppose we take the simple, full ODE model (now parameterised with scaled $\tilde{\gamma} = \gamma/b$) and fit via MCMC to both the WT data and the overexpression data. What does this tell us about the biological model parameters and the differences between these phenotypes?
@@ -190,6 +218,68 @@ res_OE = mrna_transport_inference_full('no_decay_flat_prior_phi_OE_v312',
 						use_prior_predictive = FALSE, train_on_OE = TRUE,
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
 ```
+
+If what we care about is comparing the transport bias, $\nu$, when fitting to WT and OE data, we can do this directly at steady state.
+
+```{r}
+source('run_model_comparison_stst.R')
+identifier = 'MCv341'
+res_wt <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,train_on_OE=FALSE)
+identifier <- 'MCv342'
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,train_on_OE=TRUE)
+```
+
+
+So interestingly fitting at steady state gives high transport bias in the OE similar to the WT rather than a different value, but much higher noise. It may be that in this case, the predictions are almost entirely explained by the noise. 
+
+We have a mechanistic hypothesis about what is causing the noise in this case (blocking). It would be great to be able to include this more mechanistic measurement noise model, rather than simply a Gaussian which is not realistic in this context. However, this seems tricky to do.
+
+In the meantime, plot this RNA distributions for WT and OE
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(9,11,9)
+my_normaliser <- function(dataset) apply(dataset,1,function(x)x/x[1]) %>% t()
+  data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+  raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
+  exp_data = raw_data
+  exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
+  overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+  overexpression_data = overexpression_data[times$sort_indices4,] #need to sort time series and correspondingly reorder rows
+  test_data = rbind(data,overexpression_data)
+  test_data = test_data[times$sort_indices2,]
+  test_data[is.na(test_data)]=0
+ 
+  normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
+colnames(normalised_data) = seq_len(16)
+df_wt <- as.data.frame(normalised_data) %>% mutate(time=times$ts1) %>% gather(key=cell,value=rna,-time) %>% mutate(phenotype='WT',cell=as.integer(cell))
+
+   swap <- function(name1, name2, envir = parent.env(environment()))
+    {
+      temp <- get(name1, pos = envir)
+      assign(name1, get(name2, pos = envir), pos = envir)
+      assign(name2, temp, pos = envir)
+    }
+    swap('exp_data','overexpression_data')
+    temp <- list(times$ts1,times$ts4)
+    times$ts1 <- temp[[2]]
+    times$ts4 <- temp[[1]]
+    print('swapped')
+    print(times$ts1)
+
+normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise
+colnames(normalised_data) = seq_len(16)
+df_oe <- as.data.frame(normalised_data) %>% mutate(time=times$ts4) %>% gather(key=cell,value=rna,-time) %>% mutate(phenotype='OE',cell=as.integer(cell))  
+full_join(df_wt,df_oe) %>%
+  ggplot(aes(x=cell,y=rna,group=time)) +
+  geom_line() +
+  facet_grid(~phenotype)
+
+
+```
+
 
 
 

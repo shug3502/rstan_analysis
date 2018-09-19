@@ -78,8 +78,8 @@ data {
 }
 parameters {
   real<lower=0,upper=1> nu;
-  real<lower=0,upper=0.5> xi;
-  real<lower=0,upper=1> phi;
+  real<lower=0> xi;
+  real<lower=0> phi;
 }
 model {
   real y_stst[T1,16];
@@ -101,7 +101,7 @@ for (t in 1:T1){
     print(beta);
     y_obs[t,j] ~ beta(alpha,beta) T[0,1];
     */
-    y_obs[t,j] ~ normal(y_stst[t,j],xi) T[0,1];
+    y_obs[t,j] ~ normal(y_stst[t,j]/phi,xi) T[0,];
 //    } else {
 //      y_obs[t,j] ~ normal(y_stst[t,j],xi) T[0,];
 //    }

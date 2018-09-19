@@ -62,11 +62,12 @@ if (use_real_data){
 }
 ############################
 if (run_mcmc) {
-  estimates <- stan(file = 'model_comparison_at_stst2.stan',
+  estimates <- stan(file = 'model_comparison_at_stst3.stan',
                     data = list (
                       T1 = nSamples,
                       T2 = nTest+nTestOE,
-                      y_obs = normalised_data
+                      y_obs = normalised_data,
+                      x_i = c(2,4)
                     ),
                     seed = 42,
                     chains = 4,
@@ -102,7 +103,9 @@ pairs(estimates, pars = parametersToPlot)
 #look at posterior predictive distn
 source('post_pred_plot_at_stst.R')
 #post_pred_plot_at_stst((test_data %>% my_normaliser),times$ts3,nTest,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst')
-p1 <- post_pred_plot_at_stst((test_data %>% my_normaliser),times$ts2,nSamples+nTest+nTestOE,'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst',ts_test=times$ts3,OE_test=times$ts4)
+p1 <- post_pred_plot_at_stst((test_data %>% my_normaliser),times$ts2,nSamples+nTest+nTestOE,
+                             'y_sim',estimates,identifier,title_stem='plots/posterior_pred_stst',
+                             ts_test=vector(),OE_test=times$ts4) #times$ts3
 
 if (compare_via_loo){
   library(loo)

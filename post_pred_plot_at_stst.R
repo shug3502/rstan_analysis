@@ -31,7 +31,7 @@ post_pred_plot_at_stst <- function(raw_data,ts,nSamples,params,estimates,identif
   #add schematic image of egg chamber to plot
   im <- magick::image_read('plots/egg_chamber_stg4to6.png')
   df <- data_frame(x = 14,
-                   y = 0.88,
+                   y = 0.8,
                    width = 4,
                    image = list(im))
   p1 <- p1 + geom_subview(aes(x=x,y=y,subview=image,width=width,height=width), data=df)

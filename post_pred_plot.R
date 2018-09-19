@@ -27,6 +27,7 @@ p1 <- ggplot(pred, aes(x = time, y = median)) +
   geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25) +
   facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
   labs(x = "Time (hrs)", y = "mRNA") +
+  theme_bw() +
   theme(text = element_text(size = 12), axis.text = element_text(size = 12),
         legend.position = "none", strip.text = element_text(size = 8))
 if (!is.na(raw_data[1])){
