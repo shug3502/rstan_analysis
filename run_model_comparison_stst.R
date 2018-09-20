@@ -62,7 +62,7 @@ if (use_real_data){
 }
 ############################
 if (run_mcmc) {
-  estimates <- stan(file = 'model_comparison_at_stst3.stan',
+  estimates <- stan(file = 'model_comparison_at_stst4.stan',
                     data = list (
                       T1 = nSamples,
                       T2 = nTest+nTestOE,
@@ -71,7 +71,8 @@ if (run_mcmc) {
                     seed = 42,
                     chains = 4,
                     warmup = 1000,
-                    iter = 2000
+                    iter = 2000,
+                    init = function() list(nu=0.9, xi=0.4, phi=0.3)                    
 #                    control = list(adapt_delta = 0.99)
   )
   
