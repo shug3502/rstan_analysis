@@ -277,17 +277,43 @@ g1 <- full_join(df_wt,df_oe) %>%
   geom_line() +
   facet_grid(~phenotype)
 print(g1)
-ggsave('plots/normalised_data_distn.eps')
+ggsave('plots/normalised_data_distn.eps',device=cairo_ps)
 
 g2 <- df_oe %>% 
   ggplot(aes(x=cell,y=rna)) +
   geom_line() +
   facet_wrap(~time)
 print(g2)
-
+ggsave('plots/normalised_data_distn_faceted.eps',device=cairo_ps)
 
 ```
 
+Check what the distributions of RNA across cells from the stan model for the mixture model look like from using the exposed stan funtions.
+
+```{r}
+library(rstan)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+expose_stan_functions('model_comparison_at_stst4.stan')
+nu = 0.95
+rc_indices = seq_len(16)
+names(rc_indices) = seq_len(16)
+p1 <- rc_indices %>%
+  purrr::map(get_RC_from_dict) %>%
+  purrr::map_df(function(x) get_k2(nu,x)) %>%
+  mutate(cellID = seq_len(16)) %>%
+  gather(key=rcID,value=mRNA,-cellID) %>%
+  mutate(rcID=as.integer(rcID)) %>%
+  ggplot(aes(x=cellID,y=mRNA)) + 
+  geom_line() + 
+  facet_wrap(~rcID,scales='free')
+print(p1)
+ggsave('plots/normalised_model_distn_faceted.eps',device=cairo_ps)
+print(rc_indices %>%
+  purrr::map(get_RC_from_dict))  
+
+```
 
 
 

@@ -65,10 +65,10 @@ functions {
     return(B); 
   }
   real[] get_first_nonzero_entry(vector v){
-    int z;
+    int z = 1;
+    real tol = 10^-13; //tolerance. If too small, then gives the wrong answer.
     real out[2];
-    z = 1;
-    while (fabs(v[z])<10^-15){
+    while (fabs(v[z])< tol){
       z = z+1;
       /* this breaks expose stan functions
       if (z>16){
@@ -133,14 +133,24 @@ vector my_normalise(vector v, real x){
       s_tilde = get_first_nonzero_entry(N_tilde);
       N_tilde = my_normalise(N_tilde,s_tilde[1]);
       //may be that vectors N and N_tilde span null space, but not sparse 
+      print(N);
+      print(N_tilde);
+      print(s[2]);
+      print(s_tilde[2]);
       if (s[2]+s_tilde[2]==2){
         //then vectors are not sparse. make sparse
         if(all_elements_positive(N)){
+          print(N_tilde);
+          print(N);
           N_tilde = N - N_tilde;
           s_tilde = get_first_nonzero_entry(N_tilde);
           N_tilde = my_normalise(N_tilde,s_tilde[1]);
           N = N - N_tilde*N[my_floor(s_tilde[2])];
+          print(N_tilde);
+          print(N);
         } else if (all_elements_positive(N_tilde)){
+          print(23);
+          print(24);
           N = N_tilde - N;
           s = get_first_nonzero_entry(N);
           N = my_normalise(N,s[1]);
@@ -151,10 +161,10 @@ vector my_normalise(vector v, real x){
       nz=0;
       nz_tilde=0;
       for (j in 1:16){
-        if (N[j] > 10^-15){
+        if (N[j] > 10^-13){
           nz = nz+1;
         }
-        if (N_tilde[j] > 10^-15){
+        if (N_tilde[j] > 10^-13){
           nz_tilde = nz_tilde + 1;
         }
       }
