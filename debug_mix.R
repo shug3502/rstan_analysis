@@ -1,11 +1,27 @@
 library(rstan)
-expose_stan_functions('model_comparison_at_stst4.stan')
 expose_stan_functions('debug.stan')
-nu=0.5
-B = alter_matrix(construct_matrix(nu),c(1,5))
-Q = qr.Q(qr(t(B)))
-Q_stan = qr_Q_stan(t(B))
-#Q = Q_stan
+#This constructs a matrix B to illustrate the behaviour. B should be a 16x16 matrix with rank 14
+B = t(alter_matrix(construct_matrix(0),c(5,13))) 
+
+Q = qr.Q(qr(B)) #qr decomposition with R
+Q_stan = qr_Q_stan(B) #qr decomposition with Stan
+apply(Q-Q_stan,2,function(x) sum(abs(x))<10^-14) #several of the final columns are different
+
+#the final two columns of the Q matrix should span the null space of B. If both span the same space, then rank of this should be 2, but gives rank 3.
+X = cbind(Q[,15:16],Q_stan[,get_index_for_Q_cols(B)])
+print(qr(X)$rank)  
+######################################
+
+Q
+R = qr.R(qr(B))
+diag(R)
+R_stan = qr_R_stan(B)
+diag(R_stan)
+
+##########################################
+
+
+expose_stan_functions('model_comparison_at_stst4.stan')
 
 compute_N_bar <- function(Q){
 N=Q[,15]
@@ -39,9 +55,9 @@ get_k2_R <- function(x,nu=0.95) {
   Q = qr.Q(qr(t(B)))
   return(compute_N_bar(Q))
 }
-rc_indices = seq_len(16)
-names(rc_indices) = seq_len(16)
-p1 <- rc_indices %>%
+rc_indices = seq(from=2,to=16)
+names(rc_indices) = seq_len(16)[-1]
+p2 <- rc_indices %>%
   purrr::map(get_RC_from_dict) %>%
   purrr::map_df(function(x) get_k2_R(x,nu=nu)) %>%
   mutate(cellID = seq_len(16)) %>%
@@ -52,3 +68,7 @@ p1 <- rc_indices %>%
   facet_wrap(~rcID,scales='free')
 print(p1)
 
+my_fun <- function(Q){
+  qqr <- Q[,15:16] %>% qr
+  qqr$rank
+}

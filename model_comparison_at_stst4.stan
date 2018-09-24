@@ -70,17 +70,12 @@ functions {
     real out[2];
     while (fabs(v[z])< tol){
       z = z+1;
-      /* this breaks expose stan functions
-      if (z>16){
-        return(0.0);
-      }
-      */
     }
     out[1] = v[z];
     out[2] = z;
     return(out);
   }
-  int my_floor(real r){
+  int my_ceil(real r){
     //assume r is a positive real that we want to find the floor of
     int k = 0;
     while (k < r){
@@ -99,12 +94,33 @@ functions {
     }
     return(out);
   }
-vector my_normalise(vector v, real x){
+  vector my_normalise(vector v, real x){
     //normalise by dividing by x
     vector[16] w;
       w = v/x;
     return(w);
   }
+  int find_zero(vector v, int l){
+    // integer l is length of v
+    // will assume the final column will be a zero and want to find the other
+    int k = 0;
+    int j = 0;
+    real tol = 10^-14;
+    while (j < l){
+      j += 1;
+      if (fabs(v[j])<tol){
+        k=j;
+        break;
+      }   
+    }
+    return(k);
+  }
+  int[] get_index_for_Q_cols(matrix A){
+    int zero_indices[2];
+    zero_indices[1] = find_zero(diagonal(qr_R(A)), 16);
+    zero_indices[2] = 16;
+    return(zero_indices); 
+  } 
 
  vector get_k2(real th, int[] x_i){
    //alter matrix for blocking and compute QR decomposition from this
@@ -112,13 +128,13 @@ vector my_normalise(vector v, real x){
     matrix[16,16] Q;
     vector[16] N;
     vector[16] N_tilde;
-    vector[16] N_temp;
     vector[16] N_bar;
     real s[2];
     real s_tilde[2];
     real nz;
     real nz_tilde;
     int y_i[2];
+    int zero_indices[2];
     
     if (sum(x_i) > 0){
       // then we will block a ring canal
@@ -126,35 +142,26 @@ vector my_normalise(vector v, real x){
       Q = qr_Q(B'); //compute qr decomposition
     //take last n-r cols of Q as basis of null space
     //here null spcae is of dimension 2 when we have altered the matrix
-      N = Q[1:16,16];
+      zero_indices = get_index_for_Q_cols(B');
+      N = Q[1:16,zero_indices[1]];
       s = get_first_nonzero_entry(N);
       N = my_normalise(N,s[1]);
-      N_tilde = Q[1:16,15];
+      N_tilde = Q[1:16,zero_indices[2]];
       s_tilde = get_first_nonzero_entry(N_tilde);
       N_tilde = my_normalise(N_tilde,s_tilde[1]);
       //may be that vectors N and N_tilde span null space, but not sparse 
-      print(N);
-      print(N_tilde);
-      print(s[2]);
-      print(s_tilde[2]);
       if (s[2]+s_tilde[2]==2){
         //then vectors are not sparse. make sparse
         if(all_elements_positive(N)){
-          print(N_tilde);
-          print(N);
           N_tilde = N - N_tilde;
           s_tilde = get_first_nonzero_entry(N_tilde);
           N_tilde = my_normalise(N_tilde,s_tilde[1]);
-          N = N - N_tilde*N[my_floor(s_tilde[2])];
-          print(N_tilde);
-          print(N);
+          N = N - N_tilde*N[my_ceil(s_tilde[2])];
         } else if (all_elements_positive(N_tilde)){
-          print(23);
-          print(24);
           N = N_tilde - N;
           s = get_first_nonzero_entry(N);
           N = my_normalise(N,s[1]);
-          N_tilde = N_tilde - N*N_tilde[my_floor(s[2])];
+          N_tilde = N_tilde - N*N_tilde[my_ceil(s[2])];
         }
       }
       //need to combine and weight by number of nurse cells
@@ -249,10 +256,12 @@ model {
   vector[16] log_theta = log(theta); // cache log calculation
   real y_stst[T1,16];
   int blocked_cells[2];
+  vector[16] alpha = rep_vector(1,16);
   xi ~ normal(0,0.1) T[0,]; 
   nu ~ beta(1,1) T[0,1];
-  phi ~ normal(0.30,0.036) T[0,1]; 
-  //note no prior on theta, so uniform on simplex
+  phi ~ normal(0.30,0.036) T[0,1];
+  alpha[1]=15;
+  theta ~ dirichlet(alpha); //prior over the simplex, half of the time no blocked ring canal
   for (t in 1:T1) {
     vector[16] lps = log_theta;
     for (k in 1:16) {

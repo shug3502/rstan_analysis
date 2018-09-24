@@ -310,9 +310,6 @@ p1 <- rc_indices %>%
   facet_wrap(~rcID,scales='free')
 print(p1)
 ggsave('plots/normalised_model_distn_faceted.eps',device=cairo_ps)
-print(rc_indices %>%
-  purrr::map(get_RC_from_dict))  
-
 ```
 
 
@@ -321,8 +318,10 @@ At steady state, use mixture model of blocked ring canals
 
 ```{r}
 source('run_model_comparison_stst.R')
-identifier <- 'MCv362'
+identifier <- 'MCv364' 
 res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,train_on_OE=TRUE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+print(estimates,pars='theta')
 ```
 
 
