@@ -17,7 +17,11 @@ compare_RC_preds <- function(ts,estimates,identifier,title_stem='plots/compare_R
   
   pred <- get_preds('y_pred') %>% mutate(altered='No blocking')
   removed_RC_pred <- get_preds('y_pred_altered') %>% mutate(altered='With blocking')
-  preds_compared <- full_join(pred,removed_RC_pred)
+  preds_compared <- full_join(pred,removed_RC_pred) %>%
+    group_by(time) %>% 
+    mutate(oocyte_rna = median[1]) %>%
+    ungroup() %>%
+    mutate(normalised_rna = median/oocyte_rna)
 
   p1 <- ggplot(preds_compared, aes(x = time, y = median)) +
     geom_line(aes(color=altered)) +
@@ -43,5 +47,16 @@ compare_RC_preds <- function(ts,estimates,identifier,title_stem='plots/compare_R
           strip.text = element_text(size = 8))
   print(p2)
   ggsave(paste('plots/compare_side_by_side',identifier, '.eps',sep=''),device=cairo_ps)
+
+  p3 <- ggplot(preds_compared, aes(x=cellID,y=normalised_rna,group=time,color=time)) +
+    geom_line() +
+    scale_colour_gradient(low = bp_colors[[1]], high = bp_colors[[2]]) +
+    facet_grid(~altered) + 
+    labs(x='Cell ID', y='mRNA',color='Time',title)
+  theme_bw() + 
+    theme(text = element_text(size = 12), axis.text = element_text(size = 12),
+          #legend.position = "none", 
+          strip.text = element_text(size = 8))
+  print(p3)
   return(preds_compared)
 }

@@ -92,19 +92,7 @@ for (t in 1:T1){
   for (j in 2:16){
 //    if (j>1) {
   // see https://stats.stackexchange.com/questions/12232/calculating-the-parameters-of-a-beta-distribution-using-the-mean-and-variance
-  /*
-    mu = y_stst[t,j]/phi;
-    one_minus_mu = 1-mu;
-    alpha = (one_minus_mu/xi^2 - 1/mu)*mu^2;
-    print(alpha);
-    beta = alpha*(1/mu - 1);
-    print(beta);
-    y_obs[t,j] ~ beta(alpha,beta) T[0,1];
-    */
     y_obs[t,j] ~ normal(y_stst[t,j]/phi,xi) T[0,];
-//    } else {
-//      y_obs[t,j] ~ normal(y_stst[t,j],xi) T[0,];
-//    }
   }
 }
 }
@@ -112,24 +100,20 @@ generated quantities {
   real y_pred[(T1+T2),16];
   real y_sim[(T1+T2),16];
   vector[T1] log_lik;
-  real y_stst[T1,16];
+  real y_stst_pred[T1,16];
   for (t in 1:(T1+T2)) {
     y_pred[t] = to_array_1d(get_k2(nu));
     y_sim[t,1] = 1; 
     for (j in 2:16){
-      /*
-      mu_pred = y_pred[t,j]/phi;
-      one_min_pred = 1-mu_pred;
-      alpha_pred = (one_min_pred/xi^2 - 1/mu_pred)*mu_pred^2;
-      beta_pred = alpha_pred*(1/mu_pred - 1);
-      y_sim[t,j] = beta_rng(alpha_pred,beta_pred);
-      */
       y_sim[t,j] = fabs(normal_rng(y_pred[t,j]/phi, xi));
     }
   }
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
   for (t in 1:T1){
-    y_stst[t] = to_array_1d(get_k2(nu));
+    y_stst_pred[t] = to_array_1d(get_k2(nu));
+    for (j in 2:16){
+      log_lik[t] = log_lik[t] + normal_lpdf(y_obs[t,j] | y_stst_pred[t,j]/phi,xi) - normal_lcdf(y_obs[t,j] | y_stst_pred[t,j]/phi,xi); //subtract log cdf due to truncation
+    }
   }
 }

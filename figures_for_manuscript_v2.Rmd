@@ -64,17 +64,17 @@ Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posteri
 ```{r, Fig5, echo=FALSE,message=FALSE}
 source('mrna_transport_full.R')
 res_WT = mrna_transport_inference_full('no_decay_v331',
-						use_real_data = TRUE, run_mcmc = TRUE,
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
 						verbose = TRUE, compare_via_loo = FALSE,
-						show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = FALSE,
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
 res_OE = mrna_transport_inference_full('no_decay_OE_v332',
-						use_real_data = TRUE, run_mcmc = TRUE,
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
 						verbose = TRUE, compare_via_loo = FALSE,
-						show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = TRUE,
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
 source('sensitivity_and_analytics.R')

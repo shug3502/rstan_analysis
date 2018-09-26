@@ -269,7 +269,7 @@ model {
       blocked_cells = get_RC_from_dict(k);
       y_stst[t] = to_array_1d(get_k2(nu,blocked_cells));
       for (j in 2:16) {
-        lps[k] = lps[k] + 2*normal_lpdf(y_obs[t,j] | y_stst[t,j]/phi, xi); //multiply by 2 due to truncation
+        lps[k] = lps[k] + normal_lpdf(y_obs[t,j] | y_stst[t,j]/phi, xi) - normal_lcdf(y_obs[t,j] | y_stst[t,j]/phi, xi); //subtract log cdf due to truncation
       }
     }
     target += log_sum_exp(lps);
@@ -278,6 +278,8 @@ model {
 generated quantities {
   real y_pred[(T1+T2),16];
   real y_sim[(T1+T2),16];
+  real y_stst_pred[T1,16];
+  vector[T1] log_lik;
   int z_sim[T1+T2];
   int blocked_cells_sim[2];
   for (t in 1:(T1+T2)) {
@@ -288,5 +290,19 @@ generated quantities {
     for (j in 2:16){
       y_sim[t,j] = fabs(normal_rng(y_pred[t,j]/phi, xi));
     }
+  }
+      //compute log likelihood for model comparison via loo
+  log_lik = rep_vector(0,T1);
+  for (t in 1:T1) {
+    vector[16] lps = log(theta);
+    for (k in 1:16) {
+      //sum over mixture components to marginalize out
+      blocked_cells_sim = get_RC_from_dict(k);
+      y_stst_pred[t] = to_array_1d(get_k2(nu,blocked_cells_sim));
+      for (j in 2:16) {
+        lps[k] = lps[k] + normal_lpdf(y_obs[t,j] | y_stst_pred[t,j]/phi, xi) - normal_lcdf(y_obs[t,j] | y_stst_pred[t,j]/phi, xi); //subtract log cdf due to truncation
+      }
+    }
+    log_lik[t] = log_sum_exp(lps);
   }
 }

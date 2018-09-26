@@ -8,7 +8,7 @@ functions {
     vector[16] dydt;
     matrix[16,16] B;
     vector[16] producers;
-    producers = rep_vector(1,16);
+    producers = rep_vector(0,16);
     producers[1] = 0;
     B = to_matrix(x_r,16,16);
     dydt = theta[1] * B * to_vector(y) + theta[2] * producers;

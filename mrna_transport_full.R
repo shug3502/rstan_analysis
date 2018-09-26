@@ -23,7 +23,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   source('extract_times_and_scaling.R')
   times = extract_times_and_scaling(nSamples,nTest,nTestOE)
   #############################################################
-  m0 = c(0, rep(1,15)) #initial condition
+  m0 = c(0, rep(0,15)) #initial condition
   th = c(6.8,132.8)
   sig = 1.080
   phi = 0.23

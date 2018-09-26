@@ -2,9 +2,8 @@
 #write as function, may need to think about what to do if want to run from command line again
 run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=9,nTest=11,nTestOE=9,
                                       parametersToPlot = c('nu','xi','phi'),verbose=FALSE,
-                                      compare_via_loo=FALSE,
-                                      show_diagnostic_plots=FALSE,
-                                      train_on_OE=FALSE){
+                                      compare_via_loo=FALSE, show_diagnostic_plots=FALSE,
+                                      use_mixture_model=FALSE, train_on_OE=FALSE){
   #steady state analysis only for the simplest model without decay or other complications
 library(rstan)
 library(mvtnorm)
@@ -62,7 +61,9 @@ if (use_real_data){
 }
 ############################
 if (run_mcmc) {
-  estimates <- stan(file = 'model_comparison_at_stst4.stan',
+  stan_file <- case_when(use_mixture_model ~ 'model_comparison_at_stst4.stan',
+                        TRUE ~ 'model_comparison_at_stst2.stan')
+  estimates <- stan(file = stan_file,
                     data = list (
                       T1 = nSamples,
                       T2 = nTest+nTestOE,
@@ -139,6 +140,7 @@ if (show_diagnostic_plots) {
   # mcmc_scatter(draws,pars=parametersToPlot)
   # ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
 }
+
 
 ######################
 #cos saving wasn't working

@@ -79,7 +79,15 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
       theme_bw() + 
       labs(x='age (hrs)',y='log(area)')
     print(g) 
-    ggsave('plots/timescale_model.eps')
+    ggsave('plots/timescale_model.eps',device=cairo_ps)
+    
+    g2 <- ggplot(data=df,aes(x=time_hrs,y=la)) + 
+      geom_point() +
+      geom_smooth(method='lm') +
+      theme_bw() +
+      labs(x='time (hrs)',y='log(area)')
+    print(g2)
+    ggsave('plots/timescale_model2.eps',device=cairo_ps)
     
     h <- ggplot(data=df,aes(x=time_hrs,y=la,color=split)) + 
       geom_point() +
@@ -87,7 +95,7 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
       theme_bw() +
       labs(x='time (hrs)',y='log(area)')
     print(h)
-    ggsave('plots/timescale_model.eps',device=cairo_ps)
+    ggsave('plots/timescale_model_split.eps',device=cairo_ps)
   }
  #########################################
 ##use coefficients of linear model
@@ -96,11 +104,11 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
   t0 = lm_by_split %>%
     ungroup() %>%
     filter(grepl('Intercept',term)) %>%
-    select(split,estimate) 
+    dplyr::select(split,estimate) #can get confused with MASS::select if loaded wrongly
   time_scaling = lm_by_split %>%
     ungroup %>%
     filter(grepl('time_hrs',term)) %>%
-    select(split,estimate)
+    dplyr::select(split,estimate)
   return(list(t0=t0,
               ts1=purrr::map_dbl(ts1,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate)),
               ts2=purrr::map_dbl(ts2,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate)),

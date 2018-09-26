@@ -1,0 +1,185 @@
+---
+title: "Mixture model for blocked ring canals"
+author: "Jonathan Harrison"
+date: "24/09/2018"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+Forward simulating from the model suggests that blocking of ring canals could account for differences between observations and observed counts of mRNA particles in cells far from the oocyte. 
+
+```{r}
+library(rstan)
+library(broom)
+library(dplyr)
+identifier = 'testv003'
+nSamples=9
+nTest=11
+nTestOE=9
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(nSamples,nTest,nTestOE)
+y0 = rep(1,16); y0[1]=0
+stan_file = 'switch_off_RCs.stan'
+stan_list = list(y0=y0,
+                 T1  = nSamples,                 
+                 t0 = times$t0$estimate[3],
+                 ts1 = times$ts1,                 
+                 a = 9,
+                 b = 0.2,
+                 gamma = 0.01,
+                 nu = 0.95,
+                 sigma = 1.25,
+                 phi = 0.3,
+                 b_i = 4,
+                 b_j = 8)
+estimates <- stan(file = stan_file,
+                  data = stan_list,
+                  seed = 42,
+                  chains = 4,
+                  warmup = 1000,
+                  iter = 2000
+)
+tryCatch({
+  #estimates@stanmodel@dso <- new("cxxdso") #seems have to do this to be able to save :S
+  saveRDS(estimates, file = paste('fits/switch_off_RCs_',identifier,'.rds',sep='')) # to load use readRDS("fit.rds")
+}, warning = function(war) {  
+  # warning handler picks up where error was generated
+  print(paste("WARNING:  ",war))
+}, error = function(err) {  
+  # error handler picks up where error was generated
+  print(paste("NOT SAVED ERROR:  ",err))
+}) # END tryCatch
+source('compare_RC_preds.R')
+comparison_df <- compare_RC_preds(times$ts1,estimates,identifier)
+
+```
+
+Blocking each of the 15 ring canals, or not blocking any, results in different distributions of mRNA across the cells in the tissue at steady state. We consider using this blocking mechanism as a more mechanistic noise model. 
+
+We fit a mixture model with 16 hidden states corresponding to which (if any) ring canal is blocked. We marginalise over the hidden states by summing over these states and infer the ring canal transport bias, $\nu$. The model is as follows:
+\begin{align} p(\nu | \mathbf{y})  &\propto p(\mathbf{y} | \nu) p(\nu) \\
+&= \sum_{z=1}^{16} \theta_z p(\mathbf{y} | \nu, z) p(\nu) \\
+&= \sum_{z=1}^{16} \theta_z N(\mathbf{y} \, | \, \mathbf{k}_z(\nu)) p(\nu) \\
+\end{align}
+where $\mathbf{y}$ is the observed mRNA counts across cells, $z \in \{ 1,2, \dots, 16\}$, $\nu$ is the transport bias, $\mathbf{k}$ is the steady state distribution of mRNA across cells predicted from the model when blocking the $z$th ring canal, and $\theta_z$ are the mixture weights. 
+
+
+
+
+
+
+
+In the meantime, plot this RNA distributions for WT and OE
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(9,11,9)
+my_normaliser <- function(dataset) apply(dataset,1,function(x)x/x[1]) %>% t()
+  data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+  raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
+  exp_data = raw_data
+  exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
+  overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+  overexpression_data = overexpression_data[times$sort_indices4,] #need to sort time series and correspondingly reorder rows
+  test_data = rbind(data,overexpression_data)
+  test_data = test_data[times$sort_indices2,]
+  test_data[is.na(test_data)]=0
+ 
+  normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
+colnames(normalised_data) = seq_len(16)
+df_wt <- as.data.frame(normalised_data) %>% mutate(time=times$ts1) %>% gather(key=cell,value=rna,-time) %>% mutate(phenotype='WT',cell=as.integer(cell))
+
+   swap <- function(name1, name2, envir = parent.env(environment()))
+    {
+      temp <- get(name1, pos = envir)
+      assign(name1, get(name2, pos = envir), pos = envir)
+      assign(name2, temp, pos = envir)
+    }
+    swap('exp_data','overexpression_data')
+    temp <- list(times$ts1,times$ts4)
+    times$ts1 <- temp[[2]]
+    times$ts4 <- temp[[1]]
+    print('swapped')
+    print(times$ts1)
+
+normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise
+colnames(normalised_data) = seq_len(16)
+df_oe <- as.data.frame(normalised_data) %>% mutate(time=times$ts4) %>% gather(key=cell,value=rna,-time) %>% mutate(phenotype='OE',cell=as.integer(cell))  
+g1 <- full_join(df_wt,df_oe) %>%
+  ggplot(aes(x=cell,y=rna,group=time,color=factor(time))) +
+  geom_line() +
+  facet_grid(~phenotype)
+print(g1)
+ggsave('plots/normalised_data_distn.eps',device=cairo_ps)
+
+g2 <- df_oe %>% 
+  ggplot(aes(x=cell,y=rna)) +
+  geom_line() +
+  facet_wrap(~time)
+print(g2)
+ggsave('plots/normalised_data_distn_faceted.eps',device=cairo_ps)
+
+```
+
+Check what the distributions of RNA across cells from the stan model for the mixture model look like from using the exposed stan funtions.
+
+```{r}
+library(rstan)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+expose_stan_functions('model_comparison_at_stst4.stan')
+nu = 0.90
+phi=0.3
+rc_indices = seq_len(16)
+names(rc_indices) = seq_len(16)
+p1 <- rc_indices %>%
+  purrr::map(get_RC_from_dict) %>%
+  purrr::map_df(function(x) get_k2(nu,x)) %>%
+  mutate(cellID = seq_len(16)) %>%
+  gather(key=rcID,value=mRNA,-cellID) %>%
+  mutate(rcID=as.integer(rcID), mRNA = case_when(cellID!=1 ~ mRNA/phi, TRUE ~ mRNA)) %>%
+  ggplot(aes(x=cellID,y=mRNA)) + 
+  geom_line() + 
+  facet_wrap(~rcID,scales='free')
+print(p1)
+ggsave('plots/normalised_model_distn_faceted.eps',device=cairo_ps)
+```
+
+
+
+At steady state, use mixture model of blocked ring canals
+
+```{r}
+source('run_model_comparison_stst.R')
+identifier <- 'MCv364' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=TRUE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+print(estimates,pars='theta')
+library(bayesplot)
+mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
+```
+
+##Model comparison to compare blocking to no blocking
+The mixture model at steady state seems to fit reasonably well. For some cells such as cell 2, the credible interval is much wider than the observed data. 
+Is the mixture model (describing the blocking mechanism) genuinely an improvement on the previous model without blocking at steady state?
+We use model comparison via leave one out cross validation to find out.
+
+```{r}
+source('run_model_comparison_stst.R')
+identifier <- 'MCv371' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=FALSE ,train_on_OE=TRUE)
+identifier <- 'MCblockedv372' 
+res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=TRUE ,train_on_OE=TRUE)
+loo::compare(res_oe[[3]],res_oe_blocked[[3]])
+```
+
+
+
+
