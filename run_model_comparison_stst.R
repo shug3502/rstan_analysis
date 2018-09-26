@@ -73,7 +73,7 @@ if (run_mcmc) {
                     chains = 4,
                     warmup = 1000,
                     iter = 2000,
-                    init = function() list(nu=0.9, xi=0.4, phi=0.3)                    
+#                    init = function() list(nu=0.9, xi=0.4, phi=0.3)                    
 #                    control = list(adapt_delta = 0.99)
   )
   

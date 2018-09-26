@@ -113,7 +113,7 @@ generated quantities {
   for (t in 1:T1){
     y_stst_pred[t] = to_array_1d(get_k2(nu));
     for (j in 2:16){
-      log_lik[t] = log_lik[t] + normal_lpdf(y_obs[t,j] | y_stst_pred[t,j]/phi,xi) - normal_lcdf(y_obs[t,j] | y_stst_pred[t,j]/phi,xi); //subtract log cdf due to truncation
+      log_lik[t] = log_lik[t] + normal_lpdf(y_obs[t,j] | y_stst_pred[t,j]/phi, xi)/(1-normal_lcdf(0 | y_stst_pred[t,j]/phi, xi)); //denominator due to truncation
     }
   }
 }

@@ -269,7 +269,7 @@ model {
       blocked_cells = get_RC_from_dict(k);
       y_stst[t] = to_array_1d(get_k2(nu,blocked_cells));
       for (j in 2:16) {
-        lps[k] = lps[k] + normal_lpdf(y_obs[t,j] | y_stst[t,j]/phi, xi) - normal_lcdf(y_obs[t,j] | y_stst[t,j]/phi, xi); //subtract log cdf due to truncation
+        lps[k] = lps[k] + normal_lpdf(y_obs[t,j] | y_stst[t,j]/phi, xi)/(1-normal_lcdf(0 | y_stst[t,j]/phi, xi)); //denominator due to truncation
       }
     }
     target += log_sum_exp(lps);
@@ -300,7 +300,7 @@ generated quantities {
       blocked_cells_sim = get_RC_from_dict(k);
       y_stst_pred[t] = to_array_1d(get_k2(nu,blocked_cells_sim));
       for (j in 2:16) {
-        lps[k] = lps[k] + normal_lpdf(y_obs[t,j] | y_stst_pred[t,j]/phi, xi) - normal_lcdf(y_obs[t,j] | y_stst_pred[t,j]/phi, xi); //subtract log cdf due to truncation
+        lps[k] = lps[k] + normal_lpdf(y_obs[t,j] | y_stst_pred[t,j]/phi, xi)/(1-normal_lcdf(0 | y_stst_pred[t,j]/phi, xi)); //demoninator due to truncation
       }
     }
     log_lik[t] = log_sum_exp(lps);
