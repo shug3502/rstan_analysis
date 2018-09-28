@@ -52,7 +52,7 @@ color_scheme_get("purple")
 #g2 <- mcmc_dens(as.array(estimates),pars='nu') +
 g2 <- ggplot(data=NULL) + geom_blank() + theme_bw() +
   theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-          strip.text = element_text(size = 8)) + 
+          strip.text = element_text(size = 8),legend.position=c(0.2,0.7)) + 
   labs(x=expression(paste('Transport bias  ', nu)),y='Density') + 
   geom_density(data=nu_df,aes(nu,fill=distribution,alpha=distribution)) + 
   scale_fill_manual(values = c('#e5cce5','#400040'),guide = guide_legend(title = 'Distribution')) + 
@@ -137,7 +137,9 @@ comparisons <- compare_RC_preds(times$ts1,estimates,identifier)
 marginal_nu_by_pheno <- marginal_nu_comparison()
 ###############
 library(patchwork)
-comparisons[[1]] + { {ggplot(data=NULL) + geom_blank() + theme_minimal()} + marginal_nu_by_pheno } + plot_layout(ncol=1,heights=c(2,1))
+h <- comparisons[[1]] + { {ggplot(data=NULL) + geom_blank() + theme_minimal()} + marginal_nu_by_pheno } + plot_layout(ncol=1,heights=c(2,1))
+print(h)
+ggsave(paste('plots/fig7',identifier,'.eps',sep=''),device=cairo_ps)
 ```
 
 FigS1: (Supplementary) Exponential growth model to establish timescales A) Schematic of time points used for each stage, B) Linear regression of log(A) against the time points for each stage.

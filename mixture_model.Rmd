@@ -10,6 +10,9 @@ knitr::opts_chunk$set(fig.width=6, fig.height=4,
                       echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
+#Blocking of Ring canals
+
+##Forward simulating
 Forward simulating from the model suggests that blocking of ring canals could account for differences between observations and observed counts of mRNA particles in cells far from the oocyte. 
 
 ```{r}
@@ -28,14 +31,14 @@ stan_list = list(y0=y0,
                  T1  = nSamples,                 
                  t0 = times$t0$estimate[3],
                  ts1 = times$ts1,                 
-                 a = 9,
+                 a = 10,
                  b = 0.2,
                  gamma = 0.01,
-                 nu = 0.95,
+                 nu = 0.9,
                  sigma = 1.25,
                  phi = 0.3,
-                 b_i = 4,
-                 b_j = 8)
+                 b_i = 8,
+                 b_j = 16)
 estimates <- stan(file = stan_file,
                   data = stan_list,
                   seed = 42,
@@ -58,6 +61,7 @@ comparison_df <- compare_RC_preds(times$ts1,estimates,identifier)
 
 ```
 
+##Mixture model
 Blocking each of the 15 ring canals, or not blocking any, results in different distributions of mRNA across the cells in the tissue at steady state. We consider using this blocking mechanism as a more mechanistic noise model. 
 
 We fit a mixture model with 16 hidden states corresponding to which (if any) ring canal is blocked. We marginalise over the hidden states by summing over these states and infer the ring canal transport bias, $\nu$. The model is as follows:
@@ -67,13 +71,8 @@ We fit a mixture model with 16 hidden states corresponding to which (if any) rin
 \end{align}
 where $\mathbf{y}$ is the observed mRNA counts across cells, $z \in \{ 1,2, \dots, 16\}$, $\nu$ is the transport bias, $\mathbf{k}$ is the steady state distribution of mRNA across cells predicted from the model when blocking the $z$th ring canal, and $\theta_z$ are the mixture weights. 
 
-
-
-
-
-
-
-In the meantime, plot this RNA distributions for WT and OE
+##Observed distribution of RNA across cells
+To illustrate these ideas, we plot the RNA distributions for WT and OE based on observed data.
 ```{r}
 library(dplyr)
 library(ggplot2)
@@ -127,7 +126,8 @@ ggsave('plots/normalised_data_distn_faceted.eps',device=cairo_ps)
 
 ```
 
-Check what the distributions of RNA across cells from the stan model for the mixture model look like from using the exposed stan funtions.
+##Simulated distribution of RNA across cells
+We can generate similar distributions from the mixture model. In the plot below, we show the distribution characteristic of each of the 16 states in the mixture corresponding to blocking a different ring canal (or no blocking).
 
 ```{r}
 library(rstan)
@@ -153,8 +153,14 @@ ggsave('plots/normalised_model_distn_faceted.eps',device=cairo_ps)
 ```
 
 
-
-At steady state, use mixture model of blocked ring canals
+##Using the mixture model as a measurement error model
+By considering the distribution of RNA across cells at steady state, we were able to infer the transport bias $\nu$ for transport through ring canals.
+In order to simulate data similar to the overexpression data, this model must be dominated by a large value of the noise.
+The measurement noise we use is not very mechanistic - simply Gaussian noise here. 
+Since we have proposed a biological mechanism leading to this noise, we instead consider using this to motivate a different measurement error model. 
+We use a mixture model and sum over all the possible blocked ring canals to enable to infer the transport bias $\nu$ as usual. 
+$$ p(\nu | \mathbf{y}) \propto \sum_{j=1}^{16} p(\mathbf{y} | \nu, j) p(\nu),  $$
+where $p(\mathbf{y} | \nu, j)$ is the probability of oberving a distribution of RNA $\mathbf{y}$ given a transport bias of $\nu$ and the $j$th ring canal is blocked.
 
 ```{r}
 source('run_model_comparison_stst.R')
@@ -174,9 +180,9 @@ We use model comparison via leave one out cross validation to find out.
 ```{r}
 source('run_model_comparison_stst.R')
 identifier <- 'MCv371' 
-res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=FALSE, train_on_OE=TRUE)
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=FALSE, train_on_OE=TRUE)
 identifier <- 'MCblockedv373' 
-res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
+res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
 
 loo::compare(res_oe[[3]],res_oe_blocked[[3]])
 ```
@@ -185,7 +191,7 @@ loo::compare(res_oe[[3]],res_oe_blocked[[3]])
 ```{r}
 source('run_model_comparison_stst.R')
 identifier <- 'MCblockedv373' 
-res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
+res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
 estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
 print(estimates,pars='theta')
 

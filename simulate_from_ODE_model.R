@@ -58,6 +58,7 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
   return(all_extracted_samples)
 }
 
+library(ggplot2)
 animate_on <- FALSE
 font_size <- 12
 all_extracted_samples <- simulate_from_ODE_model() 
@@ -119,5 +120,6 @@ if (!animate_on){
   p3 <- p3 + labs(title='b) Time: 32.4 hrs')
   p4 <- p2 + p3 + plot_layout(ncol = 1,heights = c(2, 1))
   print(p4)
-  ggsave('plots/fig2.eps',device=cairo_ps)
+  ggsave('plots/fig2.eps',device=cairo_ps, width=9,height=9)
 }
+
