@@ -175,12 +175,21 @@ We use model comparison via leave one out cross validation to find out.
 source('run_model_comparison_stst.R')
 identifier <- 'MCv371' 
 res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=FALSE, train_on_OE=TRUE)
-identifier <- 'MCblockedv372' 
-res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
+identifier <- 'MCblockedv373' 
+res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
 
 loo::compare(res_oe[[3]],res_oe_blocked[[3]])
 ```
 
+
+```{r}
+source('run_model_comparison_stst.R')
+identifier <- 'MCblockedv373' 
+res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+print(estimates,pars='theta')
+
+```
 
 
 

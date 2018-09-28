@@ -7,10 +7,13 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
                                     nTestOE = 0){
   library(rstan)
   library(tidyr)
+  library(ggimage)
+  rstan_options(auto_write = TRUE)
+  options(mc.cores = parallel::detectCores())
   mc <- stan_model('model_comparison5.stan')
   expose_stan_functions(mc) #get hold of functions defined in the stan code
   #keep all other parameters constant during this experiment
-  m0 = c(0, rep(1,15)) #initial condition
+  m0 = c(0, rep(0,15)) #initial condition
   nTotal = nSamples + nTest
   source('extract_times_and_scaling.R')
   times = extract_times_and_scaling(nSamples,nTest,nTestOE,test_on_mutant_data=FALSE)
@@ -60,7 +63,7 @@ font_size <- 12
 all_extracted_samples <- simulate_from_ODE_model() 
 p1 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
 p1 <- p1 + geom_line() +
-  facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID)
+  facet_wrap(~cellID,scales='free_y') +   #needed to remove factor(cellID)
   labs(x = "Time (hrs)", y = "mRNA") +
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
@@ -73,7 +76,7 @@ print(p1)
 
 p2 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95), aes(x = time, y = median, group=factor(nu))) +
   geom_line() +
-  facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
+  facet_wrap(~cellID,scales='free_y') +   #needed to remove factor(cellID) 
   labs(title='a)', x = "Time (hrs)", y = "mRNA") +
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),

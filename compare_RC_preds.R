@@ -28,6 +28,7 @@ compare_RC_preds <- function(ts,estimates,identifier,title_stem='plots/compare_R
     geom_ribbon(aes(ymin = lb, ymax = ub, color=altered), alpha = 0.25) +
     facet_wrap(~cellID,scales='free') +   #needed to remove factor(cellID) 
     labs(x = "time", y = "rna") +
+    theme_bw() +
     theme(text = element_text(size = 12), axis.text = element_text(size = 12),
           #legend.position = "none", 
           strip.text = element_text(size = 8))
@@ -40,11 +41,11 @@ compare_RC_preds <- function(ts,estimates,identifier,title_stem='plots/compare_R
     geom_line() +
     scale_colour_gradient(low = bp_colors[[1]], high = bp_colors[[2]]) +
     facet_grid(~altered) + 
-    labs(x='Cell ID', y='mRNA',color='Time',title)
+    labs(x='Cell ID', y='mRNA',color='Time',title) +
     theme_bw() + 
     theme(text = element_text(size = 12), axis.text = element_text(size = 12),
           #legend.position = "none", 
-          strip.text = element_text(size = 8))
+          strip.text = element_text(size = 12))
   print(p2)
   ggsave(paste('plots/compare_side_by_side',identifier, '.eps',sep=''),device=cairo_ps)
 
@@ -52,11 +53,36 @@ compare_RC_preds <- function(ts,estimates,identifier,title_stem='plots/compare_R
     geom_line() +
     scale_colour_gradient(low = bp_colors[[1]], high = bp_colors[[2]]) +
     facet_grid(~altered) + 
-    labs(x='Cell ID', y='mRNA',color='Time',title)
-  theme_bw() + 
+    labs(x='Cell ID', y='mRNA',color='Time',title) +
+    theme_bw() + 
     theme(text = element_text(size = 12), axis.text = element_text(size = 12),
           #legend.position = "none", 
-          strip.text = element_text(size = 8))
+          strip.text = element_text(size = 12))
   print(p3)
-  return(preds_compared)
+  return(list(p3,p2,p1,preds_compared))
+}
+
+marginal_nu_comparison <- function(identifier = 'no_decay_v331'){
+  library(bayesplot)
+  library(ggridges)
+  color_scheme_set('purple')
+  color_scheme_get('purple')
+  estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')) 
+  wt.draws <- as.array(estimates, pars='nu')
+  identifier = 'full_nu_uniform_OE_v302'
+  estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')) 
+  oe.draws <- as.array(estimates, pars='nu')
+  nu_df <- data_frame(wt=as.numeric(wt.draws)[1:2000],oe=as.numeric(oe.draws))
+  h <- nu_df %>% tidyr::gather(key='phenotype',value='nu') %>%
+    ggplot(aes(y=phenotype,x=nu)) +
+    geom_density_ridges2(fill='#e5cce5') + 
+    theme_bw() +
+    theme(text = element_text(size = 12), axis.text = element_text(size = 12),
+          legend.position = "none", strip.text = element_text(size = 12),
+          plot.title = element_text(size=12), 
+          strip.text.x = element_text(size = 16, face="italic")) +
+    labs(y='Phenotype',x=expression(paste('Transport bias  ', nu)))
+  print(h)
+  ggsave('plots/ridge_nu_plot.eps',device=cairo_ps)
+  return(h)
 }

@@ -17,10 +17,10 @@ expose_stan_functions(stan_model('model_comparison_at_stst2.stan'))
 ############################################
 #set ICs
 #nu = 0.72
-th = c(100,100)
-sig = 100 
-phi = 0.289
-y_0 = rep(0,16)
+th = c(0.24,12.9)
+#sig = 100 
+#phi = 0.3
+#y_0 = rep(0,16)
 
 ############################################
 #try to construct as functions 
@@ -51,7 +51,7 @@ diff_y <- function(a,b,nu,t,diff_wrt_a = TRUE){
 for (ii in c(TRUE,FALSE)){ #make plots for both dyda and dydb
 
 nu = 0.95
-t = 10
+t = 30
 df <- data.frame(a=numeric(),b=numeric(),dy=numeric())
 for (a in seq(from=-3,to=3,length=28)){
   for (b in seq(from=-3,to=3,length=28)){

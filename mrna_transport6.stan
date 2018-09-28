@@ -8,7 +8,7 @@ functions {
     vector[16] dydt;
     matrix[16,16] B;
     vector[16] producers;
-    producers = rep_vector(0,16);
+    producers = rep_vector(1,16);
     producers[1] = 0;
     B = to_matrix(x_r,16,16);
     dydt = theta[1] * B * to_vector(y) + theta[2] * producers;
@@ -36,17 +36,13 @@ model {
 generated quantities {
   int y_hat[T,16];
   real y_ode[T,16];
-  y_ode = integrate_ode_rk45(mrnatransport, y0, t0, ts, theta, B, x_i );
+  y_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts, theta, B, x_i );
   for (t in 1:T){
     for (j in 1:16){
       if (j>1){
         y_hat[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
-        //y_hat[t,j] = poisson_rng(y_ode[t,j]);
-	//y_hat[t,j] = normal_rng(y_ode[t,j],sigma);
       } else {
         y_hat[t,j] = neg_binomial_2_rng(phi*y_ode[t,j], sigma);    
-        //y_hat[t,j] = poisson_rng(phi*y_ode[t,j]);    
-	//y_hat[t,j] = normal_rng(phi*y_ode[t,j],sigma);
       }
     }
   }

@@ -139,9 +139,9 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                      OE_producers = producers
                      )
     if (!use_hierarchical_model){
-      initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.57)    
+      initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.3)    
     } else {
-      initF <- function() list(mu=c(9, 0.18, 2.2), sigma=1.25, phi=0.57)    
+      initF <- function() list(mu=c(9, 0.18, 2.2), sigma=1.25, phi=0.3)    
     }
     estimates <- stan(file = stan_file,
                       data = stan_list,
@@ -221,7 +221,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     ggsave(paste('plots/scatter',identifier, '.eps',sep=''),device=cairo_ps)
     
     cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
-    pairs(estimates, pars = parametersToPlot)
+    pairs(estimates, pars = c('a','b','nu','phi','sigma'))
     dev.off()
   }
   ######################
