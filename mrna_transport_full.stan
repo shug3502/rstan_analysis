@@ -105,11 +105,11 @@ transformed parameters {
 }
 model {
   real z[T1,16];
-  sigma ~ normal(0,10) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
-  phi ~ normal(0.30,0.036) T[0,1]; //normal(0.57,0.118) T[0,1];
+  sigma ~ normal(0,10) T[0,];
+  phi ~ normal(0.345,0.048) T[0,1];
   a ~ normal(0,10) T[0,];
   b ~ normal(0,10) T[0,];
-  gamma ~ normal(0,10) T[0,];
+  gamma ~ normal(0,b/1000) T[0,];
   nu ~ beta(1,1) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
@@ -146,7 +146,7 @@ generated quantities {
   theta_OE[2] = 2*theta[2]; //double the rate of production in the overexpressor
   for (t in 1:T3){
     y_ode_OE = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i ); //use overexpression producers
-    for (j in 1:16){
+   for (j in 1:16){
       if (j>1){
         y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j], sigma);
       } else {

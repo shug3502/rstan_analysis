@@ -104,7 +104,8 @@ get_mean_and_std <- function(q){
  q %>%
     process_for_phi() %>%
     add_tally() %>%
-    summarise(av = mean(phi), std = sd(phi), av_median=median(phi), stnd_error=sd(phi)/sqrt(n[1]))
+    summarise(av = mean(phi), std = sd(phi), av_median=median(phi), stnd_error=sd(phi)/sqrt(n[1]),
+              med = median(phi), stnd_error_med=1.2533*sd(phi)/sqrt(n[1]))
 }
 
 #attempt to fit gamma distribution to use as prior for phi
@@ -177,7 +178,7 @@ q %>% process_for_phi() %>%
   add_tally() %>%
   summarise(ss=mean(av),std_err=sd(av)/sqrt(n[1]))
 
-a %>% 
+b %>% 
   mutate(Normalised_intensity = BgdSubtract / median(a$MeanByRegion)) %>%
   ggplot(aes(x=Region,y=Normalised_intensity)) +
   geom_violin(draw_quantiles = c(0.5)) +

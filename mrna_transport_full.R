@@ -71,7 +71,8 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
       producers = get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
     } else {
       producers = matrix(rep(1,nTestOE*16),ncol=16)
-      producers[1,] = 0
+      producers[,1] = 0
+      print(producers);
     }
   } else {
     warning('TODO: update simulated data for full model')
@@ -139,7 +140,12 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                      OE_producers = producers
                      )
     if (!use_hierarchical_model){
-      initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.3)    
+      #draw initial values from the prior
+      initF <- function() {
+	b=abs(10*rnorm(1))
+	return(list(a=abs(10*rnorm(1)),b=b,sigma=abs(10*rnorm(1)),nu=runif(1),phi=0.345,gamma=abs(rnorm(1)*b/1000)))
+      }
+      #initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.3)    
     } else {
       initF <- function() list(mu=c(9, 0.18, 2.2), sigma=1.25, phi=0.3)    
     }

@@ -55,6 +55,17 @@ if (use_real_data){
     print(nSamples)
   }
   normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
+  #for data driven prior from eyeballing which mixture egg chambers are from
+  alpha = matrix(rep(1,(nSamples+nTestOE+nTest)*16),ncol=16)
+  alpha[1,1] = 15
+  alpha[2,16] = 15
+  alpha[3,c(6,11,16)] = 13
+  alpha[4,c(12,16)] = 14
+  alpha[5,10] = 15
+  alpha[6,c(10,11)] = 14
+  alpha[7,c(1,16)] = 14
+  alpha[8,c(6,9)] = 14
+  alpha[9,c(6,11)] = 14 
 } else {
   warning('TODO: update simulated data for full model')
   return(0)
@@ -67,13 +78,14 @@ if (run_mcmc) {
                     data = list (
                       T1 = nSamples,
                       T2 = nTest+nTestOE,
-                      y_obs = normalised_data
+                      y_obs = normalised_data,
+                      alpha = alpha
                     ),
                     seed = 42,
                     chains = 4,
                     warmup = 1000,
                     iter = 2000,
-#                    init = function() list(nu=0.9, xi=0.4, phi=0.3)                    
+                    init = function() list(nu=0.9, xi=0.4, phi=0.3)
 #                    control = list(adapt_delta = 0.99)
   )
   

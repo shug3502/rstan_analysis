@@ -26,7 +26,7 @@ Fig3: Assembly of higher order complexes in oocyte A) Particles in different reg
 
 ```{r, Fig3, echo=FALSE,message=FALSE}
 source('estimate_phi_directly.R')
-a %>% 
+b %>% 
   mutate(Normalised_intensity = BgdSubtract / median(a$MeanByRegion)) %>%
   ggplot(aes(x=Region,y=Normalised_intensity)) +
   geom_violin(draw_quantiles = c(0.5)) +

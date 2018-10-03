@@ -64,17 +64,63 @@ functions {
     B[x_i[2],x_i[1]] = 0;    
     return(B); 
   }
-  real get_first_nonzero_entry(vector v){
-    int z;
-    z = 1;
-    while (fabs(v[z])<10^-15){
+  real[] get_first_nonzero_entry(vector v){
+    int z = 1;
+    real tol = 10^-13; //tolerance. If too small, then gives the wrong answer.
+    real out[2];
+    while (fabs(v[z])< tol){
       z = z+1;
-      if (z>16){
-        return(0.0);
+    }
+    out[1] = v[z];
+    out[2] = z;
+    return(out);
+  }
+  int my_ceil(real r){
+    //assume r is a positive real that we want to find the floor of
+    int k = 0;
+    while (k < r){
+      k+=1;
+    }
+    return(k);
+  }
+  int all_elements_positive(vector v){
+    //specific to length 16 vectors
+    int out; 
+    out = 1;
+    for (j in 1:16){
+      if (v[j]<0) { 
+        out = 0;
       }
     }
-    return(v[z]);
+    return(out);
   }
+  vector my_normalise(vector v, real x){
+    //normalise by dividing by x
+    vector[16] w;
+      w = v/x;
+    return(w);
+  }
+  int find_zero(vector v, int l){
+    // integer l is length of v
+    // will assume the final column will be a zero and want to find the other
+    int k = 0;
+    int j = 0;
+    real tol = 10^-14;
+    while (j < l){
+      j += 1;
+      if (fabs(v[j])<tol){
+        k=j;
+        break;
+      }   
+    }
+    return(k);
+  }
+  int[] get_index_for_Q_cols(matrix A){
+    int zero_indices[2];
+    zero_indices[1] = find_zero(diagonal(qr_R(A)), 16);
+    zero_indices[2] = 16;
+    return(zero_indices); 
+  } 
 
  vector get_k2(real th, int[] x_i){
    //alter matrix for blocking and compute QR decomposition from this
@@ -83,10 +129,12 @@ functions {
     vector[16] N;
     vector[16] N_tilde;
     vector[16] N_bar;
-    real s;
+    real s[2];
+    real s_tilde[2];
     real nz;
     real nz_tilde;
     int y_i[2];
+    int zero_indices[2];
     
     if (sum(x_i) > 0){
       // then we will block a ring canal
@@ -94,24 +142,36 @@ functions {
       Q = qr_Q(B'); //compute qr decomposition
     //take last n-r cols of Q as basis of null space
     //here null spcae is of dimension 2 when we have altered the matrix
-      N = Q[1:16,16];
+      zero_indices = get_index_for_Q_cols(B');
+      N = Q[1:16,zero_indices[1]];
       s = get_first_nonzero_entry(N);
-      for (i in 1:16){ //normalise
-          N[i] = N[i]/s;
-      }
-      N_tilde = Q[1:16,15];
-      s = get_first_nonzero_entry(N_tilde);
-      for (i in 1:16){ //normalise
-          N_tilde[i] = N_tilde[i]/s;
+      N = my_normalise(N,s[1]);
+      N_tilde = Q[1:16,zero_indices[2]];
+      s_tilde = get_first_nonzero_entry(N_tilde);
+      N_tilde = my_normalise(N_tilde,s_tilde[1]);
+      //may be that vectors N and N_tilde span null space, but not sparse 
+      if (s[2]+s_tilde[2]==2){
+        //then vectors are not sparse. make sparse
+        if(all_elements_positive(N)){
+          N_tilde = N - N_tilde;
+          s_tilde = get_first_nonzero_entry(N_tilde);
+          N_tilde = my_normalise(N_tilde,s_tilde[1]);
+          N = N - N_tilde*N[my_ceil(s_tilde[2])];
+        } else if (all_elements_positive(N_tilde)){
+          N = N_tilde - N;
+          s = get_first_nonzero_entry(N);
+          N = my_normalise(N,s[1]);
+          N_tilde = N_tilde - N*N_tilde[my_ceil(s[2])];
+        }
       }
       //need to combine and weight by number of nurse cells
       nz=0;
       nz_tilde=0;
       for (j in 1:16){
-        if (N[j] > 10^-15){
+        if (N[j] > 10^-13){
           nz = nz+1;
         }
-        if (N_tilde[j] > 10^-15){
+        if (N_tilde[j] > 10^-13){
           nz_tilde = nz_tilde + 1;
         }
       }
@@ -120,26 +180,22 @@ functions {
       } else {
         nz_tilde = nz_tilde-1;
       }
-      //combine and weight
-      N_bar = nz/(nz+nz_tilde)*N + nz_tilde/(nz+nz_tilde)*N_tilde; 
+      //combine and weight. Make so that normalised to 1 in oocyte
+      if (s[2]==1){
+        N_bar = (nz/(nz+nz_tilde)*N + nz_tilde/(nz+nz_tilde)*sum(N)/sum(N_tilde)*N_tilde)*(nz+nz_tilde)/nz; 
+      } else if (s_tilde[2]==1){
+        N_bar = ((nz/(nz+nz_tilde)*sum(N_tilde)/sum(N)*N + nz_tilde/(nz+nz_tilde)*N_tilde))*(nz+nz_tilde)/nz_tilde;
+      }
     } else {
-    
       // no blocking
       y_i[1]=15;
       y_i[2]=16;
       B = alter_matrix(construct_matrix(th), y_i); 
       Q = qr_Q(B'); //compute qr decomposition
-      N = Q[1:16,16];
-      s = N[1];
-      for (i in 1:16){ //normalise
-          N[i] = N[i]/s;
-      }
-  N_bar = Q[1:16,16];
-  s = N_bar[1];
-  for (i in 1:16){ //normalise
-      N_bar[i] = N_bar[i]/s;
-  }
- }
+      N_bar = Q[1:16,16];
+      s = get_first_nonzero_entry(N_bar);
+      N_bar = my_normalise(N_bar,s[1]);
+    }
   return(N_bar);
   }
   
@@ -183,45 +239,48 @@ functions {
     return(blocked_cells);
   }
 }
+
 data {
   int<lower=1> T1;
   int<lower=0> T2;
   real y_obs[T1,16];
-  //int x_i[2];
 }
 parameters {
-  simplex[16] theta; //probability of blocking for each ring canal
+  simplex[16] theta; //mixing proportions for each ring canal
   real<lower=0,upper=1> nu;
   real<lower=0> xi;
   real<lower=0> phi;
 }
+
 model {
+  vector[16] log_theta = log(theta); // cache log calculation
   real y_stst[T1,16];
-  vector[16] alpha;
-  int z[T1];
   int blocked_cells[2];
-  alpha = rep_vector(1,16);
-  print(alpha);
-  theta ~ dirichlet(alpha);
-  print(theta);
+  vector[16] alpha = rep_vector(1,16);
   xi ~ normal(0,0.1) T[0,]; 
   nu ~ beta(1,1) T[0,1];
-  phi ~ normal(0.30,0.036) T[0,1]; 
-  for (t in 1:T1){
-    z[t] ~ categorical(theta);
-    blocked_cells = get_RC_from_dict(z[t]);
-    y_stst[t] = to_array_1d(get_k2(nu,blocked_cells));
-    for (j in 2:16){
-      y_obs[t,j] ~ normal(y_stst[t,j]/phi,xi) T[0,];
+  phi ~ normal(0.30,0.036) T[0,1];
+  alpha[1]=15;
+  theta ~ dirichlet(alpha); //prior over the simplex, half of the time no blocked ring canal
+  for (t in 1:T1) {
+    vector[16] lps = log_theta;
+    for (k in 1:16) {
+      //sum over mixture components to marginalize out
+      blocked_cells = get_RC_from_dict(k);
+      y_stst[t] = to_array_1d(get_k2(nu,blocked_cells));
+      for (j in 2:16) {
+        lps[k] = lps[k] + normal_lpdf(y_obs[t,j] | y_stst[t,j]/phi, xi)/(1-normal_lcdf(0 | y_stst[t,j]/phi, xi)); //denominator due to truncation
+      }
     }
+    target += log_sum_exp(lps);
   }
 }
 generated quantities {
   real y_pred[(T1+T2),16];
   real y_sim[(T1+T2),16];
+  real y_stst_pred[T1,16];
   vector[T1] log_lik;
-  real y_stst[T1,16];
-  int z_sim[T1];
+  int z_sim[T1+T2];
   int blocked_cells_sim[2];
   for (t in 1:(T1+T2)) {
     z_sim[t] = categorical_rng(theta);    
@@ -232,9 +291,18 @@ generated quantities {
       y_sim[t,j] = fabs(normal_rng(y_pred[t,j]/phi, xi));
     }
   }
-    //compute log likelihood for model comparison via loo
+      //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
-  for (t in 1:T1){
-    y_stst[t] = to_array_1d(get_k2(nu,blocked_cells_sim));
+  for (t in 1:T1) {
+    vector[16] lps = log(theta);
+    for (k in 1:16) {
+      //sum over mixture components to marginalize out
+      blocked_cells_sim = get_RC_from_dict(k);
+      y_stst_pred[t] = to_array_1d(get_k2(nu,blocked_cells_sim));
+      for (j in 2:16) {
+        lps[k] = lps[k] + normal_lpdf(y_obs[t,j] | y_stst_pred[t,j]/phi, xi)/(1-normal_lcdf(0 | y_stst_pred[t,j]/phi, xi)); //demoninator due to truncation
+      }
+    }
+    log_lik[t] = log_sum_exp(lps);
   }
 }

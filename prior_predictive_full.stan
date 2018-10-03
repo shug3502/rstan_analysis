@@ -89,10 +89,10 @@ transformed data {
   }
 }
 parameters {
-  real q;
+real q;
 }
 model {
-  2 ~ normal(q,1);
+2 ~ normal(q,1);
 }
 generated quantities {
   int y_pred[T1,16]; //predictions for WT
@@ -109,21 +109,13 @@ generated quantities {
   
   b = fabs(normal_rng(0,10));
   a = fabs(normal_rng(0,10));
-  gamma = 0; //fabs(normal_rng(0,0.01));
+  gamma = fabs(normal_rng(0,b/1000));
   nu = beta_rng(1,1);
-  sigma = fabs(normal_rng(0,1)); 
-  phi = fabs(normal_rng(0.57,0.118));
-  /*
-  sigma = fabs(normal_rng(0,1)); 
-  phi = fabs(normal_rng(0.57,0.118));
-  b = exp(normal_rng(1,2));
-  a = exp(normal_rng(2,2));
-  gamma = exp(normal_rng(-2,2));
-  nu = inv_logit(normal_rng(2,2));
-  */
+  sigma = fabs(normal_rng(0,10)); 
+  phi = fabs(normal_rng(0.345,0.048));
   theta[1]=b;
   theta[2]=a;
-  theta[3]=gamma;
+  theta[3]=gamma/b;
   theta[4]=nu;
   y_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
