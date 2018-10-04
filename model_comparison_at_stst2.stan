@@ -85,13 +85,11 @@ model {
   real y_stst[T1,16];
   xi ~ normal(0,0.1) T[0,]; //ommitting this should give uniform on [0,0.5]
   nu ~ beta(1,1) T[0,1];
-  phi ~ normal(0.30,0.036) T[0,1]; 
+  phi ~ normal(0.345,0.047); 
 for (t in 1:T1){
   //relying on the fact that in practice dim of null space is 1, unless nu=0 (unidirectional backward transport)
   y_stst[t] = to_array_1d(get_k2(nu));
   for (j in 2:16){
-//    if (j>1) {
-  // see https://stats.stackexchange.com/questions/12232/calculating-the-parameters-of-a-beta-distribution-using-the-mean-and-variance
     y_obs[t,j] ~ normal(y_stst[t,j]/phi,xi) T[0,];
   }
 }

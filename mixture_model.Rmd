@@ -207,3 +207,37 @@ print(estimates,pars='theta')
 ```
 
 
+First check that the model at steady state works both for wild type and overexpressor
+### Wild type
+```{r}
+source('run_model_comparison_stst.R')
+identifier <- 'MCv401WT' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=FALSE,use_mixture_model=FALSE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+library(bayesplot)
+mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
+```
+
+### Overexpressor
+
+```{r}
+source('run_model_comparison_stst.R')
+identifier <- 'MCv402OE' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=TRUE,use_mixture_model=FALSE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+library(bayesplot)
+mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
+```
+As expected, we obtain a value of $\nu$ close to 1, indicating strong bias in the direction of the oocyte. 
+The main difference between fitting to the WT and OE data is the estimated value for the noise in the OE data.
+This motivated the use of the different noise model to examine differences between the WT and OE. 
+
+###Overexpressor with mixture noise model for blocked ring canals
+```{r}
+source('run_model_comparison_stst.R')
+identifier <- 'MCv403OEblocked' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=TRUE,use_mixture_model=TRUE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+library(bayesplot)
+mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
+```

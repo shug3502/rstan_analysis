@@ -72,7 +72,7 @@ if (use_real_data){
 }
 ############################
 if (run_mcmc) {
-  stan_file <- case_when(use_mixture_model ~ 'model_comparison_at_stst4.stan',
+  stan_file <- case_when(use_mixture_model ~ 'model_comparison_at_stst3.stan',
                         TRUE ~ 'model_comparison_at_stst2.stan')
   estimates <- stan(file = stan_file,
                     data = list (
@@ -84,8 +84,8 @@ if (run_mcmc) {
                     seed = 42,
                     chains = 4,
                     warmup = 1000,
-                    iter = 2000,
-                    init = function() list(nu=0.9, xi=0.4, phi=0.3)
+                    iter = 2000
+#                    init = function() list(nu=0.9, xi=0.4, phi=0.3)
 #                    control = list(adapt_delta = 0.99)
   )
   
