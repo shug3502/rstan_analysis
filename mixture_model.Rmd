@@ -19,6 +19,9 @@ Forward simulating from the model suggests that blocking of ring canals could ac
 library(rstan)
 library(broom)
 library(dplyr)
+zz <- file( "mixture_output.log", open = "wt")
+sink(zz)
+sink(file=zz,type='message')
 identifier = 'testv003'
 nSamples=9
 nTest=11
@@ -33,7 +36,7 @@ stan_list = list(y0=y0,
                  ts1 = times$ts1,                 
                  a = 10,
                  b = 0.2,
-                 gamma = 0.01,
+                 gamma = 0,
                  nu = 0.9,
                  sigma = 1.25,
                  phi = 0.3,
@@ -44,7 +47,8 @@ estimates <- stan(file = stan_file,
                   seed = 42,
                   chains = 4,
                   warmup = 1000,
-                  iter = 2000
+                  iter = 2000,
+                  refresh=-1
 )
 tryCatch({
   #estimates@stanmodel@dso <- new("cxxdso") #seems have to do this to be able to save :S
@@ -104,8 +108,6 @@ df_wt <- as.data.frame(normalised_data) %>% mutate(time=times$ts1) %>% gather(ke
     temp <- list(times$ts1,times$ts4)
     times$ts1 <- temp[[2]]
     times$ts4 <- temp[[1]]
-    print('swapped')
-    print(times$ts1)
 
 normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise
 colnames(normalised_data) = seq_len(16)
@@ -113,14 +115,18 @@ df_oe <- as.data.frame(normalised_data) %>% mutate(time=times$ts4) %>% gather(ke
 g1 <- full_join(df_wt,df_oe) %>%
   ggplot(aes(x=cell,y=rna,group=time,color=factor(time))) +
   geom_line() +
-  facet_grid(~phenotype)
+  facet_grid(~phenotype) +
+  theme_bw() +
+  theme(legend.position='None')
 print(g1)
 ggsave('plots/normalised_data_distn.eps',device=cairo_ps)
 
 g2 <- df_oe %>% 
   ggplot(aes(x=cell,y=rna)) +
   geom_line() +
-  facet_wrap(~time)
+  facet_wrap(~time) +
+  theme_bw() +
+  theme(legend.position='None')
 print(g2)
 ggsave('plots/normalised_data_distn_faceted.eps',device=cairo_ps)
 
@@ -147,27 +153,56 @@ p1 <- rc_indices %>%
   mutate(rcID=as.integer(rcID), mRNA = case_when(cellID!=1 ~ mRNA/phi, TRUE ~ mRNA)) %>%
   ggplot(aes(x=cellID,y=mRNA)) + 
   geom_line() + 
-  facet_wrap(~rcID,scales='free')
+  facet_wrap(~rcID,scales='free_y') +
+  theme_bw()
 print(p1)
 ggsave('plots/normalised_model_distn_faceted.eps',device=cairo_ps)
 ```
 
+##Analysis of ring canal bias at steady state
+By considering the distribution of RNA across cells at steady state, we were able to infer the transport bias $\nu$ for transport through ring canals.
+
+###Wild type
+```{r}
+source('run_model_comparison_stst.R')
+identifier <- 'MCv401WT' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=FALSE,use_mixture_model=FALSE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+library(bayesplot)
+mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
+```
+Posterior predictive distribution:
+![WT](plots/posterior_pred_ststMCv401WT.jpg){ width=30% }
+
+###Overexpressor
+```{r}
+source('run_model_comparison_stst.R')
+identifier <- 'MCv402OE' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=TRUE,use_mixture_model=FALSE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+library(bayesplot)
+mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
+```
+Posterior predictive distribution:
+![OE](plots/posterior_pred_ststMCv402OE.jpg){ width=30% }
+
+As expected, we obtain a value of $\nu$ close to 1, indicating strong bias in the direction of the oocyte. 
+The value/distribution of $\nu$ is similar for both the WT and OE.
+The main difference between fitting to the WT and OE data is the estimated value for the noise in the OE data.
+This motivated the use of the different noise model to examine differences between the WT and OE. 
 
 ##Using the mixture model as a measurement error model
-By considering the distribution of RNA across cells at steady state, we were able to infer the transport bias $\nu$ for transport through ring canals.
 In order to simulate data similar to the overexpression data, this model must be dominated by a large value of the noise.
 The measurement noise we use is not very mechanistic - simply Gaussian noise here. 
 Since we have proposed a biological mechanism leading to this noise, we instead consider using this to motivate a different measurement error model. 
 We use a mixture model and sum over all the possible blocked ring canals to enable to infer the transport bias $\nu$ as usual. 
-$$ p(\nu | \mathbf{y}) \propto \sum_{j=1}^{16} p(\mathbf{y} | \nu, j) p(\nu),  $$
-where $p(\mathbf{y} | \nu, j)$ is the probability of oberving a distribution of RNA $\mathbf{y}$ given a transport bias of $\nu$ and the $j$th ring canal is blocked.
 
+###Overexpressor with mixture noise model for blocked ring canals
 ```{r}
 source('run_model_comparison_stst.R')
-identifier <- 'MCv364' 
-res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=TRUE)
+identifier <- 'MCv403OEblocked' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=TRUE,use_mixture_model=TRUE)
 estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
-print(estimates,pars='theta')
 library(bayesplot)
 mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
 ```
@@ -179,16 +214,33 @@ We use model comparison via leave one out cross validation to find out.
 
 ```{r}
 source('run_model_comparison_stst.R')
-identifier <- 'MCv371' 
-res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=FALSE, train_on_OE=TRUE)
-identifier <- 'MCblockedv373' 
-res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
+identifier <- 'MCv402OE' #'MCv371' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=FALSE, train_on_OE=TRUE)
+identifier <- 'MCv403OEblocked' #'MCblockedv373' 
+res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
 
 loo::compare(res_oe[[3]],res_oe_blocked[[3]])
 ```
 
 
-```{r}
+
+##################################
+
+Some extra models:
+
+
+```{r,results='hide',fig.show='hide'}
+source('run_model_comparison_stst.R')
+identifier <- 'MCv364' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=TRUE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+print(estimates,pars='theta')
+library(bayesplot)
+mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
+```
+
+
+```{r,results='hide',fig.show='hide'}
 source('run_model_comparison_stst.R')
 identifier <- 'MCblockedv373' 
 res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
@@ -197,47 +249,13 @@ print(estimates,pars='theta')
 
 ```
 
-```{r}
+```{r,results='hide',fig.show='hide'}
 source('run_model_comparison_stst.R')
-identifier <- 'MCblockedv393' 
-res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
+identifier <- 'MCblockedv393'
+res_oe_blocked <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,compare_via_loo=TRUE, use_mixture_model=TRUE, train_on_OE=TRUE)
 estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
 print(estimates,pars='theta')
 
 ```
 
 
-First check that the model at steady state works both for wild type and overexpressor
-### Wild type
-```{r}
-source('run_model_comparison_stst.R')
-identifier <- 'MCv401WT' 
-res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=FALSE,use_mixture_model=FALSE)
-estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
-library(bayesplot)
-mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
-```
-
-### Overexpressor
-
-```{r}
-source('run_model_comparison_stst.R')
-identifier <- 'MCv402OE' 
-res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=TRUE,use_mixture_model=FALSE)
-estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
-library(bayesplot)
-mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
-```
-As expected, we obtain a value of $\nu$ close to 1, indicating strong bias in the direction of the oocyte. 
-The main difference between fitting to the WT and OE data is the estimated value for the noise in the OE data.
-This motivated the use of the different noise model to examine differences between the WT and OE. 
-
-###Overexpressor with mixture noise model for blocked ring canals
-```{r}
-source('run_model_comparison_stst.R')
-identifier <- 'MCv403OEblocked' 
-res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=FALSE,train_on_OE=TRUE,use_mixture_model=TRUE)
-estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
-library(bayesplot)
-mcmc_pairs(as.array(estimates),pars=c('nu','xi','phi'))
-```

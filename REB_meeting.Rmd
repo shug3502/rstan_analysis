@@ -325,4 +325,12 @@ print(estimates,pars='theta')
 ```
 
 
+Lets try and fit the mixture model to the wild type data. Just for fun. May also be revealing if can identify the `correct' mixture component or not.
+```{r}
+source('run_model_comparison_stst.R')
+identifier <- 'MCv404WTblocked' 
+res_oe <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=FALSE,parametersToPlot = c('nu','xi','phi'),verbose=TRUE,show_diagnostic_plots=TRUE,use_mixture_model=TRUE,train_on_OE=FALSE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep=''))
+print(estimates,pars='theta')
+```
 

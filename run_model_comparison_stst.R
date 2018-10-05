@@ -50,9 +50,11 @@ if (use_real_data){
     temp <- list(times$ts1,times$ts4)
     times$ts1 <- temp[[2]]
     times$ts4 <- temp[[1]]
-    print('swapped')
-    print(times$ts1)
-    print(nSamples)
+    if (verbose) {
+      print('swapped')
+      print(times$ts1)
+      print(nSamples)
+    }
   }
   normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
   #for data driven prior from eyeballing which mixture egg chambers are from

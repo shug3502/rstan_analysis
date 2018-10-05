@@ -62,9 +62,11 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
       temp <- list(times$ts1,times$ts4)
       times$ts1 <- temp[[2]]
       times$ts4 <- temp[[1]]
-      print('swapped')
-      print(times$ts1)
-      print(nSamples)
+      if (verbose){
+        print('swapped')
+        print(times$ts1)
+        print(nSamples)
+      }
     }
     if (use_binary_producers){
       source('get_producers.R') #use heterogeneous production information
