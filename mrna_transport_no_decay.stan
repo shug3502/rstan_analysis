@@ -168,8 +168,8 @@ generated quantities {
   */
       //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T3);
-  y_lik_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i );
   for (t in 1:T3){
+    y_lik_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i );
     for (j in 1:16){
       if (j>1) {
         log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y_OE[t,j] | y_lik_ode[t,j],sigma);
