@@ -79,6 +79,7 @@ data {
   real ts2[T2];  //times for 'test' data
   real ts3[T3]; //times for 'OE' test predictions
   matrix[T3,16] OE_producers; //matrix of how much RNA each cell produces in OE mutant, for predictions only
+  int y_OE[T3,16];
 }
 transformed data {
   real x_r[16];
@@ -126,7 +127,7 @@ generated quantities {
   real y_ode_OE[T3,16];  
   real theta_OE[3];
   real y_lik_ode[T1,16];
-  vector[T1] log_lik;
+  vector[T3] log_lik;
   // for wild type
   y_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts2, theta, x_r, x_i );
   for (t in 1:T2){
@@ -140,7 +141,7 @@ generated quantities {
   }
   // for the overexpression mutant
   theta_OE = theta;
-  theta_OE[2] = 2*theta[2]; //double the rate of production in the overexpressor
+  theta_OE[2] = theta[2]; //double the rate of production in the overexpressor, but do so via producers
   for (t in 1:T3){
     y_ode_OE = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i ); //use overexpression producers
     for (j in 1:16){
@@ -151,6 +152,7 @@ generated quantities {
       }
     }
   }
+  /*
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
   y_lik_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i );
@@ -160,6 +162,19 @@ generated quantities {
         log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j],sigma);
       } else {
         log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j]*phi,sigma);
+      }
+    }
+  }
+  */
+      //compute log likelihood for model comparison via loo
+  log_lik = rep_vector(0,T3);
+  y_lik_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts3, theta_OE, to_array_1d(OE_producers[t,]), x_i );
+  for (t in 1:T3){
+    for (j in 1:16){
+      if (j>1) {
+        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y_OE[t,j] | y_lik_ode[t,j],sigma);
+      } else {
+        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y_OE[t,j] | y_lik_ode[t,j]*phi,sigma);
       }
     }
   }

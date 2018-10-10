@@ -117,10 +117,11 @@ Yay that looks nicer.
 ```{r}
 gurken_rna_df <- full_join(df_wt,df_oe)
 quantify_for_ilan <- gurken_rna_df %>% 
-  mutate(phenotype = factor(phenotype)) %>%
   group_by(time) %>%
-  mutate(number = rna[cell==1],
-            fraction = number/sum(rna)) %>%
+  mutate(phenotype = factor(phenotype),
+         number = rna[cell==1],
+         fraction = number/sum(rna),
+         total = sum(rna)) %>%
   filter(cell==1)
 
 
@@ -136,8 +137,14 @@ g2 <- ggplot(data = quantify_for_ilan, aes(x=phenotype,y=fraction)) +
   theme_bw()
 print(g2)
 
+g3 <- ggplot(data = quantify_for_ilan, aes(x=phenotype,y=total)) + 
+  geom_violin(draw_quantiles = c(0.5)) +
+  geom_jitter() + 
+  theme_bw()
+print(g3)
+
 library(patchwork)
-g1 + g2
+g1 + g2 + g3
 
 h1 <- ggplot(data = quantify_for_ilan, aes(x=time,y=number,color=phenotype)) + 
   geom_point() +
@@ -151,11 +158,79 @@ h2 <- ggplot(data = quantify_for_ilan, aes(x=time,y=fraction,color=phenotype)) +
   theme_bw()
 print(h2)
 
-h1+h2
+h3 <- ggplot(data = quantify_for_ilan, aes(x=time,y=total,color=phenotype)) + 
+  geom_point() +
+  geom_smooth(method = lm, se = TRUE) +
+  theme_bw()
+print(h3)
+h1+h2+h3
 
 ```
 
 These plots of the observed data suggest that the fraction of complexes localized is different between wild type and overexpressor. The number of transcripts localized also appeasrs lower in the overexpression mutant, but in my opinion this is due to the age/size of the egg chambers considered. The egg chambers quantified are generally smaller. (Possible bias here as there are too many particles in the larger overexpression datasets so that MATLAB runs out of memory in running the FISH-quant code to localize the transcripts.)
 
 
+##How many times greater is production in the overexpressor than in wild type?
+We fit a linear model to the data on total RNA counts in each egg chamber for each phenotype. 
+If $$z = \sum_{i=1}^16 y_i$$ is the total RNA count in each egg chamber, then $$\frac{\text{d} z}{\text{d} t} = 15a$$. Therefore $$ z = z_0 + 15at.$$
+```{r}
+growth_WT <- lm(data=quantify_for_ilan %>% filter(phenotype=='WT'), total ~ time) 
+growth_OE <- lm(data=quantify_for_ilan %>% filter(phenotype=='OE'), total ~ time) 
+print(coef(growth_WT)[['time']]/15)
+print(coef(growth_OE)[['time']]/15)
+print(coef(growth_OE)[['time']]/coef(growth_WT)[['time']])
+```
+Again this neglects effects from assembly in the oocyte, which we ought to account for. 
+
+```{r}
+quantify_with_assembly <- gurken_rna_df %>% 
+  mutate(phenotype = factor(phenotype)) %>%
+  group_by(time) %>%
+  mutate(phi = case_when(phenotype=='WT' ~ 0.345,
+                         phenotype=='OE' ~ 0.300,
+                         TRUE ~ NaN),
+         total = sum(rna[cell!=1]) + rna[cell==1]/phi[cell==1]) %>%
+  filter(cell==1)
+growth_WT <- lm(data=quantify_with_assembly %>% filter(phenotype=='WT'), total ~ time) 
+growth_OE <- lm(data=quantify_with_assembly %>% filter(phenotype=='OE'), total ~ time) 
+print(coef(growth_WT)[['time']]/15)
+print(coef(growth_OE)[['time']]/15)
+print(coef(growth_OE)[['time']]/coef(growth_WT)[['time']])
+```
+
+Based on this it seems reasonable to keep using $2a$ as the production in the overexpressor.
+
+```{r}
+source('mrna_transport_full.R')
+identifier <- 'v431WT_simple'
+res_WT = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = FALSE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+identifier <- 'v432_with_blocking'
+res_OE = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = FALSE, use_blocked_RCs = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+identifier <- 'v433_with_production'
+res_OE = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+```
 

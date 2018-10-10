@@ -2,7 +2,8 @@
 mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
                                              parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
                                              show_diagnostic_plots=FALSE, use_hierarchical_model=FALSE, use_prior_predictive=TRUE,
-                                             use_binary_producers=FALSE, train_on_OE=FALSE, is_nu_uniform=TRUE, no_decay_model=FALSE){
+                                             use_binary_producers=FALSE, use_blocked_RCs=FALSE, train_on_OE=FALSE,
+                                             is_nu_uniform=TRUE, no_decay_model=FALSE){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
@@ -108,40 +109,50 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     source('get_producers.R') #use heterogeneous production information
     producers = get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
   } else {
-    producers = matrix(rep(1,nTestOE*16),ncol=16)
+    producers = matrix(rep(2,nTestOE*16),ncol=16)
     producers[,1] = 0
-    print(producers);
   }
-  
+  print(producers)  
+  if (use_blocked_RCs){
+    source('get_blocked_indices.R')
+    blocked = get_blocked_indices(nTestOE)[times$sort_indices4,]
+  } else {
+    blocked = matrix(rep(1,nTestOE*3),ncol=3)
+  }
+  print(blocked)
   
   ##########################
   if (run_mcmc) {
     if (!is_nu_uniform & use_hierarchical_model) warning('Not yet implemented a non uniform hierarchical model. Using normal non-uniform model')
     if (use_prior_predictive){
-      stan_file = case_when( 
+      stan_file = case_when(
+        use_blocked_RCs ~ 'prior_predictive_with_blocking.stan',
         no_decay_model ~ 'prior_predictive_no_decay.stan',
         !is_nu_uniform ~ 'prior_predictive_nu_varying_spatially.stan',
         use_hierarchical_model ~ 'prior_predictive_hierarchical.stan',
         TRUE ~ 'prior_predictive_full.stan')
     } else {
-    stan_file = case_when( 
-      no_decay_model ~ 'mrna_transport_no_decay.stan',
-      !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
-      use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
-      TRUE ~ 'mrna_transport_full.stan')   #'mrna_transport_reparametrised.stan')
-    }
-    print(paste('Using the following stan file: ', stan_file, sep=''))
-    stan_list = list(y = exp_data,
-                     T1  = nSamples,
-                     T2 = nSamples+nTest+nTestOE,
-                     T3 = nTestOE,
-                     y0 = m0,
-                     t0 = times$t0$estimate[3],
-                     ts1 = times$ts1,
-                     ts2 = times$ts2,
-                     ts3 = times$ts4,
-                     OE_producers = producers
-                     )
+      stan_file = case_when( 
+        use_blocked_RCs ~ 'mrna_transport_with_blocking.stan',
+        no_decay_model ~ 'mrna_transport_no_decay.stan',
+        !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
+        use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
+        TRUE ~ 'mrna_transport_full.stan')   #'mrna_transport_reparametrised.stan')
+      }
+      print(paste('Using the following stan file: ', stan_file, sep=''))
+      stan_list = list(y = exp_data,
+                       T1  = nSamples,
+                       T2 = nSamples+nTest+nTestOE,
+                       T3 = nTestOE,
+                       y0 = m0,
+                       t0 = times$t0$estimate[3],
+                       ts1 = times$ts1,
+                       ts2 = times$ts2,
+                       ts3 = times$ts4,
+                       OE_blocked = blocked,
+                       OE_producers = producers,
+                       y_OE = overexpression_data
+                       )
     if (!use_hierarchical_model){
       #draw initial values from the prior
       initF <- function() {
