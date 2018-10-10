@@ -1,0 +1,103 @@
+---
+title: "RNA decay - investigation"
+author: "Jonathan Harrison"
+date: "8 October 2018"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+Want to fit a model to the overexpression data and get reasonable results from doing so. Currently, using the full model without decay does not give sensible results. 
+Using the model with decay gives a degenerate fit with no uncertainty - unsure why.
+
+Will try using a subset of the data, or synthetic data. 
+
+```{r}
+source('mrna_transport_full.R')
+res_WT = mrna_transport_inference_full('no_decay_v331',
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+res_OE = mrna_transport_inference_full('no_decay_OE_v332',
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+source('figure5_plotting.R')
+marginal_WT + res_WT + plot_layout(ncol=1,height=c(1,3))
+```
+
+
+```{r}
+source('mrna_transport_full.R')
+identifier <- 'v411OE'
+res_OE = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 4,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma','gamma'),
+						is_nu_uniform = TRUE, no_decay_model = FALSE)
+identifier <- 'v412WT'
+res_WT = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 4,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						parametersToPlot = c('a','b','nu','phi','sigma','gamma'),
+						is_nu_uniform = TRUE, no_decay_model = FALSE)
+
+```
+
+```{r}
+source('mrna_transport_full.R')
+identifier <- 'v416Synthetic'
+res_WT = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = FALSE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						parametersToPlot = c('a','b','nu','phi','sigma','gamma'),
+						is_nu_uniform = TRUE, no_decay_model = FALSE)
+
+```
+
+
+```{r}
+source('mrna_transport_full.R')
+identifier <- 'v421WT_with_producers'
+res_WT = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+identifier <- 'v422WT_2a_producers'
+res_OE = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = FALSE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+
+```
+

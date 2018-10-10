@@ -1,0 +1,161 @@
+---
+title: "Following meeting with Ilan"
+author: "Jonathan Harrison"
+date: "9 October 2018"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+##Notes following meeting with Ilan on 8th October.
+
+Include observed data in Figure 7 or similar figure. Show unnormalised. 
+Also quantify in WT and OE the number and fraction of transcripts that are localized. 
+Demonstrate that particles are equivalent between WT and the OE mutant. 
+
+To investigate:
+Inhomogeneous production due to patchy expression of the gal-4 driver. 
+Inhomogeneous transport through ring canals. 
+Waiting of mRNA to form into complexes at the nuclear pore complex, such as for assembly with dynein or other proteins. 
+(Model comparison between some of these are the 'normal' model).
+
+#Observed data
+
+##Observed distribution of RNA across cells
+To illustrate these ideas, we plot the RNA distributions for WT and OE based on observed data.
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(9,11,9)
+my_normaliser <- function(dataset) apply(dataset,1,function(x)x/x[1]) %>% t()
+  data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+  raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
+  exp_data = raw_data
+  exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
+  overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+  overexpression_data = overexpression_data[times$sort_indices4,] #need to sort time series and correspondingly reorder rows
+  test_data = rbind(data,overexpression_data)
+  test_data = test_data[times$sort_indices2,]
+  test_data[is.na(test_data)]=0
+ 
+  normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
+colnames(normalised_data) = seq_len(16)
+df_wt <- as.data.frame(normalised_data) %>% mutate(time=times$ts1) %>% gather(key=cell,value=rna,-time) %>% mutate(phenotype='WT',cell=as.integer(cell))
+
+
+normalised_data = overexpression_data %>% my_normaliser #divide by amount in oocyte to normalise
+colnames(normalised_data) = seq_len(16)
+df_oe <- as.data.frame(normalised_data) %>% mutate(time=times$ts4) %>% gather(key=cell,value=rna,-time) %>% mutate(phenotype='OE',cell=as.integer(cell))  
+g1 <- full_join(df_wt,df_oe) %>%
+  ggplot(aes(x=cell,y=rna,group=time,color=factor(time))) +
+  geom_line() +
+  facet_grid(~phenotype) +
+  theme_bw() +
+  theme(legend.position='None')
+print(g1)
+ggsave('plots/normalised_data_distn.eps',device=cairo_ps)
+
+g2 <- df_oe %>% 
+  ggplot(aes(x=cell,y=rna)) +
+  geom_line() +
+  facet_wrap(~time) +
+  theme_bw() +
+  theme(legend.position='None')
+print(g2)
+ggsave('plots/normalised_data_distn_faceted.eps',device=cairo_ps)
+
+```
+
+
+The same thing but without the normalisation:
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(9,11,9)
+data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+exp_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
+exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
+overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+overexpression_data = overexpression_data[times$sort_indices4,] #need to sort time series and correspondingly reorder rows
+colnames(exp_data) = seq_len(16)
+df_wt <- as.data.frame(exp_data) %>% mutate(time=times$ts1) %>% gather(key=cell,value=rna,-time) %>% mutate(phenotype='WT',cell=as.integer(cell))
+
+
+colnames(overexpression_data) = seq_len(16)
+df_oe <- as.data.frame(overexpression_data) %>% mutate(time=times$ts4) %>% gather(key=cell,value=rna,-time) %>% mutate(phenotype='OE',cell=as.integer(cell))  
+
+h1 <- full_join(df_wt,df_oe) %>%
+  ggplot(aes(x=cell,y=rna,group=time,color=factor(time))) +
+  geom_line() +
+  facet_grid(~phenotype) +
+  theme_bw() +
+  theme(legend.position='None')
+print(h1)
+ggsave('plots/unnormalised_data_distn.eps',device=cairo_ps)
+
+h2 <- full_join(df_wt,df_oe) %>% 
+  ggplot(aes(x=cell,y=rna,color=factor(phenotype))) +
+  geom_line() +
+  facet_wrap(~time) +
+  theme_bw() +
+  theme(legend.position='None')
+print(h2)
+ggsave('plots/unnormalised_data_distn_faceted.eps',device=cairo_ps)
+```
+
+Yay that looks nicer.
+
+##Show the number and fraction of complexes localized
+
+```{r}
+gurken_rna_df <- full_join(df_wt,df_oe)
+quantify_for_ilan <- gurken_rna_df %>% 
+  mutate(phenotype = factor(phenotype)) %>%
+  group_by(time) %>%
+  mutate(number = rna[cell==1],
+            fraction = number/sum(rna)) %>%
+  filter(cell==1)
+
+
+g1 <- ggplot(data = quantify_for_ilan, aes(x=phenotype,y=number)) + 
+  geom_violin(draw_quantiles = c(0.5)) +
+  geom_jitter() + 
+  theme_bw()
+print(g1)
+
+g2 <- ggplot(data = quantify_for_ilan, aes(x=phenotype,y=fraction)) + 
+  geom_violin(draw_quantiles = c(0.5)) +
+  geom_jitter() + 
+  theme_bw()
+print(g2)
+
+library(patchwork)
+g1 + g2
+
+h1 <- ggplot(data = quantify_for_ilan, aes(x=time,y=number,color=phenotype)) + 
+  geom_point() +
+  geom_smooth(method = lm, se = TRUE) +
+  theme_bw()
+print(h1)
+
+h2 <- ggplot(data = quantify_for_ilan, aes(x=time,y=fraction,color=phenotype)) + 
+  geom_point() +
+  geom_smooth(method = lm, se = TRUE) +
+  theme_bw()
+print(h2)
+
+h1+h2
+
+```
+
+These plots of the observed data suggest that the fraction of complexes localized is different between wild type and overexpressor. The number of transcripts localized also appeasrs lower in the overexpression mutant, but in my opinion this is due to the age/size of the egg chambers considered. The egg chambers quantified are generally smaller. (Possible bias here as there are too many particles in the larger overexpression datasets so that MATLAB runs out of memory in running the FISH-quant code to localize the transcripts.)
+
+
+

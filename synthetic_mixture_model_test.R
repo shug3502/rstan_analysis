@@ -22,7 +22,7 @@ synthetic_mixture_model_test <- function(identifier = 'syntheticv001',
   #can we identify the correct mixture component?
   nu_real = 0.95
   phi_real = 0.35
-  xi_real = 0.1
+  xi_real = 0.01
   
   
   raw_data = get_k2(nu_real,get_RC_from_dict(rc_index_real))
@@ -37,13 +37,14 @@ synthetic_mixture_model_test <- function(identifier = 'syntheticv001',
                       data = list (
                         T1 = nSamples,
                         T2 = nTest+nTestOE,
-                        y_obs = data
+                        y_obs = data,
+                        N_mix = 2
                       ),
                       seed = 42,
                       chains = 4,
                       warmup = 1000,
                       iter = 2000,
-                      init = function() list(nu=nu_real, xi=xi_real, phi=phi_real),
+                      init = function() list(nu=nu_real, phi=phi_real),
                       control=list(adapt_delta=0.99)
     )
     
@@ -70,7 +71,7 @@ synthetic_mixture_model_test <- function(identifier = 'syntheticv001',
   return(list(p1,estimates))
 }
 
-for (i in seq_len(1)){
-  identifier = paste('syntheticv10',i,sep='')
-  p <- synthetic_mixture_model_test(identifier, run_mcmc=FALSE, nSamples=10,  rc_index_real=i)
+for (i in seq_len(2)){
+  identifier = paste('syntheticv30',i,sep='')
+  p <- synthetic_mixture_model_test(identifier, run_mcmc=TRUE, nSamples=10,  rc_index_real=i)
 }

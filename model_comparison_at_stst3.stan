@@ -244,27 +244,28 @@ data {
   int<lower=1> T1;
   int<lower=0> T2;
   real y_obs[T1,16];
+  int<lower=1> N_mix; //number of mixture components (ring canals), for all RCs use 16
 }
 parameters {
-  simplex[16] theta; //mixing proportions for each ring canal
+  simplex[N_mix] theta; //mixing proportions for each ring canal
   real<lower=0,upper=1> nu;
   real<lower=0> xi;
   real<lower=0> phi;
 }
 
 model {
-  vector[16] log_theta = log(theta); // cache log calculation
+  vector[N_mix] log_theta = log(theta); // cache log calculation
   real y_stst[T1,16];
   int blocked_cells[2];
-  vector[16] alpha = rep_vector(1,16);
+  vector[N_mix] alpha = rep_vector(1,N_mix);
   xi ~ normal(0,0.1) T[0,]; 
   nu ~ beta(1,1) T[0,1];
   phi ~ normal(0.30,0.036) T[0,1];
-  alpha[1]=15;
+  alpha[1] = N_mix - 1;
   theta ~ dirichlet(alpha); //prior over the simplex, half of the time no blocked ring canal
   for (t in 1:T1) {
-    vector[16] lps = log_theta;
-    for (k in 1:16) {
+    vector[N_mix] lps = log_theta;
+    for (k in 1:N_mix) {
       //sum over mixture components to marginalize out
       blocked_cells = get_RC_from_dict(k);
       y_stst[t] = to_array_1d(get_k2(nu,blocked_cells));
@@ -294,8 +295,8 @@ generated quantities {
       //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);
   for (t in 1:T1) {
-    vector[16] lps = log(theta);
-    for (k in 1:16) {
+    vector[N_mix] lps = log(theta);
+    for (k in 1:N_mix) {
       //sum over mixture components to marginalize out
       blocked_cells_sim = get_RC_from_dict(k);
       y_stst_pred[t] = to_array_1d(get_k2(nu,blocked_cells_sim));

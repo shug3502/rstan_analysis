@@ -22,11 +22,8 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   
   source('extract_times_and_scaling.R')
   times = extract_times_and_scaling(nSamples,nTest,nTestOE)
-  #############################################################
   m0 = c(0, rep(0,15)) #initial condition
-  th = c(6.8,132.8)
-  sig = 1.080
-  phi = 0.23
+  #############################################################
   
   #############################################################
   # source('get_nc_transition_matrix.R')
@@ -68,27 +65,22 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
         print(nSamples)
       }
     }
-    if (use_binary_producers){
-      source('get_producers.R') #use heterogeneous production information
-      producers = get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
-    } else {
-      producers = matrix(rep(1,nTestOE*16),ncol=16)
-      producers[,1] = 0
-      print(producers);
-    }
   } else {
     warning('TODO: update simulated data for full model')
     #sample from the model to get fake data 
     mc <- stan_model('model_comparison_at_stst_with_decay.stan')  #('mrna_transport5.stan')
     expose_stan_functions(mc)
+    th = c(0.2,10)
+    sig = 1.25
+    phi = 0.345
     nu = 0.92
-    gamma = 0.01
+    gamma = 0.3
     B = construct_matrix(nu, gamma) %>% as.vector
 
     print('using fake generated data')
     samples <- stan(file = 'mrna_transport6.stan',
                     data = list (
-                      T  = nSamples+nTest,
+                      T  = nSamples+nTest+nTestOE,
                       y0 = m0,
                       t0 = times$t0,
                       ts = times$ts2,
@@ -107,9 +99,18 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     s <- rstan::extract(samples,permuted=FALSE)
     #plot(s[1,1,seq(from=1, to=(nSamples*16-1), by=nSamples)])
     #plot(s[1,1,seq(from=nSamples, to=(nSamples*16), by=nSamples)])
-    boxplot(s[,1,seq(from=nSamples, to=((nSamples+nTest)*16), by=nSamples)])
-    test_data = matrix(s[1,1,1:(16*(nSamples+nTest))],nrow=(nSamples+nTest),byrow=FALSE) #this is our fake data
-    exp_data = test_data[!(times$ts2 %in% times$ts3),] # for plotting
+    boxplot(s[,1,seq(from=nSamples, to=((nSamples+nTest+nTestOE)*16), by=nSamples)])
+    test_data = matrix(s[1,1,1:(16*(nSamples+nTest+nTestOE))],nrow=(nSamples+nTest+nTestOE),byrow=FALSE) #this is our fake data
+    exp_data = test_data[!(times$ts2 %in% times$ts3),] 
+    overexpression_data = test_data[(times$ts2 %in% times$ts4),]
+  }
+  if (use_binary_producers){
+    source('get_producers.R') #use heterogeneous production information
+    producers = get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
+  } else {
+    producers = matrix(rep(1,nTestOE*16),ncol=16)
+    producers[,1] = 0
+    print(producers);
   }
   
   
@@ -145,7 +146,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
       #draw initial values from the prior
       initF <- function() {
 	b=abs(10*rnorm(1))
-	return(list(a=abs(10*rnorm(1)),b=b,sigma=abs(10*rnorm(1)),nu=runif(1),phi=0.345,gamma=abs(rnorm(1)*b/1000)))
+	return(list(a=abs(10*rnorm(1)),b=b,sigma=abs(10*rnorm(1)),nu=runif(1),phi=0.345,gamma=abs(rnorm(1)*b/10)))
       }
       #initF <- function() list(a=9, b=0.18, sigma=1.25, nu=0.9, phi=0.3)    
     } else {

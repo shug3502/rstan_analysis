@@ -109,7 +109,7 @@ model {
   phi ~ normal(0.345,0.048) T[0,1];
   a ~ normal(0,10) T[0,];
   b ~ normal(0,10) T[0,];
-  gamma ~ normal(0,b/1000) T[0,];
+  gamma ~ normal(0,b) T[0,];
   nu ~ beta(1,1) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){

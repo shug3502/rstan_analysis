@@ -18,7 +18,6 @@ functions {
 data {
   int<lower=1> T;
   real y0[16];
-  real t0;
   real ts[T];
   real theta[2];
   real sigma;
