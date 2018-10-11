@@ -106,6 +106,9 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     overexpression_data = test_data[(times$ts2 %in% times$ts4),]
   }
   if (use_binary_producers[1]){ #use_binary_producers can be a logical, real or vector (numeric) of length
+    if (use_binary_producers[1]<0){
+      print('fitting difference between producers in OE and WT from data')
+    }
     source('get_producers.R') #use heterogeneous production information
     producers = get_producers(nTestOE,multiplier=use_binary_producers)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
   } else {
@@ -126,6 +129,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     if (!is_nu_uniform & use_hierarchical_model) warning('Not yet implemented a non uniform hierarchical model. Using normal non-uniform model')
     if (use_prior_predictive){
       stan_file = case_when(
+        (use_binary_producers[1] < 0) ~ 'prior_predictive_fit_OE_production.stan',
         use_blocked_RCs ~ 'prior_predictive_with_blocking.stan',
         no_decay_model ~ 'prior_predictive_no_decay.stan',
         !is_nu_uniform ~ 'prior_predictive_nu_varying_spatially.stan',
@@ -133,6 +137,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
         TRUE ~ 'prior_predictive_full.stan')
     } else {
       stan_file = case_when( 
+        (use_binary_producers[1] < 0) ~ 'mrna_transport_fit_OE_production.stan',
         use_blocked_RCs ~ 'mrna_transport_with_blocking.stan',
         no_decay_model ~ 'mrna_transport_no_decay.stan',
         !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
