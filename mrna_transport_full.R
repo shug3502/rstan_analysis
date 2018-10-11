@@ -105,9 +105,9 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     exp_data = test_data[!(times$ts2 %in% times$ts3),] 
     overexpression_data = test_data[(times$ts2 %in% times$ts4),]
   }
-  if (use_binary_producers){
+  if (use_binary_producers[1]){ #use_binary_producers can be a logical, real or vector (numeric) of length
     source('get_producers.R') #use heterogeneous production information
-    producers = 2*get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
+    producers = get_producers(nTestOE,multiplier=use_binary_producers)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
   } else {
     producers = matrix(rep(2,nTestOE*16),ncol=16)
     producers[,1] = 0
@@ -115,7 +115,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   print(producers)  
   if (use_blocked_RCs){
     source('get_blocked_indices.R')
-    blocked = get_blocked_indices(nTestOE)[times$sort_indices4,]
+    blocked = get_blocked_indices(nTestOE)[times$sort_indices4,] #matrix of which RCs might be blocked
   } else {
     blocked = matrix(rep(1,nTestOE*3),ncol=3)
   }

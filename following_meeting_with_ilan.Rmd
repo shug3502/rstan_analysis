@@ -241,7 +241,7 @@ res_prod4a = mrna_transport_inference_full(identifier = identifier,
 						verbose = FALSE, compare_via_loo = TRUE,
 						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = FALSE,
-						use_binary_producers = TRUE,
+						use_binary_producers = 2,
 						parametersToPlot = c('a','b','nu','phi','sigma'),
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
 loo::compare(res_simple[[2]],res_block[[2]])
@@ -272,4 +272,45 @@ ggplot(data=all_ll_df, aes(x=ll,y=id)) +
 
 ```
 
+
+##Following meeting with Ruth 2018/10/11
+We will consider the following models:
+0. Simple (M0)
+1. Blocked RCs (M1)
+2. Inhomogeneous production (2a,a) (M2)
+3. Inhomogeneous production (4a,2a) (M3)
+4. Inhomogeneous production (4a,a) (M4)
+5. Inhomogeneous production (ka,a) (M5)
+6. Blocking and production (M6)
+7. Density dependent transport (M7)
+8. Density dependent transport and production (M8)
+9. Density dependent transport and blocking (M9)
+
+```{r}
+source('mrna_transport_full.R')
+identifier <- 'v435WT_with_production4a_a'
+res_M4 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = c(4,1),
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+
+identifier <- 'v435WT_with_production4a_a'
+res_M4 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = c(4,1),
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+
+
+
+```
 
