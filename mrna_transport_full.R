@@ -107,7 +107,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   }
   if (use_binary_producers){
     source('get_producers.R') #use heterogeneous production information
-    producers = get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
+    producers = 2*get_producers(nTestOE)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
   } else {
     producers = matrix(rep(2,nTestOE*16),ncol=16)
     producers[,1] = 0

@@ -71,8 +71,8 @@ ggsave('plots/normalised_data_distn_faceted.eps',device=cairo_ps)
 
 ```
 
-
 The same thing but without the normalisation:
+
 ```{r}
 library(dplyr)
 library(ggplot2)
@@ -110,7 +110,6 @@ print(h2)
 ggsave('plots/unnormalised_data_distn_faceted.eps',device=cairo_ps)
 ```
 
-Yay that looks nicer.
 
 ##Show the number and fraction of complexes localized
 
@@ -172,7 +171,10 @@ These plots of the observed data suggest that the fraction of complexes localize
 
 ##How many times greater is production in the overexpressor than in wild type?
 We fit a linear model to the data on total RNA counts in each egg chamber for each phenotype. 
-If $$z = \sum_{i=1}^16 y_i$$ is the total RNA count in each egg chamber, then $$\frac{\text{d} z}{\text{d} t} = 15a$$. Therefore $$ z = z_0 + 15at.$$
+If $$z = \sum_{i=1}^{16} y_i$$ is the total RNA count in each egg chamber, then $$\frac{\text{d} z}{\text{d} t} = 15a.$$ Therefore $$ z = z_0 + 15at.$$
+
+Based on the total RNA counts in each egg chamber, we can estimate production rate $a$ directly for WT and OE data and give a ratio of how much bigger the production for the OE is.
+
 ```{r}
 growth_WT <- lm(data=quantify_for_ilan %>% filter(phenotype=='WT'), total ~ time) 
 growth_OE <- lm(data=quantify_for_ilan %>% filter(phenotype=='OE'), total ~ time) 
@@ -180,7 +182,7 @@ print(coef(growth_WT)[['time']]/15)
 print(coef(growth_OE)[['time']]/15)
 print(coef(growth_OE)[['time']]/coef(growth_WT)[['time']])
 ```
-Again this neglects effects from assembly in the oocyte, which we ought to account for. 
+This neglects effects from assembly in the oocyte, which we ought to account for. 
 
 ```{r}
 quantify_with_assembly <- gurken_rna_df %>% 
@@ -203,34 +205,71 @@ Based on this it seems reasonable to keep using $2a$ as the production in the ov
 ```{r}
 source('mrna_transport_full.R')
 identifier <- 'v431WT_simple'
-res_WT = mrna_transport_inference_full(identifier = identifier,
-						use_real_data = TRUE, run_mcmc = TRUE,
+res_simple = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
-						verbose = TRUE, compare_via_loo = TRUE,
+						verbose = FALSE, compare_via_loo = TRUE,
 						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = FALSE,
 						use_binary_producers = FALSE,
 						parametersToPlot = c('a','b','nu','phi','sigma'),
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
 identifier <- 'v432_with_blocking'
-res_OE = mrna_transport_inference_full(identifier = identifier,
-						use_real_data = TRUE, run_mcmc = TRUE,
+res_block = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
-						verbose = TRUE, compare_via_loo = TRUE,
+						verbose = FALSE, compare_via_loo = TRUE,
 						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = FALSE,
 						use_binary_producers = FALSE, use_blocked_RCs = TRUE,
 						parametersToPlot = c('a','b','nu','phi','sigma'),
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
 identifier <- 'v433_with_production'
-res_OE = mrna_transport_inference_full(identifier = identifier,
-						use_real_data = TRUE, run_mcmc = TRUE,
+res_prod = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
-						verbose = TRUE, compare_via_loo = TRUE,
+						verbose = FALSE, compare_via_loo = TRUE,
 						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = FALSE,
 						use_binary_producers = TRUE,
 						parametersToPlot = c('a','b','nu','phi','sigma'),
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
+identifier <- 'v434_with_production4a'
+res_prod4a = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = FALSE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+loo::compare(res_simple[[2]],res_block[[2]])
+loo::compare(res_simple[[2]],res_prod[[2]])
+loo::compare(res_block[[2]],res_prod[[2]])
+loo::compare(res_simple[[2]],res_block[[2]],res_prod[[2]],res_prod4a[[2]])
 ```
+
+```{r}
+
+get_sum_of_log_lik <- function(estimates,id){
+  log_lik_1 <- extract_log_lik(estimates)
+  ll_df <- data.frame(ll=apply(log_lik_1,1,sum), id=id)
+return(ll_df)
+}
+
+all_ll_df <- get_sum_of_log_lik(res_simple[[3]],id='simple') %>%
+  full_join(get_sum_of_log_lik(res_block[[3]],id='block')) %>%
+  full_join(get_sum_of_log_lik(res_prod[[3]],id='prod_2a')) %>%
+  full_join(get_sum_of_log_lik(res_prod4a[[3]],id='prod_4a'))
+
+library(ggridges)
+ggplot(data=all_ll_df, aes(x=ll,y=id)) + 
+  stat_density_ridges(quantile_lines = TRUE, quantiles = c(0.025,0.5, 0.975), alpha = 0.7) +
+  theme_bw() + 
+  labs(x='Log likelihood',y='Model')
+  
+
+```
+
 
