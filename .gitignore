@@ -7,5 +7,7 @@ plots/
 .Rhistory
 *.old
 *.log
+*.jpg
+data/queuing_snapshots/
 make_figures_mRNA_localization_files/
 .DS_Store

@@ -310,6 +310,16 @@ res_M4 = mrna_transport_inference_full(identifier = identifier,
 						parametersToPlot = c('a','b','nu','phi','sigma','alpha'),
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
 
+identifier <- 'v437WT_blocking_and_production'
+res_M4 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = c(4,1), use_blocked_RCs = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
 
 ```
 
