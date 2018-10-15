@@ -129,6 +129,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     if (!is_nu_uniform & use_hierarchical_model) warning('Not yet implemented a non uniform hierarchical model. Using normal non-uniform model')
     if (use_prior_predictive){
       stan_file = case_when(
+        (use_density_dependence && use_blocked_RCs) ~ 'prior_predictive_density_dependent_with_blocking.stan',
         use_density_dependence ~ 'prior_predictive_density_dependent.stan',        
         (use_binary_producers[1] < 0) ~ 'prior_predictive_fit_OE_production.stan',
         use_blocked_RCs ~ 'prior_predictive_with_blocking.stan',
@@ -138,6 +139,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
         TRUE ~ 'prior_predictive_full.stan')
     } else {
       stan_file = case_when( 
+        (use_density_dependence && use_blocked_RCs) ~ 'mrna_transport_density_dependent_with_blocking.stan',        
         use_density_dependence ~ 'mrna_transport_density_dependent.stan',
         (use_binary_producers[1] < 0) ~ 'mrna_transport_fit_OE_production.stan',
         use_blocked_RCs ~ 'mrna_transport_with_blocking.stan',

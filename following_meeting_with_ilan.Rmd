@@ -288,38 +288,155 @@ We will consider the following models:
 
 ```{r}
 source('mrna_transport_full.R')
+#M0
+identifier <- 'v431WT_simple'
+res_M0 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = FALSE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = FALSE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+#M1
+identifier <- 'v432_with_blocking'
+res_M1 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = FALSE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = FALSE, use_blocked_RCs = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+#M2
+identifier <- 'v433_with_production'
+res_M2 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = FALSE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+#M3
+identifier <- 'v434_with_production4a'
+res_M3 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = FALSE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = 2,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+#M4
 identifier <- 'v435WT_with_production4a_a'
 res_M4 = mrna_transport_inference_full(identifier = identifier,
 						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
-						verbose = TRUE, compare_via_loo = TRUE,
+						verbose = FALSE, compare_via_loo = TRUE,
 						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = FALSE,
 						use_binary_producers = c(4,1),
 						parametersToPlot = c('a','b','nu','phi','sigma'),
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
-
+#M5
 identifier <- 'v436WT_with_production_fit_ka'
-res_M4 = mrna_transport_inference_full(identifier = identifier,
-						use_real_data = TRUE, run_mcmc = TRUE,
+res_M5 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
-						verbose = TRUE, compare_via_loo = TRUE,
+						verbose = FALSE, compare_via_loo = TRUE,
 						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = FALSE,
 						use_binary_producers = c(-1,1),
 						parametersToPlot = c('a','b','nu','phi','sigma','alpha'),
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
-
+#M6
 identifier <- 'v437WT_blocking_and_production'
-res_M4 = mrna_transport_inference_full(identifier = identifier,
-						use_real_data = TRUE, run_mcmc = TRUE,
+res_M6 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 9, nTest = 11, nTestOE = 9,
-						verbose = TRUE, compare_via_loo = TRUE,
+						verbose = FALSE, compare_via_loo = TRUE,
 						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 						use_prior_predictive = FALSE, train_on_OE = FALSE,
 						use_binary_producers = c(4,1), use_blocked_RCs = TRUE,
 						parametersToPlot = c('a','b','nu','phi','sigma'),
 						is_nu_uniform = TRUE, no_decay_model = TRUE)
+#M7
+identifier <- 'v438WT_density_dependent_2a'
+res_M7 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = FALSE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = c(2,2), use_density_dependence=TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma','beta'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+#M8
+identifier <- 'v439WT_density_dependent_4a'
+res_M8 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = FALSE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = c(4,1), use_density_dependence=TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma','beta'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+#M9
+identifier <- 'v440WT_density_dependent_with_blocking'
+res_M9 = mrna_transport_inference_full(identifier = identifier,
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = TRUE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						use_binary_producers = FALSE, use_blocked_RCs = TRUE,
+						use_density_dependence=TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma','beta'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+loo::compare(res_M0[[2]],res_M1[[2]],res_M2[[2]],res_M3[[2]],res_M4[[2]],res_M5[[2]],res_M6[[2]],res_M7[[2]],res_M8[[2]],res_M9[[2]])
+
+loo::compare(res_M0[[2]],res_M1[[2]],res_M2[[2]],res_M3[[2]],res_M4[[2]],res_M6[[2]],res_M7[[2]],res_M8[[2]],res_M9[[2]])
+```
+
+```{r}
+
+get_sum_of_log_lik <- function(estimates,id){
+  log_lik_1 <- extract_log_lik(estimates)
+  ll_df <- data.frame(ll=apply(log_lik_1,1,sum), id=id)
+return(ll_df)
+}
+
+all_ll_df <- get_sum_of_log_lik(res_M0[[3]],id='M0') %>%
+  full_join(get_sum_of_log_lik(res_M1[[3]],id='M1')) %>%
+  full_join(get_sum_of_log_lik(res_M2[[3]],id='M2')) %>%
+  full_join(get_sum_of_log_lik(res_M3[[3]],id='M3')) %>%
+  full_join(get_sum_of_log_lik(res_M4[[3]],id='M4')) %>%
+#  full_join(get_sum_of_log_lik(res_M5[[3]],id='M5')) %>%
+  full_join(get_sum_of_log_lik(res_M6[[3]],id='M6')) %>%
+  full_join(get_sum_of_log_lik(res_M7[[3]],id='M7')) %>%
+  full_join(get_sum_of_log_lik(res_M8[[3]],id='M8')) %>%
+  full_join(get_sum_of_log_lik(res_M9[[3]],id='M9'))
+
+library(ggridges)
+ggplot(data=all_ll_df, aes(x=ll,y=id)) + 
+  stat_density_ridges(quantile_lines = TRUE, quantiles = c(0.025,0.5, 0.975), alpha = 0.7) +
+  theme_bw() + 
+  labs(x='Log likelihood',y='Model')
+  
 
 ```
+
+
+TO DO:
+Run M9 (Done)
+Rerun M5 to figure out what went on here (or leave this).
+Run some/all ommitting young egg chambers or investigating timescale model to try to avoid issues due to this
+
+
 
