@@ -72,6 +72,9 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
       #use only to omit outliers in the overexpression data for experimentation
       overexpression_data = overexpression_data[omit_OE_data_pts,]
       test_data = test_data[omit_OE_data_pts,]
+      nTestOE=nTestOE-length(omit_OE_data_pts)
+      times$ts2 = times$ts2[omit_OE_data_pts]
+      times$ts4 = times$ts4[omit_OE_data_pts]
     }
   } else {
     warning('TODO: update simulated data for full model')

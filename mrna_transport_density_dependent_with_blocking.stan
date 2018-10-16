@@ -199,7 +199,7 @@ generated quantities {
   int y_pred_OE[T3,16]; //predictions for OE
   real y_ode_OE[T3,16];  
   real theta_OE[4];
-  real y_lik_ode[T1,16];
+  real y_lik_ode[T3,16];
   int OE_x_i[3];  
   vector[T3] log_lik;
   // for wild type

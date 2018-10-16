@@ -126,7 +126,7 @@ generated quantities {
   int y_pred_OE[T3,16]; //predictions for OE
   real y_ode_OE[T3,16];  
   real theta_OE[3];
-  real y_lik_ode[T1,16];
+  real y_lik_ode[T3,16];
   vector[T3] log_lik;
   // for wild type
   y_ode = integrate_ode_rk45(mrnatransport, y0, 0, ts2, theta, x_r, x_i );
