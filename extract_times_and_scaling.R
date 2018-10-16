@@ -120,7 +120,7 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
   ts4 = purrr::map_dbl(ts4,function(x) rescale_time(x,time_scaling %>% filter(grepl('Overexpression',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('Overexpression',split)) %>% select(estimate) %>% .$estimate))
 
   #try using separate models for each split of data
-  ts_by_split = sort.int(c(tt$ts1,tt$ts3,tt$ts4),index.return=TRUE)
+  ts_by_split = sort.int(c(ts1,ts3,ts4),index.return=TRUE)
   ts2 = ts_by_split$x
   sort_indices2 = ts_by_split$ix
   

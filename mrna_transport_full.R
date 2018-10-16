@@ -68,6 +68,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
       }
     }
     if (omit_OE_data_pts[1]) {
+	if (omit_OE_data_pts[1]>0) error('incorrect usage of the omit OE data pts option. Should be a list of negative indices to omit')
       #use only to omit outliers in the overexpression data for experimentation
       overexpression_data = overexpression_data[omit_OE_data_pts,]
       test_data = test_data[omit_OE_data_pts,]
