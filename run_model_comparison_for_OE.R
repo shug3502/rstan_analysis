@@ -1,6 +1,7 @@
 #run model comparison
 #######
 run_mcmc=TRUE
+omit_OE_data_pts=FALSE
 source('mrna_transport_full.R')
 #M0
 identifier <- 'v441WT_simple'
@@ -10,7 +11,7 @@ res_M0 = mrna_transport_inference_full(identifier = identifier,
                                        verbose = FALSE, compare_via_loo = TRUE,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
                                        use_prior_predictive = FALSE, train_on_OE = FALSE,
-                                       use_binary_producers = FALSE,
+                                       use_binary_producers = FALSE, omit_OE_data_pts=omit_OE_data_pts,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        is_nu_uniform = TRUE, no_decay_model = TRUE)
 #M1
@@ -20,7 +21,7 @@ res_M1 = mrna_transport_inference_full(identifier = identifier,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = TRUE,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
-                                       use_prior_predictive = FALSE, train_on_OE = FALSE,
+                                       use_prior_predictive = FALSE, train_on_OE = FALSE, omit_OE_data_pts=omit_OE_data_pts,
                                        use_binary_producers = FALSE, use_blocked_RCs = TRUE,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        is_nu_uniform = TRUE, no_decay_model = TRUE)
@@ -32,7 +33,7 @@ res_M2 = mrna_transport_inference_full(identifier = identifier,
                                        verbose = FALSE, compare_via_loo = TRUE,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
                                        use_prior_predictive = FALSE, train_on_OE = FALSE,
-                                       use_binary_producers = TRUE,
+                                       use_binary_producers = TRUE, omit_OE_data_pts=omit_OE_data_pts,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        is_nu_uniform = TRUE, no_decay_model = TRUE)
 #M3
@@ -43,7 +44,7 @@ res_M3 = mrna_transport_inference_full(identifier = identifier,
                                        verbose = FALSE, compare_via_loo = TRUE,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
                                        use_prior_predictive = FALSE, train_on_OE = FALSE,
-                                       use_binary_producers = 2,
+                                       use_binary_producers = 2, omit_OE_data_pts=omit_OE_data_pts,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        is_nu_uniform = TRUE, no_decay_model = TRUE)
 #M4
@@ -54,7 +55,7 @@ res_M4 = mrna_transport_inference_full(identifier = identifier,
                                        verbose = FALSE, compare_via_loo = TRUE,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
                                        use_prior_predictive = FALSE, train_on_OE = FALSE,
-                                       use_binary_producers = c(4,1),
+                                       use_binary_producers = c(4,1), omit_OE_data_pts=omit_OE_data_pts,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        is_nu_uniform = TRUE, no_decay_model = TRUE)
 # #M5
@@ -65,7 +66,7 @@ res_M4 = mrna_transport_inference_full(identifier = identifier,
 #                                        verbose = FALSE, compare_via_loo = TRUE,
 #                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
 #                                        use_prior_predictive = FALSE, train_on_OE = FALSE,
-#                                        use_binary_producers = c(-1,1),
+#                                        use_binary_producers = c(-1,1), omit_OE_data_pts=omit_OE_data_pts,
 #                                        parametersToPlot = c('a','b','nu','phi','sigma','alpha'),
 #                                        is_nu_uniform = TRUE, no_decay_model = TRUE)
 #M6
@@ -75,7 +76,7 @@ res_M6 = mrna_transport_inference_full(identifier = identifier,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = TRUE,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
-                                       use_prior_predictive = FALSE, train_on_OE = FALSE,
+                                       use_prior_predictive = FALSE, train_on_OE = FALSE, omit_OE_data_pts=omit_OE_data_pts,
                                        use_binary_producers = c(4,1), use_blocked_RCs = TRUE,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        is_nu_uniform = TRUE, no_decay_model = TRUE)
@@ -86,7 +87,7 @@ res_M7 = mrna_transport_inference_full(identifier = identifier,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = TRUE,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
-                                       use_prior_predictive = FALSE, train_on_OE = FALSE,
+                                       use_prior_predictive = FALSE, train_on_OE = FALSE, omit_OE_data_pts=omit_OE_data_pts,
                                        use_binary_producers = c(2,2), use_density_dependence=TRUE,
                                        parametersToPlot = c('a','b','nu','phi','sigma','beta'),
                                        is_nu_uniform = TRUE, no_decay_model = TRUE)
@@ -97,7 +98,7 @@ res_M8 = mrna_transport_inference_full(identifier = identifier,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = TRUE,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
-                                       use_prior_predictive = FALSE, train_on_OE = FALSE,
+                                       use_prior_predictive = FALSE, train_on_OE = FALSE, omit_OE_data_pts=omit_OE_data_pts,
                                        use_binary_producers = c(4,1), use_density_dependence=TRUE,
                                        parametersToPlot = c('a','b','nu','phi','sigma','beta'),
                                        is_nu_uniform = TRUE, no_decay_model = TRUE)
@@ -110,6 +111,6 @@ res_M9 = mrna_transport_inference_full(identifier = identifier,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
                                        use_prior_predictive = FALSE, train_on_OE = FALSE,
                                        use_binary_producers = FALSE, use_blocked_RCs = TRUE,
-                                       use_density_dependence=TRUE,
+                                       use_density_dependence=TRUE, omit_OE_data_pts=omit_OE_data_pts,
                                        parametersToPlot = c('a','b','nu','phi','sigma','beta'),
                                        is_nu_uniform = TRUE, no_decay_model = TRUE)

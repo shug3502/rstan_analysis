@@ -3,7 +3,8 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                                           parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
                                           show_diagnostic_plots=FALSE, use_hierarchical_model=FALSE, use_prior_predictive=TRUE,
                                           use_binary_producers=FALSE, use_blocked_RCs=FALSE, train_on_OE=FALSE,
-                                          use_density_dependence=FALSE, is_nu_uniform=TRUE, no_decay_model=FALSE){
+                                          omit_OE_data_pts=FALSE, use_density_dependence=FALSE, is_nu_uniform=TRUE,
+                                          no_decay_model=FALSE){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
@@ -65,6 +66,11 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
         print(times$ts1)
         print(nSamples)
       }
+    }
+    if (omit_OE_data_pts[1]) {
+      #use only to omit outliers in the overexpression data for experimentation
+      overexpression_data = overexpression_data[omit_OE_data_pts,]
+      test_data = test_data[omit_OE_data_pts,]
     }
   } else {
     warning('TODO: update simulated data for full model')

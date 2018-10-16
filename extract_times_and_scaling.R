@@ -64,7 +64,7 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
   df <- df %>% mutate(pred_age_hrs = predict(lm_time_hrs,df))      
   # fit linear models grouped by split of data. Flies fed at separate times so grew differently
   lm_by_split <- df %>% group_by(split) %>%  do(tidy(lm(la ~ time_hrs, data = .)))
-  lm_by_split %<>% full_join(df %>%
+  lm_by_split <- lm_by_split %>% full_join(df %>%
                                do(tidy(lm(la ~ time_hrs, data = .))) %>%
                                mutate(split='all')
                              )
