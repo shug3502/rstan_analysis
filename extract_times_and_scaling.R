@@ -33,7 +33,6 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
     stages[nSamples+nTest+j] = temp[1,2] %>% as.numeric
   }
     
-  #take l0 = log(20) as initial time (when using length)
   #take measure egg chamber lengths as a scaled time variable
   log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
   ts1 = log_areas$x #ts needs to be an ordered time vector
@@ -43,9 +42,10 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
   ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
   sort_indices1 = log_areas$ix
   sort_indices2 = log_areas_test$ix
-  ts3 = setdiff(ts2,ts1) 
+  #ts3 = setdiff(ts2,ts1) 
   log_areas3 = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
   sort_indices3 = log_areas3$ix
+  ts3 = log_areas3$x
   log_areas4 = sort.int(log(egg_chamber_areas[(nSamples+nTest+1):(nSamples+nTest+nTestOE)]),index.return=TRUE)
   sort_indices4 = log_areas4$ix
   ts4 = log_areas4$x
@@ -64,6 +64,10 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
   df <- df %>% mutate(pred_age_hrs = predict(lm_time_hrs,df))      
   # fit linear models grouped by split of data. Flies fed at separate times so grew differently
   lm_by_split <- df %>% group_by(split) %>%  do(tidy(lm(la ~ time_hrs, data = .)))
+  lm_by_split %<>% full_join(df %>%
+                               do(tidy(lm(la ~ time_hrs, data = .))) %>%
+                               mutate(split='all')
+                             )
 ##########################################  
   if (optional_plot){
     g <- ggplot(data = df, aes(x=stages,y=la)) +
@@ -109,11 +113,22 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
     ungroup %>%
     filter(grepl('time_hrs',term)) %>%
     dplyr::select(split,estimate)
+  
+  ts1 = purrr::map_dbl(ts1,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate))
+  ts2 = purrr::map_dbl(ts2,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate))
+  ts3 = purrr::map_dbl(ts3,function(x) rescale_time(x,time_scaling %>% filter(grepl('test',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('test',split)) %>% select(estimate) %>% .$estimate))
+  ts4 = purrr::map_dbl(ts4,function(x) rescale_time(x,time_scaling %>% filter(grepl('Overexpression',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('Overexpression',split)) %>% select(estimate) %>% .$estimate))
+
+  #try using separate models for each split of data
+  ts_by_split = sort.int(c(tt$ts1,tt$ts3,tt$ts4),index.return=TRUE)
+  ts2 = ts_by_split$x
+  sort_indices2 = ts_by_split$ix
+  
   return(list(t0=t0,
-              ts1=purrr::map_dbl(ts1,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate)),
-              ts2=purrr::map_dbl(ts2,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate)),
-              ts3=purrr::map_dbl(ts3,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate)),
-              ts4=purrr::map_dbl(ts4,function(x) rescale_time(x,time_scaling %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate,t0 %>% filter(grepl('train',split)) %>% select(estimate) %>% .$estimate)),
+              ts1=ts1,
+              ts2=ts2,
+              ts3=ts3, 
+              ts4=ts4,
               sort_indices1=sort_indices1,
               sort_indices2=sort_indices2,
               sort_indices3=sort_indices3,

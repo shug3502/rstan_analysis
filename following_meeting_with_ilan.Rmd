@@ -92,7 +92,7 @@ colnames(overexpression_data) = seq_len(16)
 df_oe <- as.data.frame(overexpression_data) %>% mutate(time=times$ts4) %>% gather(key=cell,value=rna,-time) %>% mutate(phenotype='OE',cell=as.integer(cell))  
 
 h1 <- full_join(df_wt,df_oe) %>%
-  ggplot(aes(x=cell,y=rna,group=time,color=factor(time))) +
+  ggplot(aes(x=cell,y=rna,group=time,color=time)) +
   geom_line() +
   facet_grid(~phenotype) +
   theme_bw() +
@@ -432,11 +432,17 @@ ggplot(data=all_ll_df, aes(x=ll,y=id)) +
 
 ```
 
+Weights on different models
+
+```{r}
+loo::loo_model_weights(list(M0=res_M0[[2]],M1=res_M1[[2]],M2=res_M2[[2]],M3=res_M3[[2]],M4=res_M4[[2]],M6=res_M6[[2]],M7=res_M7[[2]],M8=res_M8[[2]],M9=res_M9[[2]]),method='pseudobma')
+```
+
+
 
 TO DO:
-Run M9 (Done)
-Rerun M5 to figure out what went on here (or leave this).
 Run some/all ommitting young egg chambers or investigating timescale model to try to avoid issues due to this
+
 
 
 

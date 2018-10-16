@@ -19,13 +19,16 @@ pred %<>% bind_cols(xdata) %>%
 if (filter_out_wt){
 pred %<>% filter(split != 'overexpression') %>%
         filter(!(split == 'test' & rna==0))
+  scale = 'free_y'
+} else {
+  scale = 'fixed'
 }
 
 if (neighbouring_ncs_only) pred <- pred %>% filter(cellID %in% c(1,2,3,5,9)) #only want to plot nieghbouring cells to oocyte
 p1 <- ggplot(pred, aes(x = time, y = median)) +
   geom_line() +
   geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25) +
-  facet_wrap(~cellID,scales='free_y') +   #needed to remove factor(cellID) 
+  facet_wrap(~cellID,scales=scale) +   #needed to remove factor(cellID) 
   labs(x = "Time (hrs)", y = "mRNA") +
   theme_bw() +
   theme(text = element_text(size = 12), axis.text = element_text(size = 12),
