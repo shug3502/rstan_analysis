@@ -1,8 +1,8 @@
 #run model comparison
 #######
 run_mcmc=TRUE
-omit_OE_data_pts = FALSE
-id = 'v470_'
+omit_OE_data_pts = c(-1,-2)
+id = 'v480_without_outliers2_'
 
 source('mrna_transport_full.R')
 #M0
