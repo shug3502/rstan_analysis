@@ -6,7 +6,7 @@ source('mrna_transport_full.R')
 #M0
 identifier <- 'v451WT_simple'
 res_M0 = mrna_transport_inference_full(identifier = identifier,
-                                       use_real_data = TRUE, run_mcmc = run_mcmc,
+                                       use_real_data = TRUE, run_mcmc = FALSE,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = TRUE,
                                        show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
