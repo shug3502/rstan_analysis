@@ -21,7 +21,7 @@ pred %<>% filter(split != 'overexpression') %>%
         filter(!(split == 'test' & rna==0))
   scale = 'free_y'
 } else {
-  scale = 'fixed'
+  scale = 'free_y'
 }
 
 if (neighbouring_ncs_only) pred <- pred %>% filter(cellID %in% c(1,2,3,5,9)) #only want to plot nieghbouring cells to oocyte
