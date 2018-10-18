@@ -67,11 +67,6 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
         print(nSamples)
       }
     }
-    if (omit_OE_data_pts[1]) {
-      #use only to omit outliers in the overexpression data for experimentation
-      overexpression_data = overexpression_data[omit_OE_data_pts,]
-      test_data = test_data[omit_OE_data_pts,]
-    }
   } else {
     warning('TODO: update simulated data for full model')
     #sample from the model to get fake data 
@@ -125,15 +120,26 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     source('get_adjusted_producers.R')
     producers = get_adjusted_producers(nTestOE)
   }
-  print(producers)  
   if (use_blocked_RCs){
     source('get_blocked_indices.R')
     blocked = get_blocked_indices(nTestOE)[times$sort_indices4,] #matrix of which RCs might be blocked
   } else {
     blocked = matrix(rep(1,nTestOE*3),ncol=3)
   }
+  if (omit_OE_data_pts[1]) {
+    if (omit_OE_data_pts[1]>0) error('incorrect usage of the omit OE data pts option. Should be a list of negative indices to omit')
+    #use only to omit outliers in the overexpression data for experimentation
+    overexpression_data = overexpression_data[omit_OE_data_pts,]
+    test_data = test_data[omit_OE_data_pts,]
+    nTestOE=nTestOE-length(omit_OE_data_pts)
+    times$ts2 = times$ts2[omit_OE_data_pts]
+    times$ts4 = times$ts4[omit_OE_data_pts]
+    blocked = blocked[omit_OE_data_pts,]
+    producers = producers[omit_OE_data_pts,]
+  }
+  print(producers) 
   print(blocked)
-  
+
   ##########################
   if (run_mcmc) {
     if (!is_nu_uniform & use_hierarchical_model) warning('Not yet implemented a non uniform hierarchical model. Using normal non-uniform model')
