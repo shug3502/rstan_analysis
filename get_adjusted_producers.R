@@ -11,7 +11,7 @@ get_adjusted_producers <- function(nTestOE,with_plot=FALSE) {
   colnames(nt_df_oe) = seq_len(16)
   nt_df_oe %<>%
     mutate(time = times$ts4) %>%
-    gather('cellID','transcription',-time) %>%
+    tidyr::gather('cellID','transcription',-time) %>%
     mutate(cellID=as.integer(cellID))
   if (with_plot){
     ggplot(data=nt_df_oe,aes(x=cellID,y=transcription,color=time,group=time)) +
