@@ -4,7 +4,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                                           show_diagnostic_plots=FALSE, use_hierarchical_model=FALSE, use_prior_predictive=TRUE,
                                           use_binary_producers=FALSE, use_blocked_RCs=FALSE, train_on_OE=FALSE,
                                           omit_OE_data_pts=FALSE, use_density_dependence=FALSE, is_nu_uniform=TRUE,
-                                          no_decay_model=FALSE){
+                                          use_data_drive_producers=FALSE, no_decay_model=FALSE){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
@@ -67,6 +67,11 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
         print(nSamples)
       }
     }
+    if (omit_OE_data_pts[1]) {
+      #use only to omit outliers in the overexpression data for experimentation
+      overexpression_data = overexpression_data[omit_OE_data_pts,]
+      test_data = test_data[omit_OE_data_pts,]
+    }
   } else {
     warning('TODO: update simulated data for full model')
     #sample from the model to get fake data 
@@ -116,6 +121,10 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     producers = matrix(rep(2,nTestOE*16),ncol=16)
     producers[,1] = 0
   }
+  if (use_data_drive_producers) {
+    source('get_adjusted_producers.R')
+    producers = get_adjusted_producers(nTestOE)
+  }
   print(producers)  
   if (use_blocked_RCs){
     source('get_blocked_indices.R')
@@ -124,17 +133,6 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     blocked = matrix(rep(1,nTestOE*3),ncol=3)
   }
   print(blocked)
-    if (omit_OE_data_pts[1]) {
-	if (omit_OE_data_pts[1]>0) error('incorrect usage of the omit OE data pts option. Should be a list of negative indices to omit')
-      #use only to omit outliers in the overexpression data for experimentation
-      overexpression_data = overexpression_data[omit_OE_data_pts,]
-      test_data = test_data[omit_OE_data_pts,]
-      nTestOE=nTestOE-length(omit_OE_data_pts)
-      times$ts2 = times$ts2[omit_OE_data_pts]
-      times$ts4 = times$ts4[omit_OE_data_pts]
-      blocked = blocked[omit_OE_data_pts,]
-      producers = producers[omit_OE_data_pts,]
-    }
   
   ##########################
   if (run_mcmc) {
