@@ -568,12 +568,12 @@ Try now with the data driven producers
 
 ```{r}
 source('mrna_transport_full.R')
-id = 'v490_test'
+id = 'v493_test'
 omit_OE_data_pts = FALSE
-run_mcmc = FALSE
-#M10
+run_mcmc = TRUE
+#M13
 identifier <- paste(id,'M10_with_production',sep='')
-res_M10 = mrna_transport_inference_full(identifier = identifier,
+res_M13 = mrna_transport_inference_full(identifier = identifier,
                                        use_real_data = TRUE, run_mcmc = run_mcmc,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = TRUE,

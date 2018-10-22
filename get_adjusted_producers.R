@@ -15,8 +15,9 @@ get_adjusted_producers <- function(nTestOE,with_plot=FALSE) {
     gather('cellID','transcription',-time) %>%
     mutate(cellID=as.integer(cellID))
   if (with_plot){
-    ggplot(data=nt_df_oe,aes(x=cellID,y=transcription,color=time,group=time)) +
+    g <- ggplot(data=nt_df_oe,aes(x=cellID,y=transcription,color=time,group=time)) +
       geom_line() + theme_bw()
+    print(g)
   }
   #Now process such that the production data can be used for production models
   nt_df_oe %<>%
@@ -24,9 +25,10 @@ get_adjusted_producers <- function(nTestOE,with_plot=FALSE) {
     mutate(normalised_transcription = transcription/sum(transcription)*15*2)
 
   if (with_plot) {
-    ggplot(data=nt_df_oe,aes(x=cellID,y=normalised_transcription,color=time,group=time)) +
+    h <- ggplot(data=nt_df_oe,aes(x=cellID,y=normalised_transcription,color=time,group=time)) +
     geom_line() +
     theme_bw()
+    print(h)
   }  
 #now convert back to a matrix to put into the model
   adjusted_producers <- nt_df_oe %>%

@@ -117,8 +117,10 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     producers[,1] = 0
   }
   if (use_data_drive_producers) {
-    source('get_adjusted_producers.R')
-    producers = get_adjusted_producers(nTestOE)
+    # source('get_adjusted_producers.R')
+    # producers = get_adjusted_producers(nTestOE)
+    source('estimate_adjusted_producers.R')
+    producers = estimate_adjusted_producers(nTestOE = nTestOE)
   }
   if (use_blocked_RCs){
     source('get_blocked_indices.R')
