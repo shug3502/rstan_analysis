@@ -465,8 +465,9 @@ all_ll_df <- get_sum_of_log_lik(res_M0[[3]],id='M0') %>%
 #  full_join(get_sum_of_log_lik(res_M5[[3]],id='M5')) %>%
   full_join(get_sum_of_log_lik(res_M6[[3]],id='M6')) %>%
   full_join(get_sum_of_log_lik(res_M7[[3]],id='M7')) %>%
-  full_join(get_sum_of_log_lik(res_M8[[3]],id='M8')) 
+  full_join(get_sum_of_log_lik(res_M8[[3]],id='M8'))
 #  full_join(get_sum_of_log_lik(res_M9[[3]],id='M9'))
+#  full_join(get_sum_of_log_lik(res_M10[[3]],id='M10'))
 
 library(ggridges)
 ggplot(data=all_ll_df, aes(x=ll,y=id)) + 
