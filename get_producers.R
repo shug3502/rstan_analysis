@@ -13,7 +13,6 @@ get_producers <- function(nTestOE,multiplier=FALSE){
     if (length(multiplier)==1){
       multiplier[2] = multiplier[1]
     }
-    print(multiplier)
     producers[producers==2]=multiplier[1]
     producers[producers==1]=multiplier[2]
   }

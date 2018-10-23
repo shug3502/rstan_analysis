@@ -41,6 +41,6 @@ estimate_adjusted_producers <- function(nTestOE) {
   )
   estimated_producers = rstan::extract(estimates,pars='a',permuted=TRUE)[[1]] %>% apply(.,2,median) 
   estimated_producers = 2*15*estimated_producers/sum(estimated_producers)
-  producers = cbind(rep(0,nTestOE),matrix(rep(estimated_producers,nTestOE),ncol=16))
+  producers = cbind(rep(0,nTestOE),matrix(rep(estimated_producers,nTestOE),ncol=15))
   return(producers)
 }
