@@ -88,6 +88,26 @@ functions {
   }
   return y_pred_OE;
 }
+  vector my_log_lik(int[,] y_OE,
+                    int T,
+                    real[] ts, 
+                    real[] y0,
+                    real[] theta,
+                    matrix producers){
+  vector[T] ll = rep_vector(0,T);
+  real y_ode_OE[T,16];
+  int placeholder[0];
+  real phi = theta[4];
+  real sigma = theta[5];
+  for (t in 1:T){
+    y_ode_OE = integrate_ode_rk45(mrnatransport, y0, 0, ts, theta, to_array_1d(producers[t,]), placeholder ); //use overexpression producers
+    y_ode_OE[t,1] = y_ode_OE[t,1]*phi;
+    for (j in 1:16){
+      ll[t] = ll[t] + neg_binomial_2_lpmf(y_OE[t,j] | y_ode_OE[t,j],sigma);
+    }
+  }
+return ll;    
+}
 }
 data {
   int<lower=1> T1;
