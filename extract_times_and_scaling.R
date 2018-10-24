@@ -70,6 +70,7 @@ rescale_time <- function(log_area, tau, t0, tol=10^-5){
                              )
 ##########################################  
   if (optional_plot){
+    require(ggplot2)
     g <- ggplot(data = df, aes(x=stages,y=la)) +
       geom_point() + 
       geom_line(color='red',aes(x=stages,y=pred_age)) +
