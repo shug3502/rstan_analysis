@@ -22,11 +22,11 @@ source('estimate_adjusted_producers.R')
 source('extract_times_and_scaling.R')
 expose_stan_functions('M0.stan')
 ###############
-nTestOE = 14
-models_to_sim = list('M0','M2','M3','M4','M10','M11')
-num_draws = 4000
-multipliers <- list(M0=c(2,2),M2=c(2,1),M3=c(4,2),M4=c(4,1))
-identifier = 'v470_with_outliers_M0_simple'  #'v431WT_simple' #load fitted posterior parameters from this model
+nTestOE = 9
+models_to_sim = list('M0','M2','M3','M4','M10','M11','M12','M13','M14')
+num_draws = 100
+multipliers <- list(M0=c(2,2),M2=c(2,1),M3=c(4,2),M4=c(4,1),M13=c(4,4),M14=c(2.5,2.5))
+identifier = 'v431WT_simple' #'v470_with_outliers_M0_simple' #load fitted posterior parameters from this model
 times = extract_times_and_scaling(1,1,nTestOE)
 overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
 overexpression_data = overexpression_data[times$sort_indices4,] #need to sort time series and correspondingly reorder rows
@@ -39,7 +39,9 @@ for (modelID in models_to_sim) {
     producers_list[modelID] = list(get_adjusted_producers(nTestOE))
   } else if (modelID=='M11') {
     producers_list[modelID] = list(estimate_adjusted_producers(nTestOE))
-  }
+  } else if (modelID=='M12') {
+    producers_list[modelID] = list(2*estimate_adjusted_producers(nTestOE))
+}
 }
 
 #######################
@@ -89,7 +91,18 @@ get_log_lik(overexpression_data,nTestOE,th,producers_list[['M0']],times)
 
 #get results from fitting model
 cat(paste('\nloading fitted model parameters from model id: ',identifier,'\n',sep=''))
-estimates <- readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep=''))
+fit_path = paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')
+if (file.exists(fit_path)){
+  estimates <- readRDS(fit_path)
+} else {
+  #try on scratch
+  fit_path = paste('/scratch/harrison/FISH_data/old_fits/mrna_transport_estimates',identifier,'.rds',sep='')
+  if (file.exists(fit_path)){
+    estimates <- readRDS(fit_path)
+  } else {
+    stop('file does not exist, please run analysis or check a different computer')
+  }
+}
 
 #################
 
@@ -141,7 +154,7 @@ xdata <- data.frame(rna = as.vector(overexpression_data),cellID = as.vector(matr
 observed_and_predictions <- full_join(post_pred_df, xdata)
 
 observed_and_predictions %>%
-  filter(round(time)==19) %>%
+  filter(round(time)==28) %>%
   ggplot(aes(x=cellID,y=y_median,ymin=y_lower,ymax=y_upper)) +
   geom_ribbon(alpha=0.4) +
   geom_line() +
@@ -149,16 +162,24 @@ observed_and_predictions %>%
   facet_wrap(~factor(modelID))
 
 observed_and_predictions %>%
-  filter(modelID=='M4') %>%
+  filter(modelID=='M12') %>%
   ggplot(aes(x=cellID,y=y_median,ymin=y_lower,ymax=y_upper)) +
   geom_ribbon(alpha=0.4) +
   geom_line() +
   geom_point(aes(x=cellID,y=rna)) +
   facet_wrap(~factor(time))  
 
-log_lik_df2 %>%
+g <- log_lik_df2 %>%
   unnest(ll) %>%
   ggplot(aes(ll,color=modelID)) +
   geom_density() + 
   scale_x_continuous(limits=c(-1800,-800))
+  print(g)
+  ggsave(paste('plots/compare_production_models_fwd_sim_',identifier,'.eps'),device=cairo_ps)
+  
+  log_lik_df2 %>%
+    filter(as.numeric(substr(modelID,2,3))>10 | modelID=='M3') %>%
+    unnest(ll) %>%
+    ggplot(aes(ll,color=modelID)) +
+    geom_density()
   

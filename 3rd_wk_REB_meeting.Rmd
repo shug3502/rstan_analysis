@@ -1,0 +1,187 @@
+---
+title: "3rd wk REB meeting"
+author: "Jonathan Harrison"
+date: "25 October 2018"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+##Data driven production models
+
+Wanted a data driven production model. Collected data on nascent transcription.
+Need to define:
+1. distribution of production across cells
+2. relative OE producton vs WT production
+
+###Model M10
+Take raw measurements of integrated fluorescence of nascent transcripts. 
+Use these as estimates of production in each cell for each egg chamber, $\hat{a}_{ij}$.
+```{r}
+nTestOE=9
+source('get_adjusted_producers.R')
+get_adjusted_producers(nTestOE,T)
+```
+
+Problem with this: since the data come from fixed samples, the nascent transcripts only give us a single snapshot in time.
+The number of nascent transcripts gives an instantaneous snapshot of the transcription rate but for the model, production rate $a$, relates to a longer time scale average production.
+Instead we can attempt to model the fact that what we have observed is a random draw from a stochastic transcription process.
+In particular, the observed measurements contain quite a few zeros where no nascent transcripts above the cosen threshold were detected in a given cell. 
+
+##Model M11
+Zero inflated poisson observation model for the transcription process.
+$$
+p(y | \theta, \lambda) =
+\begin{cases}
+\theta + (1-\theta) \, \text{Poisson}(0|\lambda) \hspace{3mm} \text{if } y=0, \\
+(1-\theta) \, \text{Poisson}(y|\lambda) \hspace{3mm} \text{if } y > 0
+\end{cases}
+$$
+We assume that there is some characteristic distribution of production across cells and all the egg chambers are noisy observations of this.
+This model could be fitted directly to the observations of nascent transcription to give estimates for the transcription in each cell, as follows.
+
+```{r}
+source('estimate_adjusted_producers.R')
+producers = estimate_adjusted_producers(nTestOE)
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+source('extract_times_and_scaling.R')
+times=extract_times_and_scaling(1,1,nTestOE)
+df <- data_frame(transcription=list(producers[1,]),cellID=list(seq(16))) %>%
+  unnest()
+
+df %>% ggplot(aes(x=cellID,y=transcription)) + geom_line()
+```
+
+##Mode M12
+Try also multiplying by 4 compared to WT production, rather than by 2.
+
+##Compare production models
+```{r}
+source('forward_simulate.R')
+```
+
+
+
+##Summary
+It is hard to estimate inhomogeneous production rates from fixed biological data, even with direct observations since we only have a single time point for each biological sample.
+
+
+##Next Up
+Look at influence of individual egg chambers via LOO.
+```{r}
+
+###########
+#setup
+library(rstan)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(tidybayes)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+source('get_producers.R')
+source('get_adjusted_producers.R')
+source('estimate_adjusted_producers.R')
+source('extract_times_and_scaling.R')
+expose_stan_functions('M0.stan')
+###############
+nTestOE = 14
+models_to_sim = list('M0','M2','M3','M4','M10','M11','M12','M13','M14')
+num_draws = 100
+multipliers <- list(M0=c(2,2),M2=c(2,1),M3=c(4,2),M4=c(4,1),M13=c(4,4),M14=c(2.5,2.5))
+identifier = 'v431WT_simple' #'v470_with_outliers_M0_simple' #load fitted posterior parameters from this model
+times = extract_times_and_scaling(1,1,nTestOE)
+overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+overexpression_data = overexpression_data[times$sort_indices4,] #need to sort time series and correspondingly reorder rows
+
+producers_list <- list()
+for (modelID in models_to_sim) {
+  if (modelID %in% names(multipliers)){
+    producers_list[modelID] = list(get_producers(nTestOE,multiplier=multipliers[[modelID]]))
+  } else if (modelID=='M10') {
+    producers_list[modelID] = list(get_adjusted_producers(nTestOE))
+  } else if (modelID=='M11') {
+    producers_list[modelID] = list(estimate_adjusted_producers(nTestOE))
+  } else if (modelID=='M12') {
+    producers_list[modelID] = list(2*estimate_adjusted_producers(nTestOE))
+}
+}
+
+#get results from fitting model
+cat(paste('\nloading fitted model parameters from model id: ',identifier,'\n',sep=''))
+fit_path = paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')
+if (file.exists(fit_path)){
+  estimates <- readRDS(fit_path)
+} else {
+  #try on scratch
+  fit_path = paste('/scratch/harrison/FISH_data/old_fits/mrna_transport_estimates',identifier,'.rds',sep='')
+  if (file.exists(fit_path)){
+    estimates <- readRDS(fit_path)
+  } else {
+    stop('file does not exist, please run analysis or check a different computer')
+  }
+}
+
+get_log_lik <- function(overexpression_data,nTestOE,theta,producers,times){
+  overexpression_data_list = lapply(1:nTestOE, FUN = function(i) overexpression_data[i,])
+  ll <- my_log_lik(overexpression_data_list,nTestOE,times$ts4,rep(0,16),theta,producers)
+  return(ll) 
+}
+
+#################
+
+y_pred0pt0 <- estimates %>%
+  spread_draws(a,b,nu,phi,sigma) %>% 
+  filter(.iteration<=num_draws) %>%
+  select(b,a,nu,phi,sigma) %>%
+  mutate(theta = purrr::pmap(list(b,a,nu,phi,sigma),function(b,a,nu,phi,sigma) c(b,a,nu,phi,sigma)))
+
+####################################################
+#whats new?
+
+get_log_lik_wrapper2 <- function(b,a,nu,phi,sigma,modelID='M0'){
+  th = c(b,a,nu,phi,sigma)
+  producers = producers_list[[modelID]]
+  s = get_log_lik(overexpression_data,nTestOE,th,producers,times)
+  return(s)
+}
+
+full_log_lik <- y_pred0pt0 %>%
+  mutate(modelID = list(models_to_sim)) %>%
+  unnest(.preserve=theta) %>%
+  mutate(time=list(times$ts4),
+         ll = purrr::pmap(list(b,a,nu,phi,sigma,modelID),
+                                 get_log_lik_wrapper2)) %>%
+  unnest(time,ll,.preserve=modelID) %>%
+  unnest()
+
+analyse_given_model <- function(nTestOE,mID='M0'){
+  #mID is a string containing the model ID
+  library(loo)
+  log_lik_matrix = matrix(full_log_lik %>% filter(modelID==mID) %>% .$ll,ncol=nTestOE,byrow=TRUE)
+  loo1 <- loo(log_lik_matrix)
+ return(loo1) 
+}
+
+aM_list <- purrr::map(models_to_sim, function(x) analyse_given_model(nTestOE,x))
+purrr::map(aM_list,plot)
+
+```
+
+Seems that M13 (uniform production across cells of 4a) has least bad pareto k shape parameters. But still bad, meaning results are still highly influenced by indicidual data points. In particular the late time points. 
+And early time point for the 4a production models.
+
+Now repeat for $n=14$ and the influence of each cell rather than egg chamber. Then consider blocking and density dependence. 
+
+```{r}
+
+```
+
+
+
