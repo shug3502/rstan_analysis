@@ -22,7 +22,7 @@ source('estimate_adjusted_producers.R')
 source('extract_times_and_scaling.R')
 expose_stan_functions('M0.stan')
 ###############
-nTestOE = 9
+nTestOE = 14
 models_to_sim = list('M0','M2','M3','M4','M10','M11')
 num_draws = 4000
 multipliers <- list(M0=c(2,2),M2=c(2,1),M3=c(4,2),M4=c(4,1))
@@ -114,9 +114,10 @@ log_lik_df <- y_pred0pt0 %>%
   mutate(time=list(times$ts4),
          ll = purrr::pmap(list(b,a,nu,phi,sigma,modelID),
                                  get_log_lik_wrapper)) %>%
-  unnest(ll,time,.preserve=modelID) %>%
+  unnest(time,.preserve=c(ll,modelID)) %>%
+  unnest(ll,.preserve = modelID) %>%
+  unnest() %>%
   mutate(cellID = list(seq_len(16))) %>%
-  unnest(.preserve=modelID) %>%
   unnest()
 
 log_lik_df2 <- y_pred0pt0 %>%

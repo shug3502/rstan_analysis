@@ -1,0 +1,198 @@
+---
+title: "Constructive Friday"
+author: "Jonathan Harrison"
+date: "19/10/2018"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+##Today will be a good day
+
+We will start by collecting together the data on the total nascent transcription level observed at a particle time point for our egg chambers.
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(ggplot2)
+nTestOE=9
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(1,1,nTestOE)
+source('get_nascent_transcription.R')
+#for OE
+nascent_transcription = get_nascent_transcription(nTestOE,'OE')
+nt_df_oe <- data.frame(nascent_transcription) 
+colnames(nt_df_oe) = seq_len(16)
+nt_df_oe %<>%
+  mutate(time = times$ts4) %>%
+  gather('cellID','transcription',-time) %>%
+  mutate(cellID=as.integer(cellID))
+  ggplot(data=nt_df_oe,aes(x=cellID,y=transcription,color=time,group=time)) +
+    geom_line() + theme_bw()
+
+  
+```
+
+To help with interpreting this, we also want numbers on the average intensity of particles in nurse cells for the overexpressor.
+
+```{r}
+nTestOE = 9
+v = seq_len(nTestOE)
+regions <- c('background','nurse_cells','oocyte')
+root <-  'Overexpression'
+
+get_stage_info <- function(root, v){
+  stages <- rep(0,length(v)) #don't need to extract estimated stages for each egg chamber example
+  for (j in seq_along(v)){
+    temp = read.table(file = paste('data/',root,v[j],'/','filenames.txt',sep='')) %>%
+      unlist %>%
+      stringr::str_extract(., 'stg.') %>%
+      stringr::str_split(.,'stg',simplify=TRUE)
+    stages[j] = temp[1,2] %>% as.numeric
+  }
+  return(stages)
+}
+
+stages <- get_stage_info(root, v)
+
+particles <- data.frame(Area=numeric(),Mean=numeric(),Min=numeric(),Max=numeric(),RawIntDen=numeric(),
+                        Region=factor(),Sample=factor(),Stage=integer())
+#####################
+#loop over each regions
+for (r in seq_along(regions)){
+  #get list of files for all examples, and extract results for a given region
+  #returns a list of results for all examples for a given region
+  temp <- list.files(path = paste('data/',root,v,'/',sep=''), pattern = "\\.xls$",full.names=TRUE) %>%
+    grep(regions[r],. , value=TRUE) %>% 
+    lapply(.,read.csv) #somehow stored data in different formats
+    
+  #take results for each example and add to data frame  
+  for (j in seq_along(temp)){
+    M <- nrow(temp[[j]]) #how many particles are labelled for each region and each egg chamber
+    Region <- rep(regions[r],M)
+    Sample <- rep(j,M)
+    Stage <- rep(stages[j],M)
+    particles <- rbind(particles,cbind(cbind(cbind(temp[[j]],Region),Sample),Stage))  
+  }
+}
+# gg<- particles %>% filter(Region=="background") %>% ggplot(aes(x=RawIntDen, y=Region, color=factor(Sample))) + geom_jitter()
+# print(gg)
+#########################
+#process by subtracting background values and valculating ratio
+processed <- particles %>% 
+  filter(Region!="background" | RawIntDen<10000) %>% 
+  group_by(Sample) %>% 
+  mutate(MeanBgd = median(RawIntDen[Region=='background']),BgdSubtract = RawIntDen-MeanBgd)
+
+q <- processed %>%
+  dplyr::select(BgdSubtract,Region,Sample,Stage) %>% #be careful of clash with select in MASS package
+  group_by(Region) %>%
+  mutate(MeanByRegion = mean(BgdSubtract),StdByRegion = sd(BgdSubtract))
+q <- q %>%
+  mutate(Ratio = MeanByRegion/median(q$MeanByRegion))
+hh <- ggplot(q,aes(Region,BgdSubtract/MeanByRegion[Region=='nurse_cells'],color=factor(Sample))) +
+  geom_violin() + 
+  geom_jitter() +
+  theme_bw() +
+  scale_x_discrete("Region", labels = c("background" = "BGD","oocyte" = "OO","nurse_cells" = "NC")) +
+  ylab('Normalised intensity')
+
+how_bright_is_a_particle <- q %>%
+  group_by(Sample) %>%
+  filter(Region=='nurse_cells') %>%
+  summarise(single_particle=mean(BgdSubtract))
+
+  ggplot(how_bright_is_a_particle, aes(x=Sample,y=single_particle)) + 
+  geom_point()
+```
+
+Now bring together and combine these data
+
+```{r}
+quantify_num_particles <- how_bright_is_a_particle %>%
+  mutate(time = times$ts4[times$sort_indices4[Sample]]) %>%
+  select(-Sample) %>%
+  full_join(nt_df_oe,by="time") %>%
+  mutate(nt = as.integer(transcription/single_particle))
+quantify_num_particles %>%
+  ggplot(aes(x=cellID,y=nt,color=time,group=time)) + 
+  geom_point() +
+  geom_line()
+
+```
+
+Now attempt to model
+```{r}
+library(rstan)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+num_particles <- quantify_num_particles %>%
+  select(cellID,nt,time) %>%
+    spread(cellID,nt) %>%
+    ungroup() %>%
+    select(-time) %>% 
+    as.matrix()
+
+stan_file <- "poisson_transcription.stan"
+stan_list <- list(T=nTestOE,
+                  nt=num_particles)
+estimates <- stan(file = stan_file,
+                  data = stan_list,
+                  seed = 42,
+                  chains = 4,
+                  warmup = 1000,
+                  iter = 2000
+)
+```
+
+```{r}
+obs_transcription <- quantify_num_particles %>%
+  select(cellID,transcription,time) %>%
+    spread(cellID,transcription) %>%
+    ungroup() %>%
+    select(-time) %>% 
+    as.matrix()
+
+stan_file <- "marginalized_poisson_model.stan"
+stan_list <- list(T=nTestOE,
+                  fluoresence_obs=obs_transcription,
+                  N_max=200)
+estimates <- stan(file = stan_file,
+                  data = stan_list,
+                  seed = 42,
+                  chains = 4,
+                  warmup = 1000,
+                  iter = 2000
+)
+```
+
+Assume zeros are data missing at random. (They are not - how does this affect things subsequently?)
+```{r}
+
+obs_transcription <- quantify_num_particles %>%
+  select(cellID,transcription,time) %>%
+    spread(cellID,transcription) %>%
+    ungroup() %>%
+    select(-time) %>% 
+    as.matrix()
+stan_file <- "missing_data_poisson_transcription.stan"
+stan_list <- list(T=nTestOE,
+                  transcription_obs=obs_transcription
+                  )
+estimates <- stan(file = stan_file,
+                  data = stan_list,
+                  seed = 42,
+                  chains = 4,
+                  warmup = 1000,
+                  iter = 2000
+)
+estimated_producers = rstan::extract(estimates,pars='a',permuted=TRUE)[[1]] %>% apply(.,2,median) 
+estimated_producers = 2*15*estimated_producers/sum(estimated_producers)
+plot(estimated_producers)
+
+```
+

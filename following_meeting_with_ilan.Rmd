@@ -570,7 +570,7 @@ Try now with the data driven producers
 source('mrna_transport_full.R')
 id = 'v493_test'
 omit_OE_data_pts = FALSE
-run_mcmc = TRUE
+run_mcmc = FALSE
 #M13
 identifier <- paste(id,'M10_with_production',sep='')
 res_M13 = mrna_transport_inference_full(identifier = identifier,
