@@ -207,9 +207,36 @@ And early time point for the 4a production models.
 
 Now repeat for $n=14$ and the influence of each cell rather than egg chamber. Then consider blocking and density dependence. 
 
+
+Interesting that for almost all models, the oocyte comes out as being modelled badly, which I had not picked up. 
+For some models, the cells far from the oocyte, also have large pareto k values.
+For the data driven production models, it is largely cell 9 and the oocyte that are a problem.
+
+Plot some of this visually.
 ```{r}
+
+full_log_lik_by_cell %>%
+  filter(modelID != 'M10') %>%
+  filter(cellID == 1) %>%
+  ggplot(aes(x=modelID,y=ll)) +
+  geom_violin() + 
+  facet_wrap(~cellID,scale='fixed')
+
+# observed_and_predictions %>% filter(cellID==1) %>%
+#     ggplot(aes(x=time,y=y_median,ymin=y_lower,ymax=y_upper)) +
+#     geom_ribbon(alpha=0.4) +
+#     geom_line() +
+#     geom_point(aes(x=time,y=rna)) +
+#     facet_wrap(~factor(modelID))  
 
 ```
 
+
+##Blocking
+In the blocking stan file, need to implement an equivalent forward simulate function, and expose this for use. 
+Can then implement via forward simulation, with different production models.
+
+##Density dependence
+Similarly, but will also need to load different parameter estimates. 
 
 
