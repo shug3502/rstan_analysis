@@ -134,6 +134,12 @@ get_log_lik <- function(overexpression_data,nTestOE,theta,producers,times){
   return(ll) 
 }
 
+get_log_lik_by_cell <- function(overexpression_data,nTestOE,theta,producers,times){
+  overexpression_data_list = lapply(1:nTestOE, FUN = function(i) overexpression_data[i,])
+  ll <- my_log_lik_by_cell(overexpression_data_list,nTestOE,times$ts4,rep(0,16),theta,producers)
+  return(ll) 
+}
+
 #################
 
 y_pred0pt0 <- estimates %>%
@@ -152,6 +158,13 @@ get_log_lik_wrapper2 <- function(b,a,nu,phi,sigma,modelID='M0'){
   return(s)
 }
 
+get_log_lik_wrapper3 <- function(b,a,nu,phi,sigma,modelID='M0'){
+  th = c(b,a,nu,phi,sigma)
+  producers = producers_list[[modelID]]
+  s = get_log_lik_by_cell(overexpression_data,nTestOE,th,producers,times)
+  return(s)
+}
+
 full_log_lik <- y_pred0pt0 %>%
   mutate(modelID = list(models_to_sim)) %>%
   unnest(.preserve=theta) %>%
@@ -161,16 +174,31 @@ full_log_lik <- y_pred0pt0 %>%
   unnest(time,ll,.preserve=modelID) %>%
   unnest()
 
-analyse_given_model <- function(nTestOE,mID='M0'){
+analyse_given_model <- function(full_log_lik,nColumns,mID='M0'){
   #mID is a string containing the model ID
   library(loo)
-  log_lik_matrix = matrix(full_log_lik %>% filter(modelID==mID) %>% .$ll,ncol=nTestOE,byrow=TRUE)
+  log_lik_matrix = matrix(full_log_lik %>% filter(modelID==mID) %>% .$ll,ncol=nColumns,byrow=TRUE)
   loo1 <- loo(log_lik_matrix)
  return(loo1) 
 }
 
-aM_list <- purrr::map(models_to_sim, function(x) analyse_given_model(nTestOE,x))
+aM_list <- purrr::map(models_to_sim, function(x) analyse_given_model(full_log_lik,nTestOE,x))
 purrr::map(aM_list,plot)
+
+#############################################
+#now the same by cell in the egg chamber
+full_log_lik_by_cell <- y_pred0pt0 %>%
+  mutate(modelID = list(models_to_sim)) %>%
+  unnest(.preserve=theta) %>%
+  mutate(cellID=list(seq_len(16)),
+         ll = purrr::pmap(list(b,a,nu,phi,sigma,modelID),
+                                 get_log_lik_wrapper3)) %>%
+  unnest(cellID,ll,.preserve=modelID) %>%
+  unnest()
+
+aM_by_cell_list <- purrr::map(models_to_sim, function(x) analyse_given_model(full_log_lik_by_cell,16,x))
+purrr::map(aM_by_cell_list,plot)
+
 
 ```
 
