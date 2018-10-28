@@ -126,6 +126,57 @@ functions {
     dydt = theta[1] * B * to_vector(y) + theta[2] * to_vector(x_r);
     return to_array_1d(dydt);
   }
+  
+    
+  real[,] forward_simulate_OE_rng(int T,
+                          real[] ts, 
+                          real[] y0,
+                          real[] theta,
+                          matrix producers,
+                          int[,] OE_blocked){
+//theta here is theta as above, but also augemented with phi and any other parameters
+  real y_ode_OE[T,16];
+  real y_pred_OE[T,16];
+  int OE_x_i[3];
+  real phi = theta[5];
+  real sigma = theta[6];
+  for (t in 1:T){
+    for (i in 1:3){
+      OE_x_i[i] = OE_blocked[t,i];
+    }
+    y_ode_OE = integrate_ode_rk45(mrnatransport, y0, 0, ts, theta, to_array_1d(producers[t,]), OE_x_i ); //use overexpression producers and specify any blocked RCs
+    y_ode_OE[t,1] = y_ode_OE[t,1]*phi;
+    for (j in 1:16){
+      y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j],sigma);
+    }
+  }
+  return y_pred_OE;
+}
+  matrix my_log_lik(int[,] y_OE,
+                    int T,
+                    real[] ts, 
+                    real[] y0,
+                    real[] theta,
+                    matrix producers,
+                    int[,] OE_blocked){
+  matrix[T,16] ll = rep_matrix(0,T,16);
+  real y_ode_OE[T,16];
+  real phi = theta[5];
+  real sigma = theta[6];
+  int OE_x_i[3];  
+  for (t in 1:T){
+    for (i in 1:3){
+      OE_x_i[i] = OE_blocked[t,i];
+    }
+    y_ode_OE = integrate_ode_rk45(mrnatransport, y0, 0, ts, theta, to_array_1d(producers[t,]), OE_x_i ); //use overexpression producers and specify which RCs are blocked
+    y_ode_OE[t,1] = y_ode_OE[t,1]*phi;
+    for (j in 1:16){
+      ll[t,j] = ll[t,j] + neg_binomial_2_lpmf(y_OE[t,j] | y_ode_OE[t,j],sigma);
+    }
+  }
+return ll;    
+}
+  
 }
 data {
   int<lower=1> T1;
@@ -167,7 +218,7 @@ transformed parameters {
 }
 model {
   real z[T1,16];
-  sigma ~ normal(0,10) T[0,]; //cauchy(0,2.5) T[0,]; //normal(1.0,0.25) T[0,]; 
+  sigma ~ normal(0,10) T[0,]; 
   phi ~ normal(0.345,0.047) T[0,];
   a ~ normal(0,10) T[0,];
   b ~ normal(0,10) T[0,];
