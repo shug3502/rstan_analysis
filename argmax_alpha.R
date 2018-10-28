@@ -15,15 +15,40 @@ source('get_adjusted_producers.R')
 source('estimate_adjusted_producers.R')
 source('extract_times_and_scaling.R')
 source('get_blocked_indices.R')
-expose_stan_functions('mrna_transport_with_blocking.stan')
 ##############
+#load estimates
+identifier_simple = 'v470_with_outliers_M0_simple'
+identifier_DD = 'v470_with_outliers_M8_density_dependent_4a'
 
+check_and_load_path <- function(fit_path){
+  if (file.exists(fit_path)){
+    estimates <- readRDS(fit_path)
+  } else {
+    #try on scratch
+    fit_path = paste('/scratch/harrison/FISH_data/old_fits/mrna_transport_estimates',identifier,'.rds',sep='')
+    if (file.exists(fit_path)){
+      estimates <- readRDS(fit_path)
+    } else {
+      stop('file does not exist, please run analysis or check a different computer')
+    }
+  }
+  return(estimates)
+}
+#get results from fitting simple model
+cat(paste('\nloading fitted simple model parameters from model id: ',identifier_simple,'\n',sep=''))
+path_simple = paste('fits/mrna_transport_estimates',identifier_simple,'.rds',sep='')
+estimates_simple <- check_and_load_path(path_simple)
+cat(paste('\nloading fitted density dependent model parameters from model id: ',identifier_DD,'\n',sep=''))
+path_DD = paste('fits/mrna_transport_estimates',identifier_DD,'.rds',sep='')
+estimates_DD <- check_and_load_path(path_DD)
+
+##############
 calculate_expected_ll <- function(alpha,
-                                  TestOE = 9,
+                                  estimates_simple,
+                                  estimates_DD,
+                                  nTestOE = 9,
                                   num_draws = 100,
-                                  identifier_simple = 'v470_with_outliers_M0_simple',
-                                  identifier_DD = 'v470_with_outliers_M8_density_dependent_4a',
-                                  models_to_sim = paste('Malpha'),
+                                  models_to_sim = c('Malpha'),
                                   with_blocking = FALSE,
                                   with_density_dependence = FALSE
                                   ){
@@ -109,30 +134,9 @@ get_log_lik_wrapper <- function(b,a,nu,beta,phi,sigma,modelID='M0'){
   return(lapply(1:nTestOE, FUN = function(i) ll[i,]))
 }
 
-check_and_load_path <- function(fit_path){
-  if (file.exists(fit_path)){
-    estimates <- readRDS(fit_path)
-  } else {
-    #try on scratch
-    fit_path = paste('/scratch/harrison/FISH_data/old_fits/mrna_transport_estimates',identifier,'.rds',sep='')
-    if (file.exists(fit_path)){
-      estimates <- readRDS(fit_path)
-    } else {
-      stop('file does not exist, please run analysis or check a different computer')
-    }
-  }
-  return(estimates)
-}
-
-#get results from fitting simple model
-cat(paste('\nloading fitted simple model parameters from model id: ',identifier_simple,'\n',sep=''))
-path_simple = paste('fits/mrna_transport_estimates',identifier_simple,'.rds',sep='')
-estimates_simple <- check_and_load_path(path_simple)
-cat(paste('\nloading fitted density dependent model parameters from model id: ',identifier_DD,'\n',sep=''))
-path_DD = paste('fits/mrna_transport_estimates',identifier_DD,'.rds',sep='')
-estimates_DD <- check_and_load_path(path_DD)
 #################
-
+if (any(!(models_to_sim %in% models_with_density_dependence))){
+expose_stan_functions('mrna_transport_with_blocking.stan')
 draws_simple <- estimates_simple %>%
   spread_draws(a,b,nu,phi,sigma) %>% 
   filter(.iteration<=num_draws) %>%
@@ -149,9 +153,12 @@ log_lik_simple <- draws_simple %>%
   mutate(cellID = list(seq_len(16))) %>%
   unnest(ll,cellID,.preserve=modelID) %>%
   unnest()
+} else{
+  log_lik_simple <- data.frame(b=numeric(),a=numeric(),ll=numeric())
+}
 
 ##################
-
+if (any(models_to_sim %in% models_with_density_dependence)){
 expose_stan_functions('mrna_transport_density_dependent_with_blocking.stan') #should replace previous functions and work with previous wrappers
 draws_DD <- estimates_DD %>%
   spread_draws(a,b,nu,beta,phi,sigma) %>% 
@@ -168,6 +175,9 @@ log_lik_DD <- draws_DD %>%
   mutate(cellID = list(seq_len(16))) %>%
   unnest(ll,cellID,.preserve=modelID) %>%
   unnest()
+} else {
+  log_lik_DD <- data.frame(b=numeric(),a=numeric(),ll=numeric())
+}
 
 #####################
 
@@ -177,5 +187,18 @@ expected_log_lik <- full_join(log_lik_simple, log_lik_DD) %>%
   group_by(modelID) %>%
   summarise(ell = mean(sum_ll)) %>%
   arrange(desc(ell))
-
+return(expected_log_lik[['ell']]) #if using default arguments, will return a single value for model 'Malpha'
 }
+
+out_simple <- optim(par=2,fn = function(x) -calculate_expected_ll(x,estimates_simple,estimates_DD),
+      lower=0,method="L-BFGS-B",control=list(maxit=50))
+
+out_blocking <- optim(par=2,fn = function(x) -calculate_expected_ll(x,estimates_simple,estimates_DD, with_blocking = TRUE),
+                    lower=0,method="L-BFGS-B",control=list(maxit=50))
+
+out_DD <- optim(par=2,fn = function(x) -calculate_expected_ll(x,estimates_simple,estimates_DD, with_density_dependence = TRUE),
+                      lower=0,method="L-BFGS-B",control=list(maxit=50))
+
+out_block_DD <- optim(par=2,fn = function(x) -calculate_expected_ll(x,estimates_simple,estimates_DD, with_blocking = TRUE, with_density_dependence = TRUE),
+                      lower=0,method="L-BFGS-B",control=list(maxit=50))
+

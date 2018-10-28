@@ -4,7 +4,8 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                                           show_diagnostic_plots=FALSE, use_hierarchical_model=FALSE, use_prior_predictive=TRUE,
                                           use_binary_producers=FALSE, use_blocked_RCs=FALSE, train_on_OE=FALSE,
                                           omit_OE_data_pts=FALSE, use_density_dependence=FALSE, is_nu_uniform=TRUE,
-                                          use_data_drive_producers=FALSE, no_decay_model=FALSE){
+                                          use_data_drive_producers=FALSE, uncertain_times=FALSE,
+					  no_decay_model=FALSE){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
@@ -22,15 +23,14 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   #Area may be better as in some examples egg chambers are quite squashed.
   #To get lengths read length.txt file in each folder
   
+  source('get_just_areas.R')
+  egg_chamber_areas <- get_just_areas(nSamples,nTest,nTestOE)
+  stages <- get_just_stages(nSamples,nTest,nTestOE)
+  time_hrs <- convert_to_hrs(stages)
   source('extract_times_and_scaling.R')
   times = extract_times_and_scaling(nSamples,nTest,nTestOE)
   m0 = c(0, rep(0,15)) #initial condition
   #############################################################
-  
-  #############################################################
-  # source('get_nc_transition_matrix.R')
-  # B1 = get_nc_transition_matrix(0) %>% as.vector
-  # B2 = get_nc_transition_matrix(1) %>% as.vector
   
   #############################################################
   
@@ -151,6 +151,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
         use_density_dependence ~ 'prior_predictive_density_dependent.stan',        
         (use_binary_producers[1] < 0) ~ 'prior_predictive_fit_OE_production.stan',
         use_blocked_RCs ~ 'prior_predictive_with_blocking.stan',
+        uncertain_times ~ 'prior_predictive_uncertain_timescales.stan',
         no_decay_model ~ 'prior_predictive_no_decay.stan',
         !is_nu_uniform ~ 'prior_predictive_nu_varying_spatially.stan',
         use_hierarchical_model ~ 'prior_predictive_hierarchical.stan',
@@ -161,6 +162,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
         use_density_dependence ~ 'mrna_transport_density_dependent.stan',
         (use_binary_producers[1] < 0) ~ 'mrna_transport_fit_OE_production.stan',
         use_blocked_RCs ~ 'mrna_transport_with_blocking.stan',
+	uncertain_times ~ 'mrna_transport_uncertain_timescales.stan',
         no_decay_model ~ 'mrna_transport_no_decay.stan',
         !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
         use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
@@ -172,7 +174,13 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                        T2 = nSamples+nTest+nTestOE,
                        T3 = nTestOE,
                        y0 = m0,
-                       t0 = times$t0$estimate[3],
+                       t0 = ifelse(uncertain_times, 6.90, times$t0$estimate[3]),
+		       areas1 = egg_chamber_areas[times$sort_indices1],
+		       areas2 = egg_chamber_areas[times$sort_indices2],
+                       areas3 = egg_chamber_areas[nSamples+nTest+times$sort_indices4],
+		       obs_times1 = time_hrs[times$sort_indices1],
+                       obs_times2 = time_hrs[times$sort_indices3],
+                       obs_times3 = time_hrs[nSamples+nTest+times$sort_indices4],
                        ts1 = times$ts1,
                        ts2 = times$ts2,
                        ts3 = times$ts4,
