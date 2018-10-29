@@ -141,6 +141,13 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   }
   print(producers) 
   print(blocked)
+if (uncertain_times){
+   #then don't reoreder the raw data
+   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+   exp_data = data[seq_len(nSamples),]
+   overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+   overexpression_data = overexpression_data[seq_len(nTestOE),]
+}
 
   ##########################
   if (run_mcmc) {
@@ -175,12 +182,12 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
                        T3 = nTestOE,
                        y0 = m0,
                        t0 = ifelse(uncertain_times, 6.90, times$t0$estimate[3]),
-		       areas1 = egg_chamber_areas[times$sort_indices1],
-		       areas2 = egg_chamber_areas[times$sort_indices2],
-                       areas3 = egg_chamber_areas[nSamples+nTest+times$sort_indices4],
-		       obs_times1 = time_hrs[times$sort_indices1],
-                       obs_times2 = time_hrs[times$sort_indices3],
-                       obs_times3 = time_hrs[nSamples+nTest+times$sort_indices4],
+		       areas1 = egg_chamber_areas[seq_len(nSamples)],
+		       areas2 = egg_chamber_areas,
+                       areas3 = egg_chamber_areas[nSamples+nTest+seq_len(nTestOE)],
+		       obs_times1 = time_hrs[seq_len(nSamples)],
+                       obs_times2 = time_hrs,
+                       obs_times3 = time_hrs[nSamples+nTest+seq_len(nTestOE)],
                        ts1 = times$ts1,
                        ts2 = times$ts2,
                        ts3 = times$ts4,

@@ -26,7 +26,7 @@ expose_stan_functions('mrna_transport_with_blocking.stan')
 identifier_simple = 'v470_with_outliers_M0_simple' #'v431WT_simple' #load fitted posterior parameters from this model
 identifier_DD = 'v470_with_outliers_M8_density_dependent_4a'
 nTestOE = 14
-num_draws = 1000
+num_draws = 100
 models_to_sim = paste('M',seq(from=0,to=14)[-6],sep='')
 models_with_blocking = c('M1','M6')
 models_with_density_dependence = c('M7','M8','M9')
@@ -242,6 +242,32 @@ g <- log_lik_df2 %>%
     geom_density() + 
     scale_x_continuous(limits=c(-1100,-850))
   
+  ##########################
+  #plot log likelihood by cellID
+  h1 <- full_log_lik_df %>%
+    filter(cellID!=1) %>%
+    group_by(modelID,b,a,nu,phi,sigma,cellID) %>%
+    summarise(sum_ll = sum(ll)) %>%  #summing over egg chambers
+    group_by(modelID,cellID) %>% 
+    summarise(log_lik = median(sum_ll)) %>% #take median to summarise posterior
+    filter(modelID!='M10') %>% #model 10 is very bad
+    ggplot(aes(x=cellID,y=log_lik,color=modelID,group=modelID)) + 
+    geom_line() +
+    geom_point()
+  print(h1)
+  
+  #and by egg chamber
+  h2 <- full_log_lik_df %>%
+    filter(cellID!=1) %>%
+    group_by(modelID,b,a,nu,phi,sigma,time) %>%
+    summarise(sum_ll = sum(ll)) %>%  #summing over cells
+    group_by(modelID,time) %>% 
+    summarise(log_lik = median(sum_ll)) %>% #take median to summarise posterior
+    filter(modelID!='M10') %>% #model 10 is very bad
+    ggplot(aes(x=time,y=log_lik,color=modelID,group=modelID)) + 
+    geom_line() +
+    geom_point()
+  print(h2)
   ###########################
   
   analyse_given_model <- function(full_log_lik,nColumns,mID='M0'){
@@ -254,7 +280,7 @@ g <- log_lik_df2 %>%
 
   #look at LOO by cellID
   log_lik_by_cellID <- full_log_lik_df %>%
-    # filter(cellID!=1) %>% 
+     filter(cellID!=1) %>% 
     group_by(cellID,modelID,a,b,phi,sigma,nu) %>%
     summarise(ll_sum=sum(ll))
   aM_cellID_list <- purrr::map(models_to_sim, function(x) analyse_given_model(log_lik_by_cellID,16,x))
@@ -262,7 +288,7 @@ g <- log_lik_df2 %>%
 
   #look at LOO by egg chamber or time pt
   log_lik_by_time <- full_log_lik_df %>%
-    # filter(cellID!=1) %>%     
+     filter(cellID!=1) %>%     
     group_by(time,modelID,a,b,phi,sigma,nu) %>%
     summarise(ll_sum=sum(ll))
   aM_time_list <- purrr::map(models_to_sim, function(x) analyse_given_model(log_lik_by_time,nTestOE,x))

@@ -191,14 +191,14 @@ return(expected_log_lik[['ell']]) #if using default arguments, will return a sin
 }
 
 out_simple <- optim(par=2,fn = function(x) -calculate_expected_ll(x,estimates_simple,estimates_DD),
-      lower=0,method="L-BFGS-B",control=list(maxit=50))
+      lower=0,method="L-BFGS-B",control=list(maxit=50)) #3.84
 
 out_blocking <- optim(par=2,fn = function(x) -calculate_expected_ll(x,estimates_simple,estimates_DD, with_blocking = TRUE),
-                    lower=0,method="L-BFGS-B",control=list(maxit=50))
+                    lower=0,method="L-BFGS-B",control=list(maxit=50)) #3.50
 
 out_DD <- optim(par=2,fn = function(x) -calculate_expected_ll(x,estimates_simple,estimates_DD, with_density_dependence = TRUE),
-                      lower=0,method="L-BFGS-B",control=list(maxit=50))
+                      lower=0,method="L-BFGS-B",control=list(maxit=50)) #4.73
 
 out_block_DD <- optim(par=2,fn = function(x) -calculate_expected_ll(x,estimates_simple,estimates_DD, with_blocking = TRUE, with_density_dependence = TRUE),
-                      lower=0,method="L-BFGS-B",control=list(maxit=50))
+                      lower=0,method="L-BFGS-B",control=list(maxit=50)) #4.33
 
