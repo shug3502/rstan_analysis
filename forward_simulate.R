@@ -28,9 +28,9 @@ identifier_simple = 'v470_with_outliers_M0_simple' #'v431WT_simple' #load fitted
 identifier_DD = 'v470_with_outliers_M8_density_dependent_4a'
 nTestOE = 9
 num_draws = 100
-models_to_sim = paste('M',seq(from=0,to=14)[-6],sep='')
-models_with_blocking = c('M1','M6')
-models_with_density_dependence = c('M7','M8','M9')
+models_to_sim = paste('M',c(0,6,7,11,15,16,17),sep='') #seq(from=0,to=14)[-6]
+models_with_blocking = c('M1','M6','M16','M17')
+models_with_density_dependence = c('M7','M8','M9','M15','M17')
 times = extract_times_and_scaling(1,1,nTestOE)
 multipliers <- list(M0=c(2,2),M1=c(2,2),M2=c(2,1),M3=c(4,2),M4=c(4,1),M6=c(4,4),M7=c(2,2),M8=c(4,4),M9=c(4,4),M13=c(4,4),M14=c(2.5,2.5))
 blocked_matrix = get_blocked_indices(nTestOE)[times$sort_indices4,] #matrix of which RCs are blocked
@@ -44,7 +44,7 @@ for (modelID in models_to_sim) {
     producers_list[modelID] = list(get_producers(nTestOE,multiplier=multipliers[[modelID]]))
   } else if (modelID=='M10') {
     producers_list[modelID] = list(get_adjusted_producers(nTestOE))
-  } else if (modelID=='M11') {
+  } else if (modelID=='M11' | as.numeric(substr(modelID,2,3))>=15) {
     producers_list[modelID] = list(estimate_adjusted_producers(nTestOE))
   } else if (modelID=='M12') {
     producers_list[modelID] = list(2*estimate_adjusted_producers(nTestOE))
@@ -117,9 +117,9 @@ check_and_load_path <- function(fit_path){
     estimates <- readRDS(fit_path)
   } else {
     #try on scratch
-    fit_path = paste('/scratch/harrison/FISH_data/old_fits/mrna_transport_estimates',identifier,'.rds',sep='')
-    if (file.exists(fit_path)){
-      estimates <- readRDS(fit_path)
+    scratch_path = paste('/scratch/harrison/FISH_data/old_fits/',stringr::str_split(fit_path,'/')[[1]][2],sep='')
+    if (file.exists(scratch_path)){
+      estimates <- readRDS(scratch_path)
     } else {
       stop('file does not exist, please run analysis or check a different computer')
     }
@@ -204,8 +204,13 @@ simple_models <- models_to_sim[!(models_to_sim %in% models_with_density_dependen
 expose_stan_functions('mrna_transport_with_blocking.stan')
 aM_all[simple_models] <- purrr::map(simple_models, alternative_analysis)
 expose_stan_functions('mrna_transport_density_dependent_with_blocking.stan') #should replace previous functions and work with previous wrappers
-aM_all[models_with_density_dependence] <- purrr::map(models_with_density_dependence, alternative_analysis)
+DD_models <- models_to_sim[models_to_sim %in% models_with_density_dependence]
+aM_all[DD_models] <- purrr::map(DD_models, alternative_analysis)
 purrr::map(aM_all,plot)
+
+#get nicely formatted output from comparison
+loo::loo_model_weights(aM_all,method='stacking')
+loo::loo_model_weights(aM_all,method="pseudobma")
 
 ###################
 expose_stan_functions('mrna_transport_density_dependent_with_blocking.stan') #should replace previous functions and work with previous wrappers

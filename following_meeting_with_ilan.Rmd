@@ -30,8 +30,9 @@ To illustrate these ideas, we plot the RNA distributions for WT and OE based on 
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+nTestOE=9
 source('extract_times_and_scaling.R')
-times = extract_times_and_scaling(9,11,9)
+times = extract_times_and_scaling(9,11,nTestOE)
 my_normaliser <- function(dataset) apply(dataset,1,function(x)x/x[1]) %>% t()
   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
   raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
@@ -78,7 +79,7 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 source('extract_times_and_scaling.R')
-times = extract_times_and_scaling(9,11,9)
+times = extract_times_and_scaling(9,11,nTestOE)
 data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
 exp_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
 exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
@@ -182,6 +183,31 @@ print(coef(growth_WT)[['time']]/15)
 print(coef(growth_OE)[['time']]/15)
 print(coef(growth_OE)[['time']]/coef(growth_WT)[['time']])
 ```
+
+Try to do the same thing with a simple stan model to quantify the uncertainty in this ratio.
+```{r}
+library(rstan)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+stan_file = 'how_much_more_produced_in_oe.stan'
+stan_list = list(T1=9,
+                 T2=nTestOE,
+                 x=quantify_for_ilan %>% filter(phenotype=='WT') %>% .$total,
+                 y=quantify_for_ilan %>% filter(phenotype=='OE') %>% .$total,
+                 ts1=quantify_for_ilan %>% filter(phenotype=='WT') %>% .$time,
+                 ts2=quantify_for_ilan %>% filter(phenotype=='OE') %>% .$time
+                 )
+    estimates <- stan(file = stan_file,
+                      data = stan_list,
+                      seed = 42,
+                      chains = 4,
+                      warmup = 1000,
+                      iter = 2000
+    )
+
+```
+
+
 This neglects effects from assembly in the oocyte, which we ought to account for. 
 
 ```{r}
