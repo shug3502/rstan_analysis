@@ -3,7 +3,7 @@
 #we assume all the data is drawn from some characteristic distribution of transcription levels across the cells
 ############################
 
-estimate_adjusted_producers <- function(nTestOE) {
+estimate_adjusted_producers <- function(nTestOE,gamma=2) {
   library(rstan)
   library(dplyr)
   library(tidyr)
@@ -41,7 +41,7 @@ estimate_adjusted_producers <- function(nTestOE) {
                     refresh=-1
   )
   estimated_producers = rstan::extract(estimates,pars='a',permuted=TRUE)[[1]] %>% apply(.,2,median) 
-  estimated_producers = 2*15*estimated_producers/sum(estimated_producers)
+  estimated_producers = gamma*15*estimated_producers/sum(estimated_producers)
   producers = cbind(rep(0,nTestOE),matrix(rep(estimated_producers,nTestOE),ncol=15,byrow = TRUE))
   return(producers)
 }
