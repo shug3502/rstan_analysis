@@ -15,8 +15,7 @@ source('get_adjusted_producers.R')
 source('estimate_adjusted_producers.R')
 source('extract_times_and_scaling.R')
 source('get_blocked_indices.R')
-source('analytic_soln.R')
-#expose_stan_functions('mrna_transport_with_blocking.stan')
+expose_stan_functions('mrna_transport_with_blocking.stan')
 ###############
 identifier_simple = 'v470_with_outliers_M0_simple' #'v431WT_simple' #load fitted posterior parameters from this model
 identifier_DD = 'v470_with_outliers_M8_density_dependent_4a'
@@ -112,8 +111,10 @@ draws_simple <- estimates_simple %>%
 post_pred_simple <- draws_simple %>%
   mutate(modelID = list(models_to_sim[!(models_to_sim %in% models_with_density_dependence)])) %>%
   unnest() %>%
-  mutate(time=list(times$ts4),
-         y_pred_oe = purrr::pmap(list(b,a,nu,beta,phi,sigma,modelID),
+  mutate(phenotype=list(c("WT","OE"))) %>%
+  unnest() %>%
+  mutate(a = ifelse(phenotype=="OE",gamma*a,a),time=ifelse(phenotype=="OE",list(times$ts4),list(times$ts1))) %>%
+  mutate(y_pred_oe = purrr::pmap(list(b,a,nu,beta,phi,sigma,modelID),
                                  forward_simulate_wrapper)) %>%
   unnest(y_pred_oe,time,.preserve=modelID) %>%
   mutate(cellID = list(seq_len(16))) %>%
@@ -240,7 +241,7 @@ post_pred_simple <- draws_simple %>%
 
 ###############
 #with analytic model predictions and data on same plot
-
+source('analytic_soln.R')
 #gamma should be multiplier for overexpresser production
 y_analytic_wt <- draws_simple %>%
   mutate(phenotype='WT',time = list(times$ts1)) %>%
@@ -256,17 +257,19 @@ y_analytic_oe <- draws_simple %>%
   unnest()
 y_df <- full_join(y_analytic_oe,y_analytic_wt) %>%
   group_by(time,cellID,phenotype) %>%
-  summarise(analytic = median(y_analytic*if_else(cellID==1,phi,1)))
+  summarise(Model = median(y_analytic*if_else(cellID==1,phi,1)),
+            model_lower=quantile(y_analytic*if_else(cellID==1,phi,1),0.025),
+            model_upper=quantile(y_analytic*if_else(cellID==1,phi,1),0.975))
 
 ######## 
 #add data
 #add observed overexpression data
 data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
 wildtype_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
-oe_data <- data.frame(data = as.vector(overexpression_data),cellID = as.vector(matrix(rep(1:16,nTestOE),nrow=nTestOE,byrow=TRUE)),time = rep(times$ts4,16),phenotype='OE')
-wt_data <- data.frame(data = as.vector(wildtype_data),cellID = as.vector(matrix(rep(1:16,nSamples),nrow=nSamples,byrow=TRUE)),time = rep(times$ts1,16),phenotype='WT')
+oe_data <- data.frame(Data = as.vector(overexpression_data),cellID = as.vector(matrix(rep(1:16,nTestOE),nrow=nTestOE,byrow=TRUE)),time = rep(times$ts4,16),phenotype='OE')
+wt_data <- data.frame(Data = as.vector(wildtype_data),cellID = as.vector(matrix(rep(1:16,nSamples),nrow=nSamples,byrow=TRUE)),time = rep(times$ts1,16),phenotype='WT')
 xdata = full_join(oe_data,wt_data)
-observed_and_predictions <- full_join(y_df, xdata) %>% gather(method,rna,-time,-cellID,-phenotype)
+observed_and_predictions <- full_join(y_df, xdata) %>% gather(method,rna,-time,-cellID,-phenotype,-model_lower,-model_upper)
 
 ###########
 #plot
@@ -276,7 +279,36 @@ ggplot(observed_and_predictions, aes(x=time,y=rna,color=method,shape=phenotype))
   theme_bw()
 
 #view as difference between WT and OE
-ggplot(observed_and_predictions %>% filter(cellID==1), aes(x=time,y=rna,color=phenotype, shape=phenotype)) +
-  geom_point() + 
+ggplot(observed_and_predictions %>% filter(cellID==1), aes(x=time,y=rna)) +
+  geom_point(aes(color=phenotype,shape=phenotype)) +
+  geom_ribbon(aes(ymin=model_lower,ymax=model_upper,color=phenotype),alpha=0.3) +
   facet_wrap(~method) +
   theme_bw()
+
+df <- post_pred_simple %>%
+  group_by(time,cellID,phenotype,modelID) %>%
+  summarise(rna=unique(y_median),method=unique(modelID)) %>%
+  full_join(observed_and_predictions)
+
+ggplot(df %>% filter(cellID==1), aes(x=time,y=rna,color=phenotype, shape=method)) +
+  geom_point() + 
+  theme_bw()
+
+############
+bl = sapply(1:14, function(n) paste(rep(" ",n),collapse=""))
+egg_chamber_layout_levels <- c(bl[1:2], 4, bl[3:4],
+                               bl[5], 8, 6, 2, bl[6],
+                               bl[7], 12, 7, 3, bl[8],
+                               16, 14, 10, 5, 1,
+                               bl[9], 15, 11, 9, bl[10],
+                               bl[11:12], 13, bl[13:14])
+observed_and_predictions$cellID <- factor(observed_and_predictions$cellID,
+                                          levels = egg_chamber_layout_levels) 
+
+h <- ggplot( observed_and_predictions %>% filter(phenotype=='WT'), aes(x=time,y=rna)) +
+  geom_point(aes(color=method,shape=method)) +
+  geom_ribbon(aes(ymin=model_lower,ymax=model_upper,color=method),alpha=0.3) +
+  facet_wrap(~cellID, ncol = 5, drop = F, strip.position="bottom") +
+  theme_classic() + 
+  theme(strip.background=element_blank())
+
