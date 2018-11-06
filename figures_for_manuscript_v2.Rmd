@@ -1,0 +1,175 @@
+---
+title: "Figures for manuscript"
+author: "Jonathan Harrison"
+date: "06/11/2018"
+output: html_document
+fig_width: 6
+fig_height: 4
+---
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+Outline of Figures:
+
+Fig1: Drosophila egg chambers exhibit a characteristic network structure of connections between nurse cells A) Cartoon of tissue, B) Equivalent image of tissue, C) Diagram of connections between NCs via RCs.
+
+
+Fig2: Behaviour of differential equation model. A) Dynamics in time shown for each cell, B) Model related to network structure of nurse cells.
+```{r, Fig2, echo=FALSE,message=FALSE}
+source('simulate_from_ODE_model.R')
+```
+
+Fig3: Assembly of higher order complexes in oocyte A) Particles in different regions of the egg chamber, B) Distribution of intensities of particles in different regions.
+
+```{r, Fig3, echo=FALSE,message=FALSE}
+source('estimate_phi_directly.R')
+b %>% 
+  mutate(Normalised_intensity = BgdSubtract / median(a$MeanByRegion)) %>%
+  ggplot(aes(x=Region,y=Normalised_intensity)) +
+  geom_violin(draw_quantiles = c(0.5)) +
+  geom_jitter(alpha=0.3) +
+  labs(y='Normalised intensity') +
+  scale_x_discrete("Region", labels = c("background" = "BGD","oocyte" = "OO","nurse_cells" = "NC")) +
+  theme_bw()
+ggsave('plots/fig3d.eps',device=cairo_ps)
+```
+
+
+Fig4: Characterisation of the bias in directionality of transport through ring canals A) Schematic of transport between two compartments, B) Posterior pairs plot, C) Posterior predictive plot.
+![optional caption text](plots/fig4_schematic.eps){ width=30% }
+```{r, Fig4, echo=FALSE,message=FALSE}
+source('run_model_comparison_stst.R')
+identifier = 'MCv321'
+res <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,train_on_OE=FALSE)
+estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep='')) 
+library(bayesplot)
+#want to compare to draws from the prior for nu
+nu_df = data.frame(posterior=as.numeric(as.array(estimates)[,,'nu']), prior=0.5 + 0.5*runif(4000)) %>% tidyr::gather(key=distribution,value=nu)
+color_scheme_get("purple")
+#g2 <- mcmc_dens(as.array(estimates),pars='nu') +
+g2 <- ggplot(data=NULL) + geom_blank() + theme_bw() +
+  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
+          strip.text = element_text(size = 8),legend.position=c(0.2,0.7)) + 
+  labs(x=expression(paste('Transport bias  ', nu)),y='Density') + 
+  geom_density(data=nu_df,aes(nu,fill=distribution,alpha=distribution)) + 
+  scale_fill_manual(values = c('#e5cce5','#400040'),guide = guide_legend(title = 'Distribution')) + 
+  scale_alpha_manual(values = c(0.66,0.66),guide = FALSE)
+print(g2)
+ggsave(paste('plots/fig4_nu_marginal',identifier,'.eps',sep=''),device=cairo_ps)
+library(patchwork)
+g1 <- ggplot(data=NULL) + geom_blank() + theme_minimal()
+{g1 + g2} - res[[1]] + plot_layout(ncol=1)
+ggsave(paste('plots/fig4',identifier,'.eps',sep=''),device=cairo_ps)
+```
+
+Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posterior predictive distribution, C) Sensitivity to a, b.
+```{r, Fig5, echo=FALSE,message=FALSE}
+source('mrna_transport_full.R')
+res_WT = mrna_transport_inference_full('no_decay_v331',
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = FALSE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+res_OE = mrna_transport_inference_full('no_decay_OE_v332',
+						use_real_data = TRUE, run_mcmc = FALSE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = TRUE, use_hierarchical_model = FALSE,
+						use_prior_predictive = FALSE, train_on_OE = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+source('figure5_plotting.R')
+marginal_WT + res_WT + plot_layout(ncol=1,height=c(1,3))
+```
+
+![optional caption text](plots/posterior_predno_decay_v331.eps){ width=30% }
+
+Fig7: Validation of testable prediction for over expression versus measured results.  
+```{r, Fig7, echo=FALSE}
+library(rstan)
+library(broom)
+library(dplyr)
+identifier = 'fig7v001'
+nSamples=9
+nTest=11
+nTestOE=9
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(nSamples,nTest,nTestOE)
+y0 = rep(1,16); y0[1]=0
+stan_file = 'switch_off_RCs.stan'
+stan_list = list(y0=y0,
+                 T1  = nSamples,                 
+                 t0 = times$t0$estimate[3],
+                 ts1 = times$ts1,                 
+                 a = 10,
+                 b = 0.2,
+                 gamma = 0,
+                 nu = 0.9,
+                 sigma = 1.25,
+                 phi = 0.3,
+                 b_i = 8,
+                 b_j = 16)
+estimates <- stan(file = stan_file,
+                  data = stan_list,
+                  seed = 42,
+                  chains = 4,
+                  warmup = 1000,
+                  iter = 2000
+)
+tryCatch({
+  #estimates@stanmodel@dso <- new("cxxdso") #seems have to do this to be able to save :S
+  saveRDS(estimates, file = paste('fits/switch_off_RCs_',identifier,'.rds',sep='')) # to load use readRDS("fit.rds")
+}, warning = function(war) {  
+  # warning handler picks up where error was generated
+  print(paste("WARNING:  ",war))
+}, error = function(err) {  
+  # error handler picks up where error was generated
+  print(paste("NOT SAVED ERROR:  ",err))
+}) # END tryCatch
+source('compare_RC_preds.R')
+comparisons <- compare_RC_preds(times$ts1,estimates,identifier)
+comparisons[[1]]
+```
+
+Figure 9: to show change in number of complexes localized in the oocyte over time
+
+```{r}
+source('figure9.R')
+```
+
+
+FigS1: (Supplementary) Exponential growth model to establish timescales A) Schematic of time points used for each stage, B) Linear regression of log(A) against the time points for each stage.
+```{r, FigS1, echo=FALSE}
+source('extract_times_and_scaling.R')
+extract_times_and_scaling(nSamples=9,nTest=11,nTestOE=9,optional_plot=TRUE)
+```
+
+FigS2: Convergence diagnostics for MCMC inference methods
+![MCMC trace corresponding to Figure 4](plots/traceMCv321.eps){ width=30% }
+![MCMC trace corresponding to Figure 5](plots/traceno_decay_v331.eps){ width=30% }
+
+
+FigS3: Prior predictive distribution
+```{r, FigS3, echo=FALSE}
+source('mrna_transport_full.R')
+res_PP = mrna_transport_inference_full('prior_pred_v391',
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 9, nTest = 11, nTestOE = 9,
+						verbose = TRUE, compare_via_loo = FALSE,
+						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
+						use_prior_predictive = TRUE, train_on_OE = FALSE,
+						is_nu_uniform = TRUE, no_decay_model = TRUE)
+```
+
+FigSPairs: Posterior pairwise plot
+![optional caption text](plots/pairsno_decay_v331.eps){ width=30% }
+
+FigS4: Sensitivity analysis
+```{r, FigS4}
+source('sensitivity_and_analytics.R')
+```
+
