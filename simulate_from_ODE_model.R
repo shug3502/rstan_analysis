@@ -10,7 +10,7 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
   library(ggimage)
   rstan_options(auto_write = TRUE)
   options(mc.cores = parallel::detectCores())
-  mc <- stan_model('mrna_transport5.stan')
+  mc <- stan_model('M0.stan')
   expose_stan_functions(mc) #get hold of functions defined in the stan code
 
   y0 = c(0, rep(0,15)) #initial condition
@@ -23,7 +23,7 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
   nu_vec = seq(from=0.7, to=1, by=0.05)
   all_extracted_samples = data.frame(rna=numeric(),time=numeric())
   for (j in seq_along(nu_vec)){
-  B = construct_matrix(nu_vec[j],0)
+  B = construct_matrix(nu_vec[j])
   samples <- stan(file = 'mrna_transport6.stan',
                       data = list (
                         T  = nTotal,

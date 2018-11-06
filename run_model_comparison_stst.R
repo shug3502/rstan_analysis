@@ -55,7 +55,7 @@ if (use_real_data){
   }
   normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
 } else {
-  warning('TODO: update simulated data for full model')
+  warning('TODO: update simulated data')
   return(0)
 }
 ############################
