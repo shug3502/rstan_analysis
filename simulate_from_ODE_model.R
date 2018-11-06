@@ -1,7 +1,7 @@
 
 simulate_from_ODE_model <- function(th = c(0.2,10),
                                     sig = 1,
-                                    phi = 0.3,
+                                    phi = 0.345,
                                     nSamples = 15,
                                     nTest = 5,
                                     nTestOE = 0){
@@ -10,24 +10,24 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
   library(ggimage)
   rstan_options(auto_write = TRUE)
   options(mc.cores = parallel::detectCores())
-  mc <- stan_model('model_comparison5.stan')
+  mc <- stan_model('mrna_transport5.stan')
   expose_stan_functions(mc) #get hold of functions defined in the stan code
-  #keep all other parameters constant during this experiment
-  m0 = c(0, rep(0,15)) #initial condition
+
+  y0 = c(0, rep(0,15)) #initial condition
   nTotal = nSamples + nTest
   source('extract_times_and_scaling.R')
-  times = extract_times_and_scaling(nSamples,nTest,nTestOE,test_on_mutant_data=FALSE)
+  times = extract_times_and_scaling(nSamples,nTest,nTestOE)
   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
   raw_data = data[times$sort_indices2,]
   #take a vector of transport bias values for nu to loop through
   nu_vec = seq(from=0.7, to=1, by=0.05)
   all_extracted_samples = data.frame(rna=numeric(),time=numeric())
   for (j in seq_along(nu_vec)){
-  B = construct_matrix(nu_vec[j])
+  B = construct_matrix(nu_vec[j],0)
   samples <- stan(file = 'mrna_transport6.stan',
                       data = list (
                         T  = nTotal,
-                        y0 = m0,
+                        y0 = y0,
                         t0 = times$t0$estimate[2],
                         ts = times$ts2,
                         theta = array(th, dim = 2),
@@ -107,6 +107,7 @@ df <- data_frame(x = 15,
                  image = list(im))
 p3 <- p3 + geom_subview(aes(x=x,y=y,subview=image,width=width,height=width), data=df)
   if (animate_on){
+  library(gganimate)
   p3 <- p3 + labs(title = 'Time: {frame_time}', x = "Cell ID", y = "mRNA") +
   transition_time(time) +
   ease_aes('linear')

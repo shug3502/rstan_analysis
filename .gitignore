@@ -1,8 +1,9 @@
 *.rds
 */*/*.tif
 */*/*.pickle
-fits/
-plots/
+fits/*
+plots/*.eps
+plots/*.jpg
 *_files/
 .Rhistory
 *.old
