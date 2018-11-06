@@ -23,6 +23,7 @@ analytic_soln <- function(b,a,nu,t,y0=rep(0,16),producers=c(0,rep(1,15))){
 observation_model <- function(phi,sigma,y){
   z = y
   z[1] = y[1]*phi
+  z = rnbinom(1,mu=z,size=sigma)
   #put negative binomial stuff in here with correct parameterisation
   return(z)
 }

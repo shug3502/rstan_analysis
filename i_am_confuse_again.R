@@ -248,19 +248,23 @@ y_analytic_wt <- draws_simple %>%
   unnest() %>%
   mutate(y_analytic = purrr::pmap(list(b,a,nu,time),analytic_soln),
          cellID=list(seq(16))) %>%
+  unnest() %>%
+  mutate(y_analytic = purrr::pmap(list(phi,sigma,y_analytic),observation_model)) %>%
   unnest()
+
 y_analytic_oe <- draws_simple %>%
   mutate(phenotype='OE',time = list(times$ts4)) %>%
   unnest() %>%
   mutate(y_analytic = purrr::pmap(list(b,gamma*a,nu,time),analytic_soln),
          cellID=list(seq(16))) %>%
+  unnest() %>%
+  mutate(y_analytic = purrr::pmap(list(phi,sigma,y_analytic),observation_model)) %>%
   unnest()
 y_df <- full_join(y_analytic_oe,y_analytic_wt) %>%
   group_by(time,cellID,phenotype) %>%
-  summarise(Model = median(y_analytic*if_else(cellID==1,phi,1)),
-            model_lower=quantile(y_analytic*if_else(cellID==1,phi,1),0.025),
-            model_upper=quantile(y_analytic*if_else(cellID==1,phi,1),0.975))
-
+  summarise(Model = median(y_analytic,na.rm=TRUE),
+            model_lower=quantile(y_analytic,0.025,na.rm=TRUE),
+            model_upper=quantile(y_analytic,0.975,na.rm=TRUE))
 ######## 
 #add data
 #add observed overexpression data
@@ -304,11 +308,12 @@ egg_chamber_layout_levels <- c(bl[1:2], 4, bl[3:4],
                                bl[11:12], 13, bl[13:14])
 observed_and_predictions$cellID <- factor(observed_and_predictions$cellID,
                                           levels = egg_chamber_layout_levels) 
-
-h <- ggplot( observed_and_predictions %>% filter(phenotype=='WT'), aes(x=time,y=rna)) +
+oap <- observed_and_predictions %>%
+  filter(phenotype=='WT')
+h <- ggplot( oap, aes(x=time,y=rna)) +
   geom_point(aes(color=method,shape=method)) +
   geom_ribbon(aes(ymin=model_lower,ymax=model_upper,color=method),alpha=0.3) +
-  facet_wrap(~cellID, ncol = 5, drop = F, strip.position="bottom") +
+  facet_wrap(~cellID, ncol = 5, drop = F, strip.position="bottom",scales='free_y') +
   theme_classic() + 
   theme(strip.background=element_blank())
-
+h
