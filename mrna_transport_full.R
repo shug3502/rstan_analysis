@@ -1,27 +1,29 @@
-#setwd('~/Documents/FISH_data/rstan_analysis')
-mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=FALSE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
+#Fits three types of model, indicated by the model_str argument:
+# simple - basic model given in the manuscript without decay
+# decay - simple model with decay
+# density_dependent - density dependent model with hill type functional form with n=1
+#For comparison with OE data, use the forward simulations based on parameter values from fitting these models to WT data.
+#See forward_simulate.R for this
+
+#JH last updated 06/11/18 
+
+##################
+
+mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
                                           parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
-                                          show_diagnostic_plots=FALSE, use_hierarchical_model=FALSE, use_prior_predictive=TRUE,
-                                          use_binary_producers=FALSE, use_blocked_RCs=FALSE, train_on_OE=FALSE,
-                                          omit_OE_data_pts=FALSE, use_density_dependence=FALSE, is_nu_uniform=TRUE,
-                                          use_data_drive_producers=FALSE, uncertain_times=FALSE,
-					  no_decay_model=FALSE){
+                                          show_diagnostic_plots=FALSE, train_on_OE=FALSE, model_str='simple'
+                                          ){
   library(rstan)
   library(mvtnorm)
   library(dplyr)
   rstan_options(auto_write = TRUE)
   options(mc.cores = parallel::detectCores())
 
-  if (use_hierarchical_model & (length(which(parametersToPlot=='a'))==0 | length(which(parametersToPlot=='b'))==0)){
-    parametersToPlot[which(parametersToPlot=='a')] = 'mu' #replace these for hierarchical model
-    parametersToPlot[which(parametersToPlot=='b')] = 'mu'
-  } 
+stopifnot(any(model_str %in% c('simple','decay','density_dependent'))) #check if model is one of simple, decay or DD
   
   #############################################################
-  #Fit linear model to log(length) of egg chambers to get time of development.
-  #Could use area or volume of egg chamber. Compare to Jia 2016 Sci Reports.
-  #Area may be better as in some examples egg chambers are quite squashed.
-  #To get lengths read length.txt file in each folder
+  #Fit linear model to log(length) of egg chambers to get time of development
+  #using area of egg chamber. Compare to Jia 2016 Sci Reports.
   
   source('get_just_areas.R')
   egg_chamber_areas <- get_just_areas(nSamples,nTest,nTestOE)
@@ -35,9 +37,8 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   #############################################################
   
   if (use_real_data){
-    #data taken from spot detection on 3 egg chambers
+    #data taken from spot detection on egg chambers via FISH quant
     if (verbose) print('using real data \n')
-    #system('python ../custom_analysis/process_all_NCs.py',wait=TRUE)
     data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
     raw_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
     exp_data = raw_data
@@ -70,7 +71,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   } else {
     warning('TODO: update simulated data for full model')
     #sample from the model to get fake data 
-    mc <- stan_model('M0.stan') 
+    mc <- stan_model('mrna_transport_with_blocking.stan') 
     expose_stan_functions(mc)
     th = c(0.2,10)
     sig = 1.25
@@ -99,95 +100,37 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
     )
     
     s <- rstan::extract(samples,permuted=FALSE)
-    #plot(s[1,1,seq(from=1, to=(nSamples*16-1), by=nSamples)])
-    #plot(s[1,1,seq(from=nSamples, to=(nSamples*16), by=nSamples)])
-    boxplot(s[,1,seq(from=nSamples, to=((nSamples+nTest+nTestOE)*16), by=nSamples)])
     test_data = matrix(s[1,1,1:(16*(nSamples+nTest+nTestOE))],nrow=(nSamples+nTest+nTestOE),byrow=FALSE) #this is our fake data
     exp_data = test_data[!(times$ts2 %in% times$ts3),] 
     overexpression_data = test_data[(times$ts2 %in% times$ts4),]
   }
-  if (use_binary_producers[1]){ #use_binary_producers can be a logical, real or vector (numeric) of length
-    if (use_binary_producers[1]<0){
-      print('fitting difference between producers in OE and WT from data')
-    }
-    source('get_producers.R') #use heterogeneous production information
-    producers = get_producers(nTestOE,multiplier=use_binary_producers)[times$sort_indices4,] #provides matrix of heterogeneous production due to patch overexpression mutant
-  } else {
-    producers = matrix(rep(2,nTestOE*16),ncol=16)
-    producers[,1] = 0
-  }
-  if (use_data_drive_producers) {
-    # source('get_adjusted_producers.R')
-    # producers = get_adjusted_producers(nTestOE)
-    source('estimate_adjusted_producers.R')
-    producers = estimate_adjusted_producers(nTestOE = nTestOE)
-  }
-  if (use_blocked_RCs){
-    source('get_blocked_indices.R')
-    blocked = get_blocked_indices(nTestOE)[times$sort_indices4,] #matrix of which RCs might be blocked
-  } else {
-    blocked = matrix(rep(1,nTestOE*3),ncol=3)
-  }
-  if (omit_OE_data_pts[1]) {
-    if (omit_OE_data_pts[1]>0) error('incorrect usage of the omit OE data pts option. Should be a list of negative indices to omit')
-    #use only to omit outliers in the overexpression data for experimentation
-    overexpression_data = overexpression_data[omit_OE_data_pts,]
-    test_data = test_data[omit_OE_data_pts,]
-    nTestOE=nTestOE-length(omit_OE_data_pts)
-    times$ts2 = times$ts2[omit_OE_data_pts]
-    times$ts4 = times$ts4[omit_OE_data_pts]
-    blocked = blocked[omit_OE_data_pts,]
-    producers = producers[omit_OE_data_pts,]
-  }
-  print(producers) 
-  print(blocked)
-if (uncertain_times){
-   #then don't reoreder the raw data
-   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
-   exp_data = data[seq_len(nSamples),]
-   overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
-   overexpression_data = overexpression_data[seq_len(nTestOE),]
-}
+
+    producers = matrix(rep(gamma,nTestOE*16),ncol=16)
+    producers[,1] = 0 #homogeneous production
+    #data driven producers are considered in the forward_simulate.R
+    blocked = matrix(rep(1,nTestOE*3),ncol=3) #this will make sure nothing is blocked in posterior predictive sims
+    #similarly blocking is considered there too
 
   ##########################
   if (run_mcmc) {
-    if (!is_nu_uniform & use_hierarchical_model) warning('Not yet implemented a non uniform hierarchical model. Using normal non-uniform model')
-    if (use_prior_predictive){
-      stan_file = case_when(
-        (use_density_dependence && use_blocked_RCs) ~ 'prior_predictive_density_dependent_with_blocking.stan',
-        use_density_dependence ~ 'prior_predictive_density_dependent.stan',        
-        (use_binary_producers[1] < 0) ~ 'prior_predictive_fit_OE_production.stan',
-        use_blocked_RCs ~ 'prior_predictive_with_blocking.stan',
-        uncertain_times ~ 'prior_predictive_uncertain_timescales.stan',
-        no_decay_model ~ 'prior_predictive_no_decay.stan',
-        !is_nu_uniform ~ 'prior_predictive_nu_varying_spatially.stan',
-        use_hierarchical_model ~ 'prior_predictive_hierarchical.stan',
-        TRUE ~ 'prior_predictive_full.stan')
-    } else {
-      stan_file = case_when( 
-        (use_density_dependence && use_blocked_RCs) ~ 'mrna_transport_density_dependent_with_blocking.stan',        
-        use_density_dependence ~ 'mrna_transport_density_dependent.stan',
-        (use_binary_producers[1] < 0) ~ 'mrna_transport_fit_OE_production.stan',
-        use_blocked_RCs ~ 'mrna_transport_with_blocking.stan',
-	uncertain_times ~ 'mrna_transport_uncertain_timescales.stan',
-        no_decay_model ~ 'mrna_transport_no_decay.stan',
-        !is_nu_uniform ~ 'mrna_transport_full_nu_varying_spatially.stan',
-        use_hierarchical_model ~ 'mrna_transport_full_hierarchical.stan',
-        TRUE ~ 'mrna_transport_full.stan')   #'mrna_transport_reparametrised.stan')
-      }
+    # if (use_prior_predictive){
+    # stan_file = case_when( model_str == 'simple' ~ 'prior_predictive_with_blocking.stan',
+    #                        model_str == 'decay' ~ 'prior_predictive_with_decay.stan',
+    #                        model_str == 'density_dependent' ~ 'prior_predictive_density_dependent_with_blocking.stan'
+    # )
+    # } else {
+     stan_file = case_when( model_str == 'simple' ~ 'mrna_transport_with_blocking.stan',
+                             model_str == 'decay' ~ 'mrna_transport_with_decay.stan',
+                             model_str == 'density_dependent' ~ 'mrna_transport_density_dependent_with_blocking.stan'
+                            )
+    # }
       print(paste('Using the following stan file: ', stan_file, sep=''))
       stan_list = list(y = exp_data,
                        T1  = nSamples,
                        T2 = nSamples+nTest+nTestOE,
                        T3 = nTestOE,
                        y0 = m0,
-                       t0 = ifelse(uncertain_times, 6.90, times$t0$estimate[3]),
-		       areas1 = egg_chamber_areas[seq_len(nSamples)],
-		       areas2 = egg_chamber_areas,
-                       areas3 = egg_chamber_areas[nSamples+nTest+seq_len(nTestOE)],
-		       obs_times1 = time_hrs[seq_len(nSamples)],
-                       obs_times2 = time_hrs,
-                       obs_times3 = time_hrs[nSamples+nTest+seq_len(nTestOE)],
+                       t0 = times$t0$estimate[3],
                        ts1 = times$ts1,
                        ts2 = times$ts2,
                        ts3 = times$ts4,
@@ -195,16 +138,8 @@ if (uncertain_times){
                        OE_producers = producers,
                        y_OE = overexpression_data
                        )
-    if (!use_hierarchical_model){
-      #draw initial values from the prior
-#      initF <- function() {
-#	b=abs(10*rnorm(1))
-#	return(list(a=abs(10*rnorm(1)),b=b,sigma=abs(10*rnorm(1)),nu=runif(1),phi=0.345,gamma=abs(rnorm(1)*b/10)))
-#      }
-      initF <- function() list(a=10, b=0.2, sigma=1.25, nu=0.9, phi=0.35, alpha=4)    
-    } else {
-      initF <- function() list(mu=c(9, 0.18, 2.2), sigma=1.25, phi=0.3)    
-    }
+      initF <- function() list(a=10, b=0.2, sigma=1.25, nu=0.9, phi=0.35, beta=0.01) #initialising can help speed up the warm up phase   
+
     estimates <- stan(file = stan_file,
                       data = stan_list,
                       seed = 42,
@@ -228,7 +163,6 @@ if (uncertain_times){
     estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep=''))
   }
   
-  #parametersToPlot = c("theta","phi","sigma") #c('mu','tau','psi','zeta')# c('mu','tau','phi')
   if (verbose) print(estimates, pars = parametersToPlot)
   
   if (compare_via_loo){
@@ -241,9 +175,6 @@ if (uncertain_times){
   #######################
   #visualisation
   ###############################
-  #cairo_ps(paste('plots/pairs',identifier, '.eps',sep=''))
-  #pairs(estimates, pars = parametersToPlot)
-  #dev.off()
   
   #look at posterior predictive distn
   source('post_pred_plot.R')
@@ -257,12 +188,6 @@ if (uncertain_times){
     p2 <- post_pred_plot(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
                          estimates,identifier,title_stem='plots/posterior_pred_OE',
                          ts_test=times$ts3,OE_test=times$ts4,filter_out_wt=FALSE)
-    # p3 <- post_pred_animation(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
-    #                      estimates,identifier,title_stem='plots/posterior_pred_OE',
-    #                      ts_test=times$ts3,OE_test=times$ts4)
-    # p4 <- post_pred_animation(test_data,times$ts2,nTest+nSamples+nTestOE,'y_pred',
-    #                      estimates,identifier,title_stem='plots/posterior_pred',
-    #                      ts_test=times$ts3,OE_test=times$ts4)
   }  
   if (show_diagnostic_plots) {
     source('mcmcDensity.R')
