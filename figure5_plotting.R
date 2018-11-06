@@ -1,5 +1,5 @@
 #########
-marginal_ab_plot <- function(identifier = 'no_decay_v331'){
+marginal_ab_plot <- function(identifier){
   estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')) 
   library(bayesplot)
   color_scheme_set("purple")
@@ -16,16 +16,19 @@ marginal_ab_plot <- function(identifier = 'no_decay_v331'){
 
 ###################
 
+library(ggplot2)
 library(patchwork)
 source('mrna_transport_full.R')
-identifier = 'no_decay_v331'
-res_WT = mrna_transport_inference_full(identifier,
+id = 'v500_minimal'
+identifier <- paste(id,'M0_simple',sep='')
+res_M0 = mrna_transport_inference_full(identifier = identifier,
                                        use_real_data = TRUE, run_mcmc = FALSE,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = FALSE,
-                                       show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
-                                       use_prior_predictive = FALSE, train_on_OE = FALSE,
-                                       is_nu_uniform = TRUE, no_decay_model = TRUE) +
+                                       show_diagnostic_plots = FALSE, train_on_OE = FALSE,
+                                       parametersToPlot = c('a','b','nu','phi','sigma'),
+                                       model_str='simple')
+res_WT = res_M0[[1]] +
   labs(title='b)') + theme(title=element_text(size=12))
 marginal_WT = marginal_ab_plot(identifier)
 marginal_WT + res_WT + plot_layout(ncol=1,height=c(1,3))

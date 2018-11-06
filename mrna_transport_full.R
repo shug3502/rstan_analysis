@@ -11,7 +11,7 @@
 
 mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
                                           parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
-                                          show_diagnostic_plots=FALSE, train_on_OE=FALSE, model_str='simple'
+                                          show_diagnostic_plots=FALSE, train_on_OE=FALSE, alpha=2, model_str='simple'
                                           ){
   library(rstan)
   library(mvtnorm)
@@ -105,7 +105,8 @@ stopifnot(any(model_str %in% c('simple','decay','density_dependent'))) #check if
     overexpression_data = test_data[(times$ts2 %in% times$ts4),]
   }
 
-    producers = matrix(rep(gamma,nTestOE*16),ncol=16)
+    #alpha is multiplier for how much more rna is produced in the overexpression mutant. Estimate via 'how_much_more_produced_in_oe.stan'
+    producers = matrix(rep(alpha,nTestOE*16),ncol=16)
     producers[,1] = 0 #homogeneous production
     #data driven producers are considered in the forward_simulate.R
     blocked = matrix(rep(1,nTestOE*3),ncol=3) #this will make sure nothing is blocked in posterior predictive sims
@@ -178,17 +179,12 @@ stopifnot(any(model_str %in% c('simple','decay','density_dependent'))) #check if
   
   #look at posterior predictive distn
   source('post_pred_plot.R')
-  source('post_pred_animation.R')
-  if (use_prior_predictive) {
-    p1 <- post_pred_plot(exp_data, times$ts1, nSamples, 'y_pred', estimates, identifier, title_stem='plots/prior_pred')
-  } else {
     p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples+nTestOE,'y_pred',
                          estimates,identifier,title_stem='plots/posterior_pred',
                          ts_test=times$ts3,OE_test=times$ts4,filter_out_wt=TRUE)
     p2 <- post_pred_plot(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
                          estimates,identifier,title_stem='plots/posterior_pred_OE',
                          ts_test=times$ts3,OE_test=times$ts4,filter_out_wt=FALSE)
-  }  
   if (show_diagnostic_plots) {
     source('mcmcDensity.R')
     mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
