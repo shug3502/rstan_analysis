@@ -70,7 +70,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=F
   } else {
     warning('TODO: update simulated data for full model')
     #sample from the model to get fake data 
-    mc <- stan_model('model_comparison_at_stst_with_decay.stan')  #('mrna_transport5.stan')
+    mc <- stan_model('M0.stan') 
     expose_stan_functions(mc)
     th = c(0.2,10)
     sig = 1.25

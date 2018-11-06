@@ -1,6 +1,6 @@
 #mrna transport analytic solution and sensitivity analysis
-#could do as markdown
-#JH 14/09/17
+#
+#JH updated 06/11/18
 ###########################################
 
 library(Matrix)
@@ -9,18 +9,11 @@ library(limSolve)
 library(rstan)
 library(ggplot2)
 library(dplyr)
-source('get_nc_transition_matrix.R')
-B1 = get_nc_transition_matrix(0)
-B2 = get_nc_transition_matrix(1)
-expose_stan_functions(stan_model('model_comparison_at_stst2.stan'))
+expose_stan_functions(stan_model('quasi_steady_state_model.stan'))
 
 ############################################
 #set ICs
-#nu = 0.72
-th = c(0.24,12.9)
-#sig = 100 
-#phi = 0.3
-#y_0 = rep(0,16)
+th = c(0.2,10)
 
 ############################################
 #try to construct as functions 
@@ -36,7 +29,7 @@ k1 <- function(a,b,nu){
 diff_y <- function(a,b,nu,t,diff_wrt_a = TRUE){
 #calculate derivative of y wrt parameters a, b based on analytic results
   B = construct_matrix(nu) #rate matrix
-  X = eigen(B) #compute eigenvalues
+  X = eigen(b*B) #compute eigenvalues
   V = X$vectors
   D = diag(exp(t*X$values))
   v = c(0,rep(1,15))
