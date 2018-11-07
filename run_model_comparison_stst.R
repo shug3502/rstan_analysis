@@ -1,6 +1,6 @@
 #write as function, may need to think about what to do if want to run from command line again
 run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run_mcmc=FALSE,
-				      nSamples=9,nTest=11,nTestOE=9,
+				                              nSamples=9,nTest=11,nTestOE=9,
                                       parametersToPlot = c('nu','xi','phi'),verbose=FALSE,
                                       compare_via_loo=FALSE, show_diagnostic_plots=FALSE,
                                       train_on_OE=FALSE){
@@ -60,7 +60,7 @@ if (use_real_data){
 }
 ############################
 if (run_mcmc) {
-  stan_file <- 'model_comparison_at_stst2.stan'
+  stan_file <- 'quasi_steady_state_model.stan'
   estimates <- stan(file = stan_file,
                     data = list (
                       T1 = nSamples,

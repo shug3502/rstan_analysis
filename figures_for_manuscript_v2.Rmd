@@ -40,8 +40,14 @@ Fig4: Characterisation of the bias in directionality of transport through ring c
 ![optional caption text](plots/fig4_schematic.eps){ width=30% }
 ```{r, Fig4, echo=FALSE,message=FALSE}
 source('run_model_comparison_stst.R')
-identifier = 'MCv321'
-res <- run_model_comparison_stst(identifier=identifier,use_real_data=TRUE,run_mcmc=TRUE,parametersToPlot = c('nu','xi','phi'),verbose=FALSE,show_diagnostic_plots=FALSE,train_on_OE=FALSE)
+identifier = 'MCv500'
+res <- run_model_comparison_stst(identifier=identifier,
+                                 nSamples=9,nTest=0,nTestOE=0,
+                                 use_real_data=TRUE,run_mcmc=TRUE,
+                                 parametersToPlot = c('nu','xi','phi'),
+                                 verbose=FALSE,
+                                 show_diagnostic_plots=FALSE,
+                                 train_on_OE=FALSE)
 estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep='')) 
 library(bayesplot)
 #want to compare to draws from the prior for nu
