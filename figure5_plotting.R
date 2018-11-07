@@ -28,7 +28,7 @@ res_M0 = mrna_transport_inference_full(identifier = identifier,
                                        show_diagnostic_plots = FALSE, train_on_OE = FALSE,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        model_str='simple')
-res_WT = res_M0[[1]] +
+res_WT = res_M0 +
   labs(title='b)') + theme(title=element_text(size=12))
 marginal_WT = marginal_ab_plot(identifier)
 marginal_WT + res_WT + plot_layout(ncol=1,height=c(1,3))
