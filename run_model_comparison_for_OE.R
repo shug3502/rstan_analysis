@@ -1,8 +1,8 @@
 #run model comparison
 #JH updated 06/11/18
 #######
-run_mcmc=FALSE
-id = 'v500_minimal'
+run_mcmc=TRUE
+id = 'v510_minimal'
 
 source('mrna_transport_full.R')
 #simple model
