@@ -20,6 +20,8 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=T
   options(mc.cores = parallel::detectCores())
 
 stopifnot(any(model_str %in% c('simple','decay','density_dependent'))) #check if model is one of simple, decay or DD
+#check folder structure
+stopifnot(dir.exists('fits') & dir.exists('plots'))
   
   #############################################################
   #Fit linear model to log(length) of egg chambers to get time of development
