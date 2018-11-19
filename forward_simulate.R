@@ -24,8 +24,8 @@ source('extract_times_and_scaling.R')
 source('get_blocked_indices.R')
 expose_stan_functions('mrna_transport_with_blocking.stan')
 ###############
-identifier_simple = 'v470_with_outliers_M0_simple' #'v431WT_simple' #load fitted posterior parameters from this model
-identifier_DD = 'v470_with_outliers_M8_density_dependent_4a'
+identifier_simple = 'v510_minimalM0_simple' #'v470_with_outliers_M0_simple' #'v431WT_simple' #load fitted posterior parameters from this model
+identifier_DD = 'v510_minimalM4_density_dependent'  #'v470_with_outliers_M8_density_dependent_4a'
 nTestOE = 9
 num_draws = 100
 gamma = 2
@@ -83,18 +83,24 @@ forward_simulate_wrapper <- function(b,a,nu,beta,phi,sigma,modelID='M0'){
   return(s)
   }
 
-get_log_lik <- function(overexpression_data,nTestOE,theta,producers,blocked,times){
+get_log_lik <- function(overexpression_data,nTestOE,theta,sigma,producers,blocked,times){
   overexpression_int_list = lapply(1:nTestOE, FUN = function(i) overexpression_data[i,]) #Rcpp is specific about the input format of arguments, so haveto make things into lists
   blocked_int_list = lapply(1:nTestOE, FUN = function(i) blocked[i,])   #similarly
-  ll <- my_log_lik(overexpression_int_list,nTestOE,times$ts4,rep(0,16),theta,producers,blocked_int_list)
+  ll <- my_log_lik(overexpression_int_list,nTestOE,times$ts4,rep(0,16),theta,sigma,producers,blocked_int_list)
   return(ll) 
 }
 
-alternative_log_lik_wrapper <- function(b,a,nu,beta,phi,sigma,modelID='M0',drop_egg_ind=FALSE,drop_cell_ind=FALSE){
-  th = c(b,a,nu,beta,phi,sigma)
+alternative_log_lik_wrapper <- function(b,a,nu,beta,phi,
+                                        sigma1,sigma2,sigma3,sigma4,sigma5,sigma6,sigma7,sigma8,
+                                        sigma9,sigma10,sigma11,sigma12,sigma13,sigma14,sigma15,sigma16,
+                                        modelID='M0',drop_egg_ind=FALSE,drop_cell_ind=FALSE){
+  th = c(b,a,nu,beta,phi)
+  # I'm guessing theres a better way than taking each as a separate column from the dataframe
+  sigma = c(sigma1,sigma2,sigma3,sigma4,sigma5,sigma6,sigma7,sigma8,
+            sigma9,sigma10,sigma11,sigma12,sigma13,sigma14,sigma15,sigma16)
   producers = producers_list[[modelID]]
   blocked = blocked_list[[modelID]]
-  ll = get_log_lik(overexpression_data,nTestOE,th,producers,blocked,times)
+  ll = get_log_lik(overexpression_data,nTestOE,th,sigma,producers,blocked,times)
   if (drop_egg_ind){ #allows us to look at the effect of leaving out an egg chamber or cell 
     ll = ll[-drop_egg_ind,]
   }
@@ -105,14 +111,14 @@ alternative_log_lik_wrapper <- function(b,a,nu,beta,phi,sigma,modelID='M0',drop_
   return(as.numeric(ll))
 }
 
-get_log_lik_wrapper <- function(b,a,nu,beta,phi,sigma,modelID='M0'){
-  th = c(b,a,nu,beta,phi,sigma)
-  producers = producers_list[[modelID]]
-  blocked = blocked_list[[modelID]]
-  ll = get_log_lik(overexpression_data,nTestOE,th,producers,blocked,times)
-  #easier for getting into right form in dataframe later (via unnest) to put back into list
-  return(lapply(1:nTestOE, FUN = function(i) ll[i,]))
-}
+# get_log_lik_wrapper <- function(b,a,nu,beta,phi,sigma,modelID='M0'){
+#   th = c(b,a,nu,beta,phi,sigma)
+#   producers = producers_list[[modelID]]
+#   blocked = blocked_list[[modelID]]
+#   ll = get_log_lik(overexpression_data,nTestOE,th,producers,blocked,times)
+#   #easier for getting into right form in dataframe later (via unnest) to put back into list
+#   return(lapply(1:nTestOE, FUN = function(i) ll[i,]))
+# }
 
 check_and_load_path <- function(fit_path){
   if (file.exists(fit_path)){
@@ -147,9 +153,10 @@ estimates_DD <- check_and_load_path(path_DD)
 
 #get posterior parameters
 draws_simple <- estimates_simple %>%
-  spread_draws(a,b,nu,phi,sigma) %>% 
+  spread_draws(a,b,nu,phi,sigma[i]) %>% 
   filter(.iteration<=num_draws) %>%
-  select(b,a,nu,phi,sigma) %>%
+  spread(i,sigma,sep='sigma') %>%
+  select(-.chain,-.iteration,-.draw) %>%
   mutate(beta = -1) 
 
 draws_DD <- estimates_DD %>%
@@ -196,7 +203,10 @@ alternative_analysis <- function(mID,drop_egg_ind=FALSE,drop_cell_ind=FALSE){
   }
   q %<>% mutate(modelID = mID,
                 drop_egg_ind=drop_egg_ind,drop_cell_ind=drop_cell_ind) %>%
-    mutate(ll = purrr::pmap(list(b,a,nu,beta,phi,sigma,modelID,drop_egg_ind,drop_cell_ind),
+    mutate(ll = purrr::pmap(list(b,a,nu,beta,phi,
+                                 isigma1,isigma2,isigma3,isigma4,isigma5,isigma6,isigma7,isigma8,
+                                 isigma9,isigma10,isigma11,isigma12,isigma13,isigma14,isigma15,isigma16,
+                                 modelID,drop_egg_ind,drop_cell_ind),
                             alternative_log_lik_wrapper))
   alternative_log_lik_simple <- mapply(q[['ll']], FUN = function(x) as.numeric(x)) %>% t()
   loo1 <- loo(alternative_log_lik_simple)
