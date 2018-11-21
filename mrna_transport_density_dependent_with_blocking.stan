@@ -137,6 +137,7 @@ functions {
                           real[] ts, 
                           real[] y0,
                           real[] theta,
+                          real[] sigma,
                           matrix producers,
                           int[,] OE_blocked){
 //theta here is theta as above, but also augemented with phi and any other parameters
@@ -144,7 +145,6 @@ functions {
   real y_pred_OE[T,16];
   int OE_x_i[3];
   real phi = theta[5];
-  real sigma = theta[6];
   for (t in 1:T){
     for (i in 1:3){
       OE_x_i[i] = OE_blocked[t,i];
@@ -152,7 +152,7 @@ functions {
     y_ode_OE = integrate_ode_rk45(mrnatransport_density_dependent, y0, 0, ts, theta, to_array_1d(producers[t,]), OE_x_i ); //use overexpression producers and specify any blocked RCs
     y_ode_OE[t,1] = y_ode_OE[t,1]*phi;
     for (j in 1:16){
-      y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j],sigma);
+      y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j],sigma[j]);
     }
   }
   return y_pred_OE;
@@ -208,7 +208,7 @@ transformed data {
   }    
 }
 parameters {
-  real<lower=0> sigma[16]; //noise param
+  real<lower=0> sigma; //noise param
   real<lower=0> phi; //difference between particles in NCs and in Oocyte
   real<lower=0> a;
   real<lower=0> b;
@@ -224,9 +224,7 @@ transformed parameters {
 }
 model {
   real z[T1,16];
-  for (i in 1:16){
-    sigma[i] ~ normal(0,10) T[0,];
-  }
+  sigma ~ normal(0,10) T[0,];
   phi ~ normal(0.345,0.047) T[0,];
   a ~ normal(0,10) T[0,];
   b ~ normal(0,10) T[0,];
@@ -236,9 +234,9 @@ model {
   for (t in 1:T1){
     for (j in 1:16) {
       if (j>1){
-        y[t,j] ~ neg_binomial_2(z[t,j], sigma[j]);
+        y[t,j] ~ neg_binomial_2(z[t,j], sigma);
       } else {
-        y[t,j] ~ neg_binomial_2(phi*z[t,j], sigma[j]);  //treat observations in oocyte differently due to aggregation of rna complexes  
+        y[t,j] ~ neg_binomial_2(phi*z[t,j], sigma);  //treat observations in oocyte differently due to aggregation of rna complexes  
       }
     }
   }
@@ -257,9 +255,9 @@ generated quantities {
   for (t in 1:T2){
     for (j in 1:16){
       if (j>1){
-        y_pred[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma[j]);
+        y_pred[t,j] = neg_binomial_2_rng(y_ode[t,j], sigma);
       } else {
-        y_pred[t,j] = neg_binomial_2_rng(phi*y_ode[t,j], sigma[j]);    
+        y_pred[t,j] = neg_binomial_2_rng(phi*y_ode[t,j], sigma);    
       }
     }
   }
@@ -273,9 +271,9 @@ generated quantities {
     y_ode_OE = integrate_ode_rk45(mrnatransport_density_dependent, y0, 0, ts3, theta_OE, to_array_1d(OE_producers[t,]), OE_x_i ); //use overexpression producers
     for (j in 1:16){
       if (j>1){
-        y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j], sigma[j]);
+        y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j], sigma);
       } else {
-        y_pred_OE[t,j] = neg_binomial_2_rng(phi*y_ode_OE[t,j], sigma[j]);    
+        y_pred_OE[t,j] = neg_binomial_2_rng(phi*y_ode_OE[t,j], sigma);    
       }
     }
   }
@@ -302,9 +300,9 @@ generated quantities {
     y_lik_ode = integrate_ode_rk45(mrnatransport_density_dependent, y0, 0, ts3, theta_OE, to_array_1d(OE_producers[t,]), OE_x_i );
     for (j in 1:16){
       if (j>1) {
-        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y_OE[t,j] | y_lik_ode[t,j],sigma[j]);
+        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y_OE[t,j] | y_lik_ode[t,j],sigma);
       } else {
-        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y_OE[t,j] | y_lik_ode[t,j]*phi,sigma[j]);
+        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y_OE[t,j] | y_lik_ode[t,j]*phi,sigma);
       }
     }
   }

@@ -8,6 +8,9 @@
 ## Here we implement a function(s) that takes an array of model parameters and simulates from the forward model to give posterior predictive samples
 
 ###########
+# Homogeneous overdispersion sigma
+
+###########
 #setup
 library(rstan)
 library(dplyr)
@@ -24,8 +27,8 @@ source('extract_times_and_scaling.R')
 source('get_blocked_indices.R')
 expose_stan_functions('mrna_transport_with_blocking.stan')
 ###############
-identifier_simple = 'v510_minimalM0_simple' #'v470_with_outliers_M0_simple' #'v431WT_simple' #load fitted posterior parameters from this model
-identifier_DD = 'v510_minimalM4_density_dependent'  #'v470_with_outliers_M8_density_dependent_4a'
+identifier_simple = 'v470_with_outliers_M0_simple' #load fitted posterior parameters from this model
+identifier_DD = 'v470_with_outliers_M8_density_dependent_4a'
 nTestOE = 9
 num_draws = 100
 gamma = 2
@@ -86,7 +89,7 @@ forward_simulate_wrapper <- function(b,a,nu,beta,phi,
   blocked = blocked_list[[modelID]]
   s = forward_simulate(nTestOE,th,sigma,producers,blocked,times)
   return(s)
-  }
+}
 
 get_log_lik <- function(overexpression_data,nTestOE,theta,sigma,producers,blocked,times){
   overexpression_int_list = lapply(1:nTestOE, FUN = function(i) overexpression_data[i,]) #Rcpp is specific about the input format of arguments, so haveto make things into lists
@@ -115,15 +118,6 @@ alternative_log_lik_wrapper <- function(b,a,nu,beta,phi,
   #easier for getting into right form in dataframe later (via unnest) to put back into list
   return(as.numeric(ll))
 }
-
-# get_log_lik_wrapper <- function(b,a,nu,beta,phi,sigma,modelID='M0'){
-#   th = c(b,a,nu,beta,phi,sigma)
-#   producers = producers_list[[modelID]]
-#   blocked = blocked_list[[modelID]]
-#   ll = get_log_lik(overexpression_data,nTestOE,th,producers,blocked,times)
-#   #easier for getting into right form in dataframe later (via unnest) to put back into list
-#   return(lapply(1:nTestOE, FUN = function(i) ll[i,]))
-# }
 
 check_and_load_path <- function(fit_path){
   if (file.exists(fit_path)){
@@ -157,33 +151,23 @@ path_DD = paste('fits/mrna_transport_estimates',identifier_DD,'.rds',sep='')
 estimates_DD <- check_and_load_path(path_DD)
 #################
 
+#this bit needs to be different
 #get posterior parameters
 draws_simple <- estimates_simple %>%
-  spread_draws(a,b,nu,phi,sigma[i]) %>% 
+  spread_draws(a,b,nu,phi,sigma) %>% 
   filter(.iteration<=num_draws) %>%
-  spread(i,sigma,sep='sigma') %>%
   select(-.chain,-.iteration,-.draw) %>%
-  mutate(beta = -1) 
+  mutate(beta = -1) %>% 
+  mutate(isigma1=sigma,isigma2=sigma,isigma3=sigma,isigma4=sigma,isigma5=sigma,isigma6=sigma,isigma7=sigma,isigma8=sigma,
+         isigma9=sigma,isigma10=sigma,isigma11=sigma,isigma12=sigma,isigma13=sigma,isigma14=sigma,isigma15=sigma,isigma16=sigma)
 
 draws_DD <- estimates_DD %>%
-  spread_draws(a,b,nu,beta,phi,sigma[i]) %>% 
+  spread_draws(a,b,nu,beta,phi,sigma) %>% 
   filter(.iteration<=num_draws) %>%
-  spread(i,sigma,sep='sigma') %>%
-  select(-.chain,-.iteration,-.draw)
+  select(-.chain,-.iteration,-.draw) %>% 
+  mutate(isigma1=sigma,isigma2=sigma,isigma3=sigma,isigma4=sigma,isigma5=sigma,isigma6=sigma,isigma7=sigma,isigma8=sigma,
+         isigma9=sigma,isigma10=sigma,isigma11=sigma,isigma12=sigma,isigma13=sigma,isigma14=sigma,isigma15=sigma,isigma16=sigma)
 #################
-# 
-# log_lik_simple <- draws_simple %>%
-#   mutate(modelID = list(models_to_sim[!(models_to_sim %in% models_with_density_dependence)])) %>%
-#   unnest() %>%
-#   mutate(time=list(times$ts4),
-#          ll = purrr::pmap(list(b,a,nu,beta,phi,sigma,modelID),
-#                                  get_log_lik_wrapper)) %>%
-#   unnest(ll,time,.preserve=modelID) %>%
-#   mutate(cellID = list(seq_len(16))) %>%
-#   unnest(ll,cellID,.preserve=modelID) %>%
-#   unnest()
-
-###########
 
 alternative_analysis <- function(mID,drop_egg_ind=FALSE,drop_cell_ind=FALSE){
   if (mID %in% models_with_density_dependence){
@@ -204,33 +188,23 @@ alternative_analysis <- function(mID,drop_egg_ind=FALSE,drop_cell_ind=FALSE){
 }
 get_model_weights <- function(models_to_sim,models_with_density_dependence,i,j){
   #i is the index of egg chamber to drop, j is index of 
-aM_all <- list()
-simple_models <- models_to_sim[!(models_to_sim %in% models_with_density_dependence)]
-expose_stan_functions('mrna_transport_with_blocking.stan')
-aM_all[simple_models] <- purrr::map(simple_models, function(mID) alternative_analysis(mID,drop_egg_ind = i,drop_cell_ind = j))
-expose_stan_functions('mrna_transport_density_dependent_with_blocking.stan') #should replace previous functions and work with previous wrappers
-DD_models <- models_to_sim[models_to_sim %in% models_with_density_dependence]
-aM_all[DD_models] <- purrr::map(DD_models, function(mID) alternative_analysis(mID,drop_egg_ind = i,drop_cell_ind = j))
-# purrr::map(aM_all,plot)
-
-#get nicely formatted output from comparison
-w_stack = loo::loo_model_weights(aM_all,method='stacking')
-w_pseudo_bma = loo::loo_model_weights(aM_all,method="pseudobma")
-return(list(w_stack = w_stack,w_pseudo_bma = w_pseudo_bma ))
+  aM_all <- list()
+  simple_models <- models_to_sim[!(models_to_sim %in% models_with_density_dependence)]
+  expose_stan_functions('mrna_transport_with_blocking.stan')
+  aM_all[simple_models] <- purrr::map(simple_models, function(mID) alternative_analysis(mID,drop_egg_ind = i,drop_cell_ind = j))
+  expose_stan_functions('mrna_transport_density_dependent_with_blocking.stan') #should replace previous functions and work with previous wrappers
+  DD_models <- models_to_sim[models_to_sim %in% models_with_density_dependence]
+  aM_all[DD_models] <- purrr::map(DD_models, function(mID) alternative_analysis(mID,drop_egg_ind = i,drop_cell_ind = j))
+  # purrr::map(aM_all,plot)
+  
+  #get nicely formatted output from comparison
+  w_stack = loo::loo_model_weights(aM_all,method='stacking')
+  w_pseudo_bma = loo::loo_model_weights(aM_all,method="pseudobma")
+  return(list(w_stack = w_stack,w_pseudo_bma = w_pseudo_bma ))
 }
 
-# out <- list()
-# for (i in seq_len(nTestOE+1)){
-#   out[[i]] <- list()
-#   for (j in seq_len(17)){
-#     print(c(i,j))
-#     out[[i]][[j]] <- get_model_weights(models_to_sim,models_with_density_dependence,i-1,j-1)
-#   }
-# }
-# print(out)
 z = get_model_weights(models_to_sim,models_with_density_dependence,0,0)
 weights_df <- data_frame(model=models_to_sim,pseudo_bma=z$w_pseudo_bma[models_to_sim],stacking=z$w_stack[models_to_sim])
-weights_df <- data_frame(model=names(w_pseudo_bma),pseudo_bma=as.numeric(w_pseudo_bma),stacking=as.numeric(w_stack))
 
 method_names <- c(
   `pseudo_bma` = "Pseudo BMA+",
@@ -246,32 +220,9 @@ weights_df %>%
         legend.position = "none", strip.text = element_text(size = 8)) +
   xlab('Model') + 
   ylab('Weight') +
-ggsave(paste('plots/weights_model_comparison_',identifier_simple,'.eps',sep=''),device=cairo_ps)
+  ggsave(paste('plots/weights_model_comparison_',identifier_simple,'.eps',sep=''),device=cairo_ps)
 
 ###################
-# log_lik_DD <- draws_DD %>%
-#   mutate(modelID = list(models_to_sim[models_to_sim %in% models_with_density_dependence])) %>%
-#   unnest() %>%
-#   mutate(time=list(times$ts4),
-#          ll = purrr::pmap(list(b,a,nu,beta,phi,sigma,modelID),
-#                           get_log_lik_wrapper)) %>%
-#   unnest(ll,time,.preserve=modelID) %>%
-#   mutate(cellID = list(seq_len(16))) %>%
-#   unnest(ll,cellID,.preserve=modelID) %>%
-#   unnest()
-# 
-# #####################
-# 
-# full_log_lik_df <- full_join(log_lik_simple, log_lik_DD)
-# 
-# log_lik_df2 <- full_log_lik_df %>%
-# #  filter(cellID!=1) %>%
-#   group_by(modelID,b,a,nu,phi,sigma) %>%
-#   summarise(ll_sum = sum(ll))
-# 
-# ######################
-# 
-
 
 expose_stan_functions('mrna_transport_with_blocking.stan')
 post_pred_simple <- draws_simple %>%
@@ -343,97 +294,5 @@ g <- log_lik_df2 %>%
   ggplot(aes(ll_sum,color=modelID)) +
   geom_density() +
   scale_x_continuous(limits=c(-1500,-800))
-  print(g)
-  ggsave(paste('plots/compare_production_models_fwd_sim_',identifier_simple,'.eps',sep=''),device=cairo_ps)
-#   
-#   log_lik_df2 %>%
-#     filter(as.numeric(substr(modelID,2,3))>10 | modelID=='M6' | modelID=='M3') %>%
-#     ggplot(aes(ll_sum,color=modelID)) +
-#     geom_density() + 
-#     scale_x_continuous(limits=c(-1100,-850))
-#   
-#   ##########################
-#   #plot log likelihood by cellID
-#   h1 <- full_log_lik_df %>%
-#     filter(cellID!=1) %>%
-#     group_by(modelID,b,a,nu,phi,sigma,cellID) %>%
-#     summarise(sum_ll = sum(ll)) %>%  #summing over egg chambers
-#     group_by(modelID,cellID) %>% 
-#     summarise(log_lik = median(sum_ll)) %>% #take median to summarise posterior
-#     filter(modelID!='M10') %>% #model 10 is very bad
-#     ggplot(aes(x=cellID,y=log_lik,color=modelID,group=modelID)) + 
-#     geom_line() +
-#     geom_point()
-#   print(h1)
-#   
-#   #and by egg chamber
-#   h2 <- full_log_lik_df %>%
-#     filter(cellID!=1) %>%
-#     group_by(modelID,b,a,nu,phi,sigma,time) %>%
-#     summarise(sum_ll = sum(ll)) %>%  #summing over cells
-#     group_by(modelID,time) %>% 
-#     summarise(log_lik = median(sum_ll)) %>% #take median to summarise posterior
-#     filter(modelID!='M10') %>% #model 10 is very bad
-#     ggplot(aes(x=time,y=log_lik,color=modelID,group=modelID)) + 
-#     geom_line() +
-#     geom_point()
-#   print(h2)
-#   
-#   h3 <- full_log_lik_df %>%
-#     filter(cellID!=1) %>%
-#     filter(time>5) %>%
-#     group_by(modelID,b,a,nu,phi,sigma,cellID) %>%
-#     summarise(sum_ll = sum(ll)) %>%  #summing over egg chambers
-#     group_by(modelID,b,a,nu,phi,sigma) %>% 
-#     filter(modelID!='M10') %>%
-#     summarise(log_lik = sum(sum_ll)) %>% #sum again
-#     group_by(modelID) %>%
-#     summarise(mu = median(log_lik)) %>%
-#     ggplot(aes(x=modelID,y=mu,color=modelID)) + 
-#     geom_point()
-#   print(h3)
-#   
-#   h4 <- full_log_lik_df %>%
-#     group_by(modelID,b,a,nu,phi,sigma,cellID) %>%
-#     summarise(sum_ll = sum(ll)) %>%  #summing over egg chambers
-#     group_by(modelID,cellID) %>% 
-#     filter(modelID!='M10') %>%
-#     filter(as.numeric(substr(modelID,2,3))%%2==0) %>% 
-#     ggplot(aes(x=factor(cellID),y=sum_ll,color=modelID)) + 
-#     geom_violin()
-#   print(h4)
-#   
-#   ###########################
-#   # 
-#   # analyse_given_model <- function(full_log_lik,nColumns,mID='M0'){
-#   #   #mID is a string containing the model ID
-#   #   log_lik_matrix = matrix(full_log_lik %>% filter(modelID==mID) %>% .$ll_sum,ncol=nColumns,byrow=FALSE)
-#   #   loo1 <- loo(log_lik_matrix)
-#   #   return(loo1) 
-#   # }
-# 
-# #   #look at LOO by cellID
-# #   log_lik_by_cellID <- full_log_lik_df %>%
-# # #     filter(cellID!=1) %>% #if use this need 15 columns in matrix instead
-# #     group_by(cellID,modelID,a,b,phi,sigma,nu,beta) %>%
-# #     summarise(ll_sum=sum(ll))
-# #   aM_cellID_list <- purrr::map(models_to_sim, function(x) analyse_given_model(log_lik_by_cellID,16,x))
-# #   purrr::map(aM_cellID_list,plot)
-# # 
-# #   #look at LOO by egg chamber or time pt
-# #   log_lik_by_time <- full_log_lik_df %>%
-# #      filter(cellID!=1) %>%     
-# #     group_by(time,modelID,a,b,phi,sigma,nu,beta) %>%
-# #     summarise(ll_sum=sum(ll))
-# #   aM_time_list <- purrr::map(models_to_sim, function(x) analyse_given_model(log_lik_by_time,nTestOE,x))
-# #   purrr::map(aM_time_list,plot)
-# #   
-# #   ############################
-# # #  try loo on all the data points
-# #   log_lik_all <- full_log_lik_df %>%
-# #     mutate(ll_sum=ll) 
-# #   analyse_given_model(log_lik_all,16*nTestOE,'M0')
-# #   
-# # aM_all_list <- purrr::map(models_to_sim, function(x) analyse_given_model(log_lik_all,16*nTestOE,x))
-# #   
-#   
+print(g)
+ggsave(paste('plots/compare_production_models_fwd_sim_',identifier_simple,'.eps',sep=''),device=cairo_ps)
