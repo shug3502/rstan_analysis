@@ -25,7 +25,7 @@ res_M0 = mrna_transport_inference_full(identifier = identifier,
                                        use_real_data = TRUE, run_mcmc = FALSE,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = FALSE,
-                                       show_diagnostic_plots = FALSE, train_on_OE = FALSE,
+                                       show_diagnostic_plots = TRUE, train_on_OE = FALSE,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        model_str='simple')
 res_WT = res_M0 +
