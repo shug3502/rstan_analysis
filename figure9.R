@@ -31,9 +31,9 @@ h1 <- ggplot(data = quantify_for_ilan, aes(x=time,y=number,color=phenotype)) +
   geom_point() +
   geom_smooth(method = lm, se = FALSE) +
   theme_bw() +
-  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-        strip.text = element_text(size = 8)) +
+  theme(text = element_text(size = 20), axis.text = element_text(size = 20),
+        strip.text = element_text(size = 20)) +
   xlab('Time') + 
   ylab('mRNA complexes in oocyte')
 print(h1)
-ggsave(paste('plots/number_in_oocyte_','.eps',sep=''),device=cairo_ps)
+ggsave(paste('plots/number_in_oocyte_','.eps',sep=''),device=cairo_ps, height=9,width=12)

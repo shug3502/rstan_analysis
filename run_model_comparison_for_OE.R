@@ -1,7 +1,7 @@
 #run model comparison
 #JH updated 06/11/18
 #######
-run_mcmc=TRUE
+run_mcmc=FALSE
 id = 'v510_minimal'
 
 source('mrna_transport_full.R')
@@ -11,7 +11,7 @@ res_M0 = mrna_transport_inference_full(identifier = identifier,
                                        use_real_data = TRUE, run_mcmc = run_mcmc,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = TRUE,
-                                       show_diagnostic_plots = FALSE, train_on_OE = FALSE,
+                                       show_diagnostic_plots = TRUE, train_on_OE = FALSE,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
 				       model_str='simple')
 
@@ -31,7 +31,7 @@ res_M4 = mrna_transport_inference_full(identifier = identifier,
                                        use_real_data = TRUE, run_mcmc = run_mcmc,
                                        nSamples = 9, nTest = 11, nTestOE = 9,
                                        verbose = FALSE, compare_via_loo = TRUE,
-                                       show_diagnostic_plots = FALSE, train_on_OE = FALSE,
+                                       show_diagnostic_plots = TRUE, train_on_OE = FALSE,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        model_str='density_dependent')
 
