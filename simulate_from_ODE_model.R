@@ -60,7 +60,7 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
 
 library(ggplot2)
 animate_on <- FALSE
-font_size <- 12
+font_size <- 18
 all_extracted_samples <- simulate_from_ODE_model() 
 p1 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
 p1 <- p1 + geom_line() +
