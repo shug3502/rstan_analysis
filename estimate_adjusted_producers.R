@@ -3,7 +3,7 @@
 #we assume all the data is drawn from some characteristic distribution of transcription levels across the cells
 ############################
 
-estimate_adjusted_producers <- function(nTestOE,gamma=2) {
+estimate_adjusted_producers <- function(nTestOE,gamma=2,plot_option=F) {
   library(rstan)
   library(dplyr)
   library(tidyr)
@@ -21,7 +21,7 @@ estimate_adjusted_producers <- function(nTestOE,gamma=2) {
     mutate(time = times$ts4) %>%
     gather('cellID','transcription',-time) %>%
     mutate(cellID=as.integer(cellID))
-    
+  
   obs_transcription <- nt_df_oe %>%
     select(cellID,transcription,time) %>%
     spread(cellID,transcription) %>%
@@ -43,5 +43,38 @@ estimate_adjusted_producers <- function(nTestOE,gamma=2) {
   estimated_producers = rstan::extract(estimates,pars='a',permuted=TRUE)[[1]] %>% apply(.,2,median) 
   estimated_producers = gamma*15*estimated_producers/sum(estimated_producers)
   producers = cbind(rep(0,nTestOE),matrix(rep(estimated_producers,nTestOE),ncol=15,byrow = TRUE))
+  
+  if (plot_option){
+    library(ggplot2)
+    ggplot(nt_df_oe,aes(x=cellID,y=transcription/10^5,group=time,color=time)) + 
+      geom_line() + 
+      geom_point() + 
+      labs(y = expression(paste("Trancription (",x, 10^5,')')), x = 'CellID') +
+      scale_colour_continuous(name="Time\n(hrs)") +
+      theme_bw() +
+      theme(text = element_text(size = 32), axis.text = element_text(size = 32),
+            strip.text = element_text(size = 32))
+    ggsave('plots/nascent_trancription_plot.eps',device=cairo_ps)      
+
+        #also plot the inferred distribution of transcription across cells
+    inferred_df = data_frame(a = producers[1,], CellID=seq_len(16))
+    ggplot(inferred_df,aes(x=CellID,y=a)) + 
+      geom_point(shape=8,size=8) + 
+      labs(y = 'Production', x = 'CellID') +
+      theme_bw() +
+      theme(text = element_text(size = 32), axis.text = element_text(size = 32),
+            strip.text = element_text(size = 32))
+    ggsave('plots/inhomogeneous_production_inferred.eps',device=cairo_ps)
+
+    #   #now also show the uncertainty in the estimates
+  # draws = as.data.frame(rstan::extract(estimates,pars='a',permuted=TRUE)[[1]])
+  # names(draws) = seq_len(16)[-1]
+  # tidy_draws <- draws %>%
+  #   gather('cellID','a') %>%
+  #   mutate(cellID = as.integer(cellID))
+  # ggplot(tidy_draws,aes(x=factor(cellID),y=a/10^5)) + 
+  #   geom_violin()
+     } 
+  
   return(producers)
 }

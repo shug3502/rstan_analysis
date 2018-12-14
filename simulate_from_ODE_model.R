@@ -91,6 +91,7 @@ ggsave('plots/fig2a.eps',device=cairo_ps)
 
 p3 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95) %>% filter(time==max(time)), aes(x = cellID, y = median, group=factor(nu))) +
   geom_line() +
+  geom_point(shape=8) +
   labs(x = "Cell ID", y = "mRNA") +
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),

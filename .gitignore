@@ -9,6 +9,9 @@ plots/*.jpg
 *.old
 *.log
 *.jpg
+*.jpeg
+*.png
+*.pdf
 data/queuing_snapshots/
 make_figures_mRNA_localization_files/
 .DS_Store
