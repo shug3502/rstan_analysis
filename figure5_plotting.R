@@ -36,4 +36,20 @@ marginal_WT = marginal_ab_plot(identifier)
 marginal_WT + res_WT + plot_layout(ncol=1,height=c(1,3))
 ggsave(paste('plots/fig5',identifier,'.eps',sep=''),width = 9, height = 9, device=cairo_ps)
 
+##################
+#for pairs plot
+library(bayesplot)
+bayesplot_theme_set(theme_bw())
+bayesplot_theme_update(text = element_text(size = 16, family = "serif"))
+estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')) 
+color_scheme_set("purple")
+draws <- as.array(estimates, pars=c('a','b','nu','sigma','phi'))
+h <- mcmc_pairs(draws,pars=c('a','b','nu','sigma','phi'),
+                off_diag_fun = 'hex')
+print(h)
+#easiest to save manually for mcmc_pairs plots, its a grid of ggplot objects in a confusing way
+#ggsave(paste('plots/pairs_bayes_',identifier,'.eps',sep=''),device=cairo_ps)
+
+################
+
 
