@@ -71,6 +71,7 @@ if (nTestOE>0){
                              )
 ##########################################  
   if (optional_plot){
+    font_size=24
     require(ggplot2)
     g <- ggplot(data = df, aes(x=stages,y=la)) +
       geom_point() + 
@@ -83,7 +84,9 @@ if (nTestOE>0){
       geom_point() + 
       geom_line(color='red',aes(x=time_hrs,y=pred_age_hrs)) +
       theme_bw() + 
-      labs(x='age (hrs)',y='log(area)')
+      labs(x='age (hrs)',y='log(area)') +
+      theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
+            strip.text = element_text(size = 8))
     print(g) 
     ggsave('plots/timescale_model.eps',device=cairo_ps)
     
@@ -91,7 +94,9 @@ if (nTestOE>0){
       geom_point() +
       geom_smooth(method='lm') +
       theme_bw() +
-      labs(x='time (hrs)',y='log(area)')
+      labs(x='time (hrs)',y='log(area)') + 
+      theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
+            strip.text = element_text(size = 8), legend.position = 'None')
     print(g2)
     ggsave('plots/timescale_model2.eps',device=cairo_ps)
     
@@ -99,7 +104,9 @@ if (nTestOE>0){
       geom_point() +
       geom_smooth(method='lm') +
       theme_bw() +
-      labs(x='time (hrs)',y='log(area)')
+      labs(x='time (hrs)',y='log(area)') + 
+      theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
+            strip.text = element_text(size = 8), legend.position = 'None')
     print(h)
     ggsave('plots/timescale_model_split.eps',device=cairo_ps)
   }

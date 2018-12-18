@@ -2,13 +2,14 @@
 marginal_ab_plot <- function(identifier){
   estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')) 
   library(bayesplot)
+  fontsize = 24
   color_scheme_set("purple")
   g1<- mcmc_dens(as.array(estimates),pars=c('a','b')) +
     theme_bw() +
-    theme(text = element_text(size = 12), axis.text = element_text(size = 12),
+    theme(text = element_text(size = fontsize), axis.text = element_text(size = fontsize),
           legend.position = "none",
-          plot.title = element_text(size=12), 
-          strip.text.x = element_text(size = 16, face="italic")) +
+          plot.title = element_text(size=fontsize), 
+          strip.text.x = element_text(size = fontsize, face="italic")) +
     labs(title='a)')
   ggsave(paste('plots/post_marginal_',identifier,'.eps',sep=''),device=cairo_ps)
   return(g1)
@@ -28,8 +29,9 @@ res_M0 = mrna_transport_inference_full(identifier = identifier,
                                        show_diagnostic_plots = TRUE, train_on_OE = FALSE,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        model_str='simple')
+fontsize = 24
 res_WT = res_M0 +
-  labs(title='b)') + theme(title=element_text(size=12))
+  labs(title='b)') + theme(title=element_text(size=fontsize))
 marginal_WT = marginal_ab_plot(identifier)
 marginal_WT + res_WT + plot_layout(ncol=1,height=c(1,3))
 ggsave(paste('plots/fig5',identifier,'.eps',sep=''),width = 9, height = 9, device=cairo_ps)

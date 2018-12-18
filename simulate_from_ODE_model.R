@@ -78,7 +78,7 @@ print(p1)
 p2 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95), aes(x = time, y = median, group=factor(nu))) +
   geom_line() +
   facet_wrap(~cellID,scales='free_y') +   #needed to remove factor(cellID) 
-  labs(title='a)', x = "Time (hrs)", y = "mRNA") +
+  labs(title='a)', x = "Time (hrs)", y = "mRNA\ncomplexes") +
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
         strip.text = element_text(size = 8), legend.position = 'None') + 
@@ -92,7 +92,8 @@ ggsave('plots/fig2a.eps',device=cairo_ps)
 p3 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95) %>% filter(time==max(time)), aes(x = cellID, y = median, group=factor(nu))) +
   geom_line() +
   geom_point(shape=8) +
-  labs(x = "Cell ID", y = "mRNA") +
+  labs(x = "Cell ID", y = "mRNA\ncomplexes") +
+  scale_x_continuous(breaks=c(1,4,8,12,16)) +
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
         strip.text = element_text(size = 8), legend.position = 'None') + 
@@ -120,7 +121,7 @@ p5 <- ggplot(all_extracted_samples %>%
                filter(nu>0.85 & nu<0.95, cellID==1),
              aes(x = time, y = median, group=factor(nu))) +
   geom_line() +
-  labs(title='a)', x = "Time (hrs)", y = "mRNA") +
+  labs(title='a)', x = "Time (hrs)", y = "mRNA\ncomplexes") +
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
         strip.text = element_text(size = 8), legend.position = 'None') + 

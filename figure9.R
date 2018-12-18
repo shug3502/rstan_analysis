@@ -26,14 +26,14 @@ quantify_for_ilan <- gurken_rna_df %>%
          fraction = number/sum(rna),
          total = sum(rna)) %>%
   filter(cell==1)
-
+font_size = 32
 h1 <- ggplot(data = quantify_for_ilan, aes(x=time,y=number,color=phenotype)) + 
   geom_point() +
   geom_smooth(method = lm, se = FALSE) +
   theme_bw() +
-  theme(text = element_text(size = 20), axis.text = element_text(size = 20),
-        strip.text = element_text(size = 20)) +
+  theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
+        strip.text = element_text(size = font_size)) +
   xlab('Time') + 
-  ylab('mRNA complexes in oocyte')
+  ylab('mRNA complexes\nin oocyte')
 print(h1)
 ggsave(paste('plots/number_in_oocyte_','.eps',sep=''),device=cairo_ps, height=9,width=12)
