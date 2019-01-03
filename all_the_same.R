@@ -204,95 +204,25 @@ get_model_weights <- function(models_to_sim,models_with_density_dependence,i,j){
 }
 
 z = get_model_weights(models_to_sim,models_with_density_dependence,0,0)
-weights_df <- data_frame(model=models_to_sim,pseudo_bma=z$w_pseudo_bma[models_to_sim],stacking=z$w_stack[models_to_sim])
+homogeneous_weights_df <- data_frame(model=models_to_sim,pseudo_bma=z$w_pseudo_bma[models_to_sim],stacking=z$w_stack[models_to_sim])
 
 method_names <- c(
   `pseudo_bma` = "Pseudo BMA+",
   `stacking` = "Stacking"
 )
-weights_df %>%
+
+fontsize=18
+homogeneous_weights_df %>%
   gather(value=weight,key=method,-model) %>%
   ggplot(aes(x=model,y=weight)) +
   geom_col() +
   facet_wrap(~method, labeller = as_labeller(method_names)) + 
   theme_bw() + 
-  theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-        legend.position = "none", strip.text = element_text(size = 8)) +
+  theme(text = element_text(size = fontsize), axis.text = element_text(size = fontsize),
+        legend.position = "none", strip.text = element_text(size = fontsize)) +
   xlab('Model') + 
   ylab('Weight') +
+  scale_y_continuous(limits=c(0,1)) +
   ggsave(paste('plots/weights_model_comparison_',identifier_simple,'.eps',sep=''),device=cairo_ps)
 
 ###################
-
-expose_stan_functions('mrna_transport_with_blocking.stan')
-post_pred_simple <- draws_simple %>%
-  mutate(modelID = list(models_to_sim[!(models_to_sim %in% models_with_density_dependence)])) %>%
-  unnest() %>%
-  mutate(time=list(times$ts4),
-         y_pred_oe = purrr::pmap(list(b,a,nu,beta,phi,
-                                      isigma1,isigma2,isigma3,isigma4,isigma5,isigma6,isigma7,isigma8,
-                                      isigma9,isigma10,isigma11,isigma12,isigma13,isigma14,isigma15,isigma16,
-                                      modelID),
-                                 forward_simulate_wrapper)) %>%
-  unnest(y_pred_oe,time,.preserve=modelID) %>%
-  mutate(cellID = list(seq_len(16))) %>%
-  unnest(.preserve=modelID) %>%
-  unnest() %>%
-  group_by(time,cellID,modelID) %>%
-  mutate(y_lower=quantile(y_pred_oe,0.025),
-         y_upper=quantile(y_pred_oe,0.975),
-         y_median=quantile(y_pred_oe,0.5)) %>%
-  ungroup()
-
-expose_stan_functions('mrna_transport_density_dependent_with_blocking.stan') #should replace previous functions and work with previous wrappers
-
-post_pred_DD <- draws_DD %>%
-  mutate(modelID = list(models_to_sim[models_to_sim %in% models_with_density_dependence])) %>%
-  unnest() %>%
-  mutate(time=list(times$ts4),
-         y_pred_oe = purrr::pmap(list(b,a,nu,beta,phi,
-                                      isigma1,isigma2,isigma3,isigma4,isigma5,isigma6,isigma7,isigma8,
-                                      isigma9,isigma10,isigma11,isigma12,isigma13,isigma14,isigma15,isigma16,
-                                      modelID),
-                                 forward_simulate_wrapper)) %>%
-  unnest(y_pred_oe,time,.preserve=modelID) %>%
-  mutate(cellID = list(seq_len(16))) %>%
-  unnest(.preserve=modelID) %>%
-  unnest() %>%
-  group_by(time,cellID,modelID) %>%
-  mutate(y_lower=quantile(y_pred_oe,0.025),
-         y_upper=quantile(y_pred_oe,0.975),
-         y_median=quantile(y_pred_oe,0.5)) %>%
-  ungroup()
-
-#add observed overexpression data
-xdata <- data.frame(rna = as.vector(overexpression_data),cellID = as.vector(matrix(rep(1:16,nTestOE),nrow=nTestOE,byrow=TRUE)),time = rep(times$ts4,16))
-observed_and_predictions <- full_join(full_join(post_pred_simple, post_pred_DD), xdata)
-
-library(gganimate)
-
-hh <- observed_and_predictions %>%
-  ggplot(aes(x=cellID,y=y_median,ymin=y_lower,ymax=y_upper)) +
-  geom_ribbon(alpha=0.4) +
-  geom_line() +
-  geom_point(aes(x=cellID,y=rna)) +
-  facet_wrap(~factor(modelID)) +
-  labs(title = 'Time: {frame_time}') +
-  transition_time(factor(time)) +
-  ease_aes('linear')
-
-
-observed_and_predictions %>%
-  filter(modelID=='M6') %>%
-  ggplot(aes(x=cellID,y=y_median,ymin=y_lower,ymax=y_upper)) +
-  geom_ribbon(alpha=0.4) +
-  geom_line() +
-  geom_point(aes(x=cellID,y=rna)) +
-  facet_wrap(~factor(time),scales='free_y')
-
-g <- log_lik_df2 %>%
-  ggplot(aes(ll_sum,color=modelID)) +
-  geom_density() +
-  scale_x_continuous(limits=c(-1500,-800))
-print(g)
-ggsave(paste('plots/compare_production_models_fwd_sim_',identifier_simple,'.eps',sep=''),device=cairo_ps)

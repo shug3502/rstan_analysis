@@ -141,7 +141,7 @@ stopifnot(dir.exists('fits') & dir.exists('plots'))
                        OE_producers = producers,
                        y_OE = overexpression_data
                        )
-      initF <- function() list(a=10, b=0.2, sigma=rep(1.25,16), nu=0.9, phi=0.35, beta=0.01) #initialising can help speed up the warm up phase   
+      initF <- function() list(a=10, b=0.2, sigma=rep(1.25,1), nu=0.9, phi=0.35, beta=0.01) #initialising can help speed up the warm up phase   
 
     estimates <- stan(file = stan_file,
                       data = stan_list,
