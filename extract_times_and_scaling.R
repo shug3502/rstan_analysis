@@ -1,4 +1,4 @@
-extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE,test_on_mutant_data=FALSE){
+extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE){
   #Get time series for egg chamber times and fit linear model 
   #Last Edited: 29/10/2018
   #JH
@@ -7,7 +7,6 @@ extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE
   require(broom)
   require(purrr)
   source('get_just_areas.R')
-  if (test_on_mutant_data){ warning('test_on_mutant_data is an argument no longer used by extract_times_and_scaling')}
 
 rescale_time <- function(log_area, tau, t0, tol=10^-5){
   t_hat = 1/tau*(log_area - t0)
@@ -18,21 +17,42 @@ egg_chamber_areas <- get_just_areas(nSamples,nTest,nTestOE)
 stages <- get_just_stages(nSamples,nTest,nTestOE)
   
   #take measure egg chamber lengths as a scaled time variable
+if (nSamples>0){ #the if statements deal with having 0 for nSamples etc
   log_areas = sort.int(log(egg_chamber_areas[1:nSamples]),index.return=TRUE)
   ts1 = log_areas$x #ts needs to be an ordered time vector
-  #log_areas_test = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
-  #ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
+  sort_indices1 = log_areas$ix
+  } else {
+  log_areas = numeric(0)
+  ts1 = numeric(0)
+  sort_indices1 = numeric(0)
+}
+if (nSamples+nTest+nTestOE>0){
   log_areas_test = sort.int(log(egg_chamber_areas),index.return=TRUE)
   ts2 = log_areas_test$x #includes the extra test sets or ts = setdiff(ts2,ts1)
-  sort_indices1 = log_areas$ix
   sort_indices2 = log_areas_test$ix
-  #ts3 = setdiff(ts2,ts1) 
+} else{
+  log_areas = numeric(0)  
+  ts2 = numeric(0)
+  sort_indices2 = numeric(0)
+}
+if (nTest>0){
   log_areas3 = sort.int(log(egg_chamber_areas[(nSamples+1):(nSamples+nTest)]),index.return=TRUE)
   sort_indices3 = log_areas3$ix
   ts3 = log_areas3$x
+} else {
+  log_areas3 = numeric(0)
+  sort_indices3 = numeric(0)
+  ts3 = numeric(0)
+}
+if (nTestOE>0){
   log_areas4 = sort.int(log(egg_chamber_areas[(nSamples+nTest+1):(nSamples+nTest+nTestOE)]),index.return=TRUE)
   sort_indices4 = log_areas4$ix
   ts4 = log_areas4$x
+} else {
+  log_areas4 = numeric(0)
+  sort_indices4 = numeric(0)
+  ts4 = numeric(0)
+}
 
   #######################################
   #fit linear models
@@ -51,6 +71,7 @@ stages <- get_just_stages(nSamples,nTest,nTestOE)
                              )
 ##########################################  
   if (optional_plot){
+    font_size=24
     require(ggplot2)
     g <- ggplot(data = df, aes(x=stages,y=la)) +
       geom_point() + 
@@ -63,7 +84,9 @@ stages <- get_just_stages(nSamples,nTest,nTestOE)
       geom_point() + 
       geom_line(color='red',aes(x=time_hrs,y=pred_age_hrs)) +
       theme_bw() + 
-      labs(x='age (hrs)',y='log(area)')
+      labs(x='age (hrs)',y='log(area)') +
+      theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
+            strip.text = element_text(size = 8))
     print(g) 
     ggsave('plots/timescale_model.eps',device=cairo_ps)
     
@@ -71,7 +94,9 @@ stages <- get_just_stages(nSamples,nTest,nTestOE)
       geom_point() +
       geom_smooth(method='lm') +
       theme_bw() +
-      labs(x='time (hrs)',y='log(area)')
+      labs(x='time (hrs)',y='log(area)') + 
+      theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
+            strip.text = element_text(size = 8), legend.position = 'None')
     print(g2)
     ggsave('plots/timescale_model2.eps',device=cairo_ps)
     
@@ -79,7 +104,9 @@ stages <- get_just_stages(nSamples,nTest,nTestOE)
       geom_point() +
       geom_smooth(method='lm') +
       theme_bw() +
-      labs(x='time (hrs)',y='log(area)')
+      labs(x='time (hrs)',y='log(area)') + 
+      theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
+            strip.text = element_text(size = 8), legend.position = 'None')
     print(h)
     ggsave('plots/timescale_model_split.eps',device=cairo_ps)
   }

@@ -61,28 +61,3 @@ compare_RC_preds <- function(ts,estimates,identifier,title_stem='plots/compare_R
   print(p3)
   return(list(p3,p2,p1,preds_compared))
 }
-
-marginal_nu_comparison <- function(identifier = 'no_decay_v331'){
-  library(bayesplot)
-  library(ggridges)
-  color_scheme_set('purple')
-  color_scheme_get('purple')
-  estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')) 
-  wt.draws <- as.array(estimates, pars='nu')
-  identifier = 'full_nu_uniform_OE_v302'
-  estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')) 
-  oe.draws <- as.array(estimates, pars='nu')
-  nu_df <- data_frame(wt=as.numeric(wt.draws)[1:2000],oe=as.numeric(oe.draws))
-  h <- nu_df %>% tidyr::gather(key='phenotype',value='nu') %>%
-    ggplot(aes(y=phenotype,x=nu)) +
-    geom_density_ridges2(fill='#e5cce5') + 
-    theme_bw() +
-    theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-          legend.position = "none", strip.text = element_text(size = 12),
-          plot.title = element_text(size=12), 
-          strip.text.x = element_text(size = 16, face="italic")) +
-    labs(y='Phenotype',x=expression(paste('Transport bias  ', nu)))
-  print(h)
-  ggsave('plots/ridge_nu_plot.eps',device=cairo_ps)
-  return(h)
-}

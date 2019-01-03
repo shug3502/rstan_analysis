@@ -137,6 +137,7 @@ functions {
                           real[] ts, 
                           real[] y0,
                           real[] theta,
+                          real[] sigma,
                           matrix producers,
                           int[,] OE_blocked){
 //theta here is theta as above, but also augemented with phi and any other parameters
@@ -144,7 +145,6 @@ functions {
   real y_pred_OE[T,16];
   int OE_x_i[3];
   real phi = theta[5];
-  real sigma = theta[6];
   for (t in 1:T){
     for (i in 1:3){
       OE_x_i[i] = OE_blocked[t,i];
@@ -152,7 +152,7 @@ functions {
     y_ode_OE = integrate_ode_rk45(mrnatransport_density_dependent, y0, 0, ts, theta, to_array_1d(producers[t,]), OE_x_i ); //use overexpression producers and specify any blocked RCs
     y_ode_OE[t,1] = y_ode_OE[t,1]*phi;
     for (j in 1:16){
-      y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j],sigma);
+      y_pred_OE[t,j] = neg_binomial_2_rng(y_ode_OE[t,j],sigma[j]);
     }
   }
   return y_pred_OE;
@@ -162,12 +162,12 @@ functions {
                     real[] ts, 
                     real[] y0,
                     real[] theta,
+                    real[] sigma,
                     matrix producers,
                     int[,] OE_blocked){
   matrix[T,16] ll = rep_matrix(0,T,16);
   real y_ode_OE[T,16];
   real phi = theta[5];
-  real sigma = theta[6];
   int OE_x_i[3];  
   for (t in 1:T){
     for (i in 1:3){
@@ -176,7 +176,7 @@ functions {
     y_ode_OE = integrate_ode_rk45(mrnatransport_density_dependent, y0, 0, ts, theta, to_array_1d(producers[t,]), OE_x_i ); //use overexpression producers and specify which RCs are blocked
     y_ode_OE[t,1] = y_ode_OE[t,1]*phi;
     for (j in 1:16){
-      ll[t,j] = ll[t,j] + neg_binomial_2_lpmf(y_OE[t,j] | y_ode_OE[t,j],sigma);
+      ll[t,j] = ll[t,j] + neg_binomial_2_lpmf(y_OE[t,j] | y_ode_OE[t,j],sigma[j]);
     }
   }
 return ll;    
@@ -284,9 +284,9 @@ generated quantities {
   for (t in 1:T1){
     for (j in 1:16){
       if (j>1) {
-        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j],sigma);
+        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j],sigma[i]);
       } else {
-        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j]*phi,sigma);
+        log_lik[t] = log_lik[t] + neg_binomial_2_lpmf(y[t,j] | y_lik_ode[t,j]*phi,sigma[i]);
       }
     }
   }

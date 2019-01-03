@@ -1,6 +1,11 @@
+#provides analytic solution computed here
+#
+#JH updated 06/11/18
+###########################################
+
 library(rstan)
 library(dplyr)
-expose_stan_functions('model_comparison_at_stst4.stan') #for functions to get k2 and B etc
+expose_stan_functions('quasi_steady_state.stan') #for functions to get k2 and B etc
 
 analytic_soln <- function(b,a,nu,t,y0=rep(0,16),producers=c(0,rep(1,15))){
   #implement analytic solution as a function of model parameters
@@ -19,11 +24,9 @@ analytic_soln <- function(b,a,nu,t,y0=rep(0,16),producers=c(0,rep(1,15))){
   return(y)
 }
 
-
 observation_model <- function(phi,sigma,y){
   z = y
   z[1] = y[1]*phi
   z = rnbinom(1,mu=z,size=sigma)
-  #put negative binomial stuff in here with correct parameterisation
   return(z)
 }

@@ -1,7 +1,7 @@
 
 simulate_from_ODE_model <- function(th = c(0.2,10),
                                     sig = 1,
-                                    phi = 0.3,
+                                    phi = 0.345,
                                     nSamples = 15,
                                     nTest = 5,
                                     nTestOE = 0){
@@ -10,24 +10,24 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
   library(ggimage)
   rstan_options(auto_write = TRUE)
   options(mc.cores = parallel::detectCores())
-  mc <- stan_model('model_comparison5.stan')
+  mc <- stan_model('mrna_transport_with_blocking.stan')
   expose_stan_functions(mc) #get hold of functions defined in the stan code
-  #keep all other parameters constant during this experiment
-  m0 = c(0, rep(0,15)) #initial condition
+
+  y0 = c(0, rep(0,15)) #initial condition
   nTotal = nSamples + nTest
   source('extract_times_and_scaling.R')
-  times = extract_times_and_scaling(nSamples,nTest,nTestOE,test_on_mutant_data=FALSE)
+  times = extract_times_and_scaling(nSamples,nTest,nTestOE)
   data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
   raw_data = data[times$sort_indices2,]
   #take a vector of transport bias values for nu to loop through
   nu_vec = seq(from=0.7, to=1, by=0.05)
   all_extracted_samples = data.frame(rna=numeric(),time=numeric())
   for (j in seq_along(nu_vec)){
-  B = construct_matrix(nu_vec[j])
+  B = construct_matrix(nu_vec[j],0)
   samples <- stan(file = 'mrna_transport6.stan',
                       data = list (
                         T  = nTotal,
-                        y0 = m0,
+                        y0 = y0,
                         t0 = times$t0$estimate[2],
                         ts = times$ts2,
                         theta = array(th, dim = 2),
@@ -60,7 +60,7 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
 
 library(ggplot2)
 animate_on <- FALSE
-font_size <- 12
+font_size <- 18
 all_extracted_samples <- simulate_from_ODE_model() 
 p1 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
 p1 <- p1 + geom_line() +
@@ -78,7 +78,7 @@ print(p1)
 p2 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95), aes(x = time, y = median, group=factor(nu))) +
   geom_line() +
   facet_wrap(~cellID,scales='free_y') +   #needed to remove factor(cellID) 
-  labs(title='a)', x = "Time (hrs)", y = "mRNA") +
+  labs(title='a)', x = "Time (hrs)", y = "mRNA\ncomplexes") +
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
         strip.text = element_text(size = 8), legend.position = 'None') + 
@@ -91,7 +91,9 @@ ggsave('plots/fig2a.eps',device=cairo_ps)
 
 p3 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95) %>% filter(time==max(time)), aes(x = cellID, y = median, group=factor(nu))) +
   geom_line() +
-  labs(x = "Cell ID", y = "mRNA") +
+  geom_point(shape=8) +
+  labs(x = "Cell ID", y = "mRNA\ncomplexes") +
+  scale_x_continuous(breaks=c(1,4,8,12,16)) +
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
         strip.text = element_text(size = 8), legend.position = 'None') + 
@@ -107,6 +109,7 @@ df <- data_frame(x = 15,
                  image = list(im))
 p3 <- p3 + geom_subview(aes(x=x,y=y,subview=image,width=width,height=width), data=df)
   if (animate_on){
+  library(gganimate)
   p3 <- p3 + labs(title = 'Time: {frame_time}', x = "Cell ID", y = "mRNA") +
   transition_time(time) +
   ease_aes('linear')
@@ -114,6 +117,20 @@ p3 <- p3 + geom_subview(aes(x=x,y=y,subview=image,width=width,height=width), dat
 print(p3)
 ggsave('plots/fig2b.eps',device=cairo_ps)
 
+p5 <- ggplot(all_extracted_samples %>%
+               filter(nu>0.85 & nu<0.95, cellID==1),
+             aes(x = time, y = median, group=factor(nu))) +
+  geom_line() +
+  labs(title='a)', x = "Time (hrs)", y = "mRNA\ncomplexes") +
+  theme_bw() +
+  theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
+        strip.text = element_text(size = 8), legend.position = 'None') + 
+  scale_color_discrete(name = "nu") + 
+  scale_colour_brewer(palette=7) + 
+  #  geom_point(aes(x = time, y = rna)) +
+  NULL
+print(p5)
+ggsave('plots/fig2d.eps',device=cairo_ps)
 
 if (!animate_on){
   library(patchwork)
@@ -121,5 +138,10 @@ if (!animate_on){
   p4 <- p2 + p3 + plot_layout(ncol = 1,heights = c(2, 1))
   print(p4)
   ggsave('plots/fig2.eps',device=cairo_ps, width=9,height=9)
+  
+  library(patchwork)
+  p4 <- p5 + p3 + plot_layout(ncol = 1,heights = c(1, 1))
+  print(p4)
+  ggsave('plots/fig2v2.eps',device=cairo_ps, width=9,height=9)
 }
 

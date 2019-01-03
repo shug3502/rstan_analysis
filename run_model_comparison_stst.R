@@ -1,9 +1,9 @@
-#setwd('~/Documents/FISH_data/rstan_analysis')
 #write as function, may need to think about what to do if want to run from command line again
-run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=9,nTest=11,nTestOE=9,
+run_model_comparison_stst <- function(identifier='MCv099',use_real_data=TRUE,run_mcmc=FALSE,
+				                              nSamples=9,nTest=11,nTestOE=9,
                                       parametersToPlot = c('nu','xi','phi'),verbose=FALSE,
                                       compare_via_loo=FALSE, show_diagnostic_plots=FALSE,
-                                      use_mixture_model=FALSE, train_on_OE=FALSE){
+                                      train_on_OE=FALSE){
   #steady state analysis only for the simplest model without decay or other complications
 library(rstan)
 library(mvtnorm)
@@ -15,9 +15,6 @@ source('extract_times_and_scaling.R')
 times = extract_times_and_scaling(nSamples,nTest,nTestOE)
 #############################################################
 m0 = c(0, rep(1,15)) #initial condition
-th = c(6.8,132.8)
-sig = 150 
-phi = 0.289 #careful can cause issues if phi is not 1 when looking at stst
 
 #############################################################
 my_normaliser <- function(dataset) apply(dataset,1,function(x)x/x[1]) %>% t()
@@ -57,25 +54,13 @@ if (use_real_data){
     }
   }
   normalised_data = exp_data %>% my_normaliser #divide by amount in oocyte to normalise for stst
-  #for data driven prior from eyeballing which mixture egg chambers are from
-  alpha = matrix(rep(1,(nSamples+nTestOE+nTest)*16),ncol=16)
-  alpha[1,1] = 15
-  alpha[2,16] = 15
-  alpha[3,c(6,11,16)] = 13
-  alpha[4,c(12,16)] = 14
-  alpha[5,10] = 15
-  alpha[6,c(10,11)] = 14
-  alpha[7,c(1,16)] = 14
-  alpha[8,c(6,9)] = 14
-  alpha[9,c(6,11)] = 14 
 } else {
-  warning('TODO: update simulated data for full model')
+  warning('TODO: update simulated data')
   return(0)
 }
 ############################
 if (run_mcmc) {
-  stan_file <- case_when(use_mixture_model ~ 'model_comparison_at_stst3.stan',
-                        TRUE ~ 'model_comparison_at_stst2.stan')
+  stan_file <- 'quasi_steady_state_model.stan'
   estimates <- stan(file = stan_file,
                     data = list (
                       T1 = nSamples,
@@ -92,7 +77,6 @@ if (run_mcmc) {
   )
   
   tryCatch({
-    #estimates@stanmodel@dso <- new("cxxdso") #seems have to do this to be able to save :S
     saveRDS(estimates, file = paste('fits/model_comparison',identifier,'.rds',sep='')) # to load use readRDS("fit.rds")
   }, warning = function(war) {  
     # warning handler picks up where error was generated
@@ -132,8 +116,6 @@ if (compare_via_loo){
 } 
 
 if (show_diagnostic_plots) {
-  source('hist_treedepth.R')
-  hist_treedepth(estimates)
   source('mcmcDensity.R')
   mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
   ggsave(paste('plots/denisty',identifier, '.eps',sep=''),device=cairo_ps)
