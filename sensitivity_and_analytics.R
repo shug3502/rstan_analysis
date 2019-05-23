@@ -13,7 +13,7 @@ expose_stan_functions(stan_model('quasi_steady_state_model.stan'))
 
 ############################################
 #set ICs
-th = c(0.2,10)
+th = c(0.24,12.9)
 
 ############################################
 #try to construct as functions 
@@ -52,7 +52,6 @@ for (a in seq(from=-3,to=3,length=28)){
     df <- df %>% bind_rows(.,temp)
   }
 }
-
 
 ############################################
 g <- ggplot(df, aes(x=log10(a), y=log10(b)))

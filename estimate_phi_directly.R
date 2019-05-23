@@ -206,3 +206,32 @@ a %>%
   mutate(phi = median(a$MeanByRegion)/BgdSubtract) %>%
   summarise(ava=mean(phi),meda=median(phi))
 
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+region_names <- c("background" = "BGD","oocyte" = "OO","nurse_cells" = "NC")
+region_labeller <- function(variable,value){
+  return(region_names[value])
+}
+one_transcript <- b %>% filter(Region=="nurse_cells") %>%
+  pull(BgdSubtract) %>% getmode()
+b %>% filter(Region=='nurse_cells') %>%
+  mutate(num_transcripts = BgdSubtract/one_transcript) %>%
+  ggplot(aes(num_transcripts)) +
+  geom_histogram() + 
+  facet_wrap(~Region,ncol=1,labeller=region_labeller) + 
+  labs(x="mRNA content")
+ggsave('plots/mRNAcontent_oocyte_normalized.eps')
+
+gmm <- b %>% filter(Region=='nurse_cells') %>%
+  mutate(num_transcripts = BgdSubtract/one_transcript) %>% pull(num_transcripts) %>%
+mixtools::normalmixEM(., lambda = c(0.8,0.2), mu = c(1,2), k = 2)
+plot(gmm, density=TRUE, cex.axis=1.4, cex.lab=1.4, cex.main=1.8,
+     main2="mRNA content in NC \n complexes", xlab2="mRNA content")
+
+gmm <- b %>% filter(Region=='oocyte') %>%
+  mutate(num_transcripts = BgdSubtract/one_transcript) %>% pull(num_transcripts) %>%
+  mixtools::normalmixEM(., lambda = c(0.6,0.2,0.1,0.05,0.05), mu = c(1,2,3,4,5), k = 5)
+plot(gmm, density=TRUE, cex.axis=1.4, cex.lab=1.4, cex.main=1.8,
+     main2="mRNA content in OO \n complexes", xlab2="mRNA content")

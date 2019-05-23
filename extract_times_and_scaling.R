@@ -1,4 +1,4 @@
-extract_times_and_scaling <- function(nSamples,nTest,nTestOE,optional_plot=FALSE){
+extract_times_and_scaling <- function(nSamples,nTest,nTestOE,use_shimada_growth_model=TRUE,optional_plot=FALSE){
   #Get time series for egg chamber times and fit linear model 
   #Last Edited: 29/10/2018
   #JH
@@ -55,24 +55,36 @@ if (nTestOE>0){
 }
 
   #######################################
-  #fit linear models
+df <- data.frame(egg_chamber_areas=egg_chamber_areas, la = log(egg_chamber_areas), stages = stages, split = c(rep('train',nSamples),rep('test',nTest),rep('Overexpression',nTestOE)))
+df <- df %>% mutate(time_hrs = convert_to_hrs(stages)) #convert to hrs moved to 'get_just_areas.R'
+
+if (use_shimada_growth_model) {
+  source('shimada_growth_model.R') #reviewer suggestion to use area measurements from shimada et al 2011
+  
+} else {
+    #fit linear models
   lm_time <- lm(log(egg_chamber_areas) ~ stages)
-  df <- data.frame(la = log(egg_chamber_areas), stages = stages, split = c(rep('train',nSamples),rep('test',nTest),rep('Overexpression',nTestOE)))
-  df <- df %>% mutate(pred_age = predict(lm_time,df))
-  df <- df %>% mutate(time_hrs = convert_to_hrs(stages)) #convert to hrs moved to 'get_just_areas.R'
   #fit another model to time in hours
   lm_time_hrs = lm(la ~ time_hrs,data=df)
-  df <- df %>% mutate(pred_age_hrs = predict(lm_time_hrs,df))      
+}  
+df <- df %>% mutate(pred_age = predict(lm_time,df))
+df <- df %>% mutate(pred_age_hrs = predict(lm_time_hrs,df)) 
   # fit linear models grouped by split of data. Flies fed at separate times so grew differently
   lm_by_split <- df %>% group_by(split) %>%  do(tidy(lm(la ~ time_hrs, data = .)))
   lm_by_split <- lm_by_split %>% full_join(df %>%
                                do(tidy(lm(la ~ time_hrs, data = .))) %>%
                                mutate(split='all')
                              )
+
 ##########################################  
   if (optional_plot){
     font_size=24
     require(ggplot2)
+    if (use_shimada_growth_model){
+      g_shimada <- g_shimada + geom_point(data = df, aes(x=time_hrs,y=log(egg_chamber_areas)), color='blue')
+      print(g_shimada)
+      ggsave('plots/timescale_shimada_revised.eps')
+    } else {
     g <- ggplot(data = df, aes(x=stages,y=la)) +
       geom_point() + 
       geom_line(color='red',aes(x=stages,y=pred_age)) +
@@ -109,6 +121,7 @@ if (nTestOE>0){
             strip.text = element_text(size = 8), legend.position = 'None')
     print(h)
     ggsave('plots/timescale_model_split.eps',device=cairo_ps)
+    }
   }
  #########################################
 ##use coefficients of linear model

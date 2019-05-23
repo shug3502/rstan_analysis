@@ -102,7 +102,7 @@ p3 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95) %>% filter(time
   #  geom_point(aes(x = cellID, y = rna)) +
   NULL
 #add schematic image of egg chamber to plot
-im <- magick::image_read('plots/egg_chamber_stg4to6.png')
+im <- magick::image_read('plots/fig1c.eps')
 df <- data_frame(x = 15,
                  y = 1500,
                  width = 700,
@@ -130,18 +130,18 @@ p5 <- ggplot(all_extracted_samples %>%
   #  geom_point(aes(x = time, y = rna)) +
   NULL
 print(p5)
-ggsave('plots/fig2d.eps',device=cairo_ps)
+ggsave('plots/fig2d.eps')
 
 if (!animate_on){
   library(patchwork)
   p3 <- p3 + labs(title='b) Time: 32.4 hrs')
   p4 <- p2 + p3 + plot_layout(ncol = 1,heights = c(2, 1))
   print(p4)
-  ggsave('plots/fig2.eps',device=cairo_ps, width=9,height=9)
+  ggsave('plots/fig2.eps', width=9,height=9)
   
   library(patchwork)
   p4 <- p5 + p3 + plot_layout(ncol = 1,heights = c(1, 1))
   print(p4)
-  ggsave('plots/fig2v2.eps',device=cairo_ps, width=9,height=9)
+  ggsave('plots/fig2v2.eps', width=9,height=9)
 }
 

@@ -188,6 +188,9 @@ stopifnot(dir.exists('fits') & dir.exists('plots'))
                          estimates,identifier,title_stem='plots/posterior_pred_OE',
                          ts_test=times$ts3,OE_test=times$ts4,filter_out_wt=FALSE)
   if (show_diagnostic_plots) {
+    source('plot_running_means.R')
+    plot_running_means(estimates,parametersToPlot)
+    ggsave(paste("plots/running_mean_",identifier,".eps",sep=""))
     source('mcmcDensity.R')
     mcmcDensity(estimates, parametersToPlot, byChain = TRUE)
     ggsave(paste('plots/denisty',identifier, '.eps',sep=''),device=cairo_ps)

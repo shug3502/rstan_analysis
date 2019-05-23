@@ -54,7 +54,7 @@ estimate_adjusted_producers <- function(nTestOE,gamma=2,plot_option=F) {
       theme_bw() +
       theme(text = element_text(size = 32), axis.text = element_text(size = 32),
             strip.text = element_text(size = 32))
-    ggsave('plots/nascent_trancription_plot.eps',device=cairo_ps)      
+    ggsave('plots/nascent_trancription_plot.eps')      
 
         #also plot the inferred distribution of transcription across cells
     inferred_df = data_frame(a = producers[1,], CellID=seq_len(16))
@@ -64,7 +64,7 @@ estimate_adjusted_producers <- function(nTestOE,gamma=2,plot_option=F) {
       theme_bw() +
       theme(text = element_text(size = 32), axis.text = element_text(size = 32),
             strip.text = element_text(size = 32))
-    ggsave('plots/inhomogeneous_production_inferred.eps',device=cairo_ps)
+    ggsave('plots/inhomogeneous_production_inferred.eps')
 
     #   #now also show the uncertainty in the estimates
   # draws = as.data.frame(rstan::extract(estimates,pars='a',permuted=TRUE)[[1]])

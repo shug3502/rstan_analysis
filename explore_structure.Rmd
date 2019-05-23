@@ -1,0 +1,111 @@
+---
+title: "Explore mRNA levels relative to tree strucutre"
+author: "Jonathan Harrison"
+date: "06/05/2019"
+output: html_document
+fig_width: 6
+fig_height: 4
+---
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+Suggestion from reviewer 1 that there may be structure to the data based on connections between nurse cells. 
+
+```{r load}
+source('extract_times_and_scaling.R')
+extract_times_and_scaling(9,11,14,TRUE)
+```
+
+Construct a df with columns as follows:
+
+egg_chamber_ID | egg_chamber_area (um^2) | age (hrs) | cell_ID | phenotype | num mRNA complexes   
+
+```{r}
+nSamples = 14
+nTest = 6
+nTestOE = 14
+source('get_just_areas.R')
+areas = get_just_areas(nSamples,nTest,nTestOE)
+paths = c(paste('Example',seq_len(nSamples + nTest),sep=''), 
+          paste('Overexpression',seq_len(nTestOE),sep=''))
+phenotypes = c(rep('WT',nSamples+nTest), rep('OE',nTestOE))
+egg_chamber_data = tibble(eggchamberID = paths, area = areas, phenotype = phenotypes)
+glimpse(egg_chamber_data)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+overexpression_data = matrix(as.numeric(read.csv('data/exp_data_overexpression.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
+
+cell_data <- cbind(egg_chamber_data,rbind(data,overexpression_data))
+# data_names <- names(cell_data)
+# data_names[4:19] <- paste('cell',data_names[4:19],sep='')
+# names(cell_data) <- data_names
+transformed_data <- cell_data %>%
+  gather(key = cellID, value = mRNA, -eggchamberID, -area, -phenotype)
+
+bl = sapply(1:14, function(n) paste(rep(" ",n),collapse=""))
+#pred$cellID <- factor(pred$cellID, levels = c("1","2","3","5","9","4","6","7","10","11","13","8","12","14","15","16"))
+transformed_data$cellID <- factor(transformed_data$cellID,levels = c(bl[1:2], 4, bl[3:4],
+                                             bl[5], 8, 6, 2, bl[6],
+                                             bl[7], 12, 7, 3, bl[8],
+                                             16, 14, 10, 5, 1,
+                                             bl[9], 15, 11, 9, bl[10],
+                                             bl[11:12], 13, bl[13:14]))
+transformed_data %>%
+  ggplot(aes(x = cellID, y = mRNA, color=phenotype)) +
+  geom_point() + 
+  facet_wrap( ~cellID, ncol = 5, drop = F, strip.position="bottom",scales="free_y") +
+  theme_classic()
+
+transformed_with_distances <- transformed_data %>%
+  mutate(distance = case_when((cellID == 1) ~ 0,
+                              (cellID %in% c(2,3,5,9)) ~ 1,
+                              (cellID %in% c(4,6,7,8,10,11,13)) ~ 2,
+                              (cellID %in% c(8,12,14,15)) ~ 3,
+                              (cellID ==16) ~ 4 ))
+  
+p1 <-  ggplot(data=transformed_with_distances,aes(x=factor(distance),y=mRNA)) +
+  geom_violin(trim = TRUE, draw_quantiles = 0.5) +
+  geom_jitter(size=0.5,width=0.2) +
+  facet_wrap(~phenotype) +
+  theme_bw() + 
+  labs(x="Distance from the oocyte")
+  print(p1)
+  ggsave(paste("plots/mRNAvsDistanceFromOocyte.eps"))
+```
+
+```{r}
+get_ranking <- function(mRNA){
+  stopifnot(length(mRNA)==16)
+  ranking <- rank(mRNA,na.last=NA) 
+  if (length(ranking) < length(mRNA)) { #deal with case where not all data processed, so contains NA
+    rankingNAlast <- rank(mRNA,na.last=TRUE)
+    rankingNAlast[rankingNAlast > 5] = NA #assume processed oocyte and neighbouring nurse cells
+    rankingNAlast[ranking <= 5] = rankingNAlast + 11
+    ranking <- rankingNAlast
+  }
+return(rep(17,16) - ranking)  #invert so oocyte generally is 1 etc
+}
+
+p2 <- transformed_with_distances %>%
+  group_by(eggchamberID) %>%
+  mutate(Ranking = get_ranking(mRNA)) %>%
+  ungroup() %>%
+  ggplot(aes(x=factor(distance),y=Ranking)) +
+  geom_violin(trim = TRUE, draw_quantiles = 0.5) +
+  geom_jitter(size=0.5,width=0.2) +
+  facet_wrap(~phenotype) +
+  theme_bw() + 
+  labs(x="Distance from the oocyte")
+print(p2)
+ggsave(paste("plots/RankingvsDistanceFromOocyte.eps"))
+library(patchwork)
+p1+p2+plot_layout(ncol=1)
+ggsave(paste("plots/figS9.eps"))
+```
+
