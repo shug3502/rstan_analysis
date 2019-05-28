@@ -85,7 +85,7 @@ model {
   real y_stst[T1,16];
   xi ~ normal(0,0.1) T[0,];
   nu ~ beta(1,1) T[0,1];
-  phi ~ normal(0.345,0.047); 
+  phi ~ normal(0.345,0.048); 
 for (t in 1:T1){
   //relying on the fact that in practice dim of null space is 1, unless nu=0 (unidirectional backward transport)
   y_stst[t] = to_array_1d(get_k2(nu));
@@ -105,6 +105,7 @@ generated quantities {
     for (j in 2:16){
       y_sim[t,j] = fabs(normal_rng(y_pred[t,j]/phi, xi));
     }
+    print(y_sim[t]);
   }
     //compute log likelihood for model comparison via loo
   log_lik = rep_vector(0,T1);

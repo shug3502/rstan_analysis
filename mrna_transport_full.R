@@ -19,7 +19,7 @@ mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=T
   rstan_options(auto_write = TRUE)
   options(mc.cores = parallel::detectCores())
 
-stopifnot(any(model_str %in% c('simple','decay','density_dependent'))) #check if model is one of simple, decay or DD
+stopifnot(any(model_str %in% c('simple','decay','density_dependent','decay_fixed'))) #check if model is one of simple, decay or DD
 #check folder structure
 stopifnot(dir.exists('fits') & dir.exists('plots'))
   
@@ -124,7 +124,8 @@ stopifnot(dir.exists('fits') & dir.exists('plots'))
     # } else {
      stan_file = case_when( model_str == 'simple' ~ 'mrna_transport_with_blocking.stan',
                              model_str == 'decay' ~ 'mrna_transport_with_decay.stan',
-                             model_str == 'density_dependent' ~ 'mrna_transport_density_dependent_with_blocking.stan'
+                             model_str == 'density_dependent' ~ 'mrna_transport_density_dependent_with_blocking.stan',
+                             model_str == 'decay_fixed' ~ 'mrna_transport_with_greater_decay.stan'
                             )
     # }
       print(paste('Using the following stan file: ', stan_file, sep=''))
@@ -139,7 +140,11 @@ stopifnot(dir.exists('fits') & dir.exists('plots'))
                        ts3 = times$ts4,
                        OE_blocked = blocked,
                        OE_producers = producers,
-                       y_OE = overexpression_data
+                       y_OE = overexpression_data,
+                       a = 16.66*alpha,
+                       b=0.26,
+                       nu=0.96,
+                       phi=0.39
                        )
       initF <- function() list(a=10, b=0.2, sigma=rep(1.25,1), nu=0.9, phi=0.35, beta=0.01) #initialising can help speed up the warm up phase   
 
@@ -197,7 +202,8 @@ stopifnot(dir.exists('fits') & dir.exists('plots'))
     
     library(bayesplot)
     draws <- as.array(estimates, pars=parametersToPlot)
-    mcmc_trace(draws)
+    mcmc_trace(draws, facet_args = list(labeller = ggplot2::label_parsed)) +
+      scale_x_continuous(breaks = c(0,1000))
     ggsave(paste('plots/trace',identifier, '.eps',sep=''),device=cairo_ps)
     mcmc_intervals(draws,pars=c('a','b','phi'))
     ggsave(paste('plots/intervals',identifier, '.eps',sep=''),device=cairo_ps)

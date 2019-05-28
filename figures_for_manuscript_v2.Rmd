@@ -40,9 +40,9 @@ Fig4: Characterisation of the bias in directionality of transport through ring c
 ![optional caption text](plots/fig4_schematic.eps){ width=30% }
 ```{r, Fig4, echo=FALSE,message=FALSE}
 source('run_model_comparison_stst.R')
-identifier = 'MCv500'
+identifier = 'MCv607'
 res <- run_model_comparison_stst(identifier=identifier,
-                                 nSamples=9,nTest=0,nTestOE=0,
+                                 nSamples=16,nTest=0,nTestOE=0,
                                  use_real_data=TRUE,run_mcmc=FALSE,
                                  parametersToPlot = c('nu','xi','phi'),
                                  verbose=FALSE,
@@ -51,12 +51,12 @@ res <- run_model_comparison_stst(identifier=identifier,
 estimates = readRDS(paste('fits/model_comparison',identifier,'.rds',sep='')) 
 library(bayesplot)
 #want to compare to draws from the prior for nu
-nu_df = data.frame(posterior=as.numeric(as.array(estimates)[,,'nu']), prior=0.5 + 0.5*runif(4000)) %>% tidyr::gather(key=distribution,value=nu)
+nu_df = data.frame(posterior=1-as.numeric(as.array(estimates)[,,'nu']), prior=0.5 - 0.5*runif(4000)) %>% tidyr::gather(key=distribution,value=nu)
 color_scheme_get("purple")
 #g2 <- mcmc_dens(as.array(estimates),pars='nu') +
 g2 <- ggplot(data=NULL) + geom_blank() + theme_bw() +
   theme(text = element_text(size = 12), axis.text = element_text(size = 12),
-          strip.text = element_text(size = 8),legend.position=c(0.2,0.7)) + 
+          strip.text = element_text(size = 8),legend.position=c(0.8,0.7)) + 
   labs(x=expression(paste('Transport bias  ', nu)),y='Density') + 
   geom_density(data=nu_df,aes(nu,fill=distribution,alpha=distribution)) + 
   scale_fill_manual(values = c('#e5cce5','#400040'),guide = guide_legend(title = 'Distribution')) + 
@@ -72,21 +72,22 @@ ggsave(paste('plots/fig4',identifier,'.eps',sep=''),device=cairo_ps)
 Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posterior predictive distribution, C) Sensitivity to a, b.
 ```{r, Fig5, echo=FALSE,message=FALSE}
 source('mrna_transport_full.R')
-res_WT = mrna_transport_inference_full('no_decay_v331',
-						use_real_data = TRUE, run_mcmc = FALSE,
-						nSamples = 9, nTest = 11, nTestOE = 9,
+res_WT = mrna_transport_inference_full('no_decay_v399',
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 16, nTest = 4, nTestOE = 14,
 						verbose = TRUE, compare_via_loo = FALSE,
 						show_diagnostic_plots = TRUE, train_on_OE = FALSE,
-						parametersToPlot = c('a','b','nu','phi','sigma'),alpha=2.18,model_str='simple')
-res_OE = mrna_transport_inference_full('no_decay_OE_v332',
-						use_real_data = TRUE, run_mcmc = FALSE,
-						nSamples = 9, nTest = 11, nTestOE = 9,
+						parametersToPlot = c('a','b','nu','phi','sigma'),alpha=2.23,model_str='simple')
+res_OE = mrna_transport_inference_full('no_decay_OE_v399',
+						use_real_data = TRUE, run_mcmc = TRUE,
+						nSamples = 16, nTest = 4, nTestOE = 14,
 						verbose = TRUE, compare_via_loo = FALSE,
 						show_diagnostic_plots = TRUE, train_on_OE = TRUE,
 						parametersToPlot = c('a','b','nu','phi','sigma'),
-						alpha=2.18, model_str='simple')
+						alpha=2.23, model_str='simple')
 source('figure5_plotting.R')
-marginal_WT + res_WT + plot_layout(ncol=1,height=c(1,3))
+plot_figure5('no_decay_v399')
+#marginal_WT + res_WT + plot_layout(ncol=1,height=c(1,3))
 ```
 
 ![optional caption text](plots/posterior_predno_decay_v331.eps){ width=30% }

@@ -7,10 +7,10 @@ library(tidyr)
 library(rstan)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-nTestOE=9
+nTestOE=14
 source('extract_times_and_scaling.R')
 ##################
-times = extract_times_and_scaling(9,11,nTestOE)
+times = extract_times_and_scaling(16,4,nTestOE)
 data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
 exp_data = data[times$sort_indices1,] #need to sort time series and correspondingly reorder rows
 exp_data[is.na(exp_data)]=0 #stan can't deal with NAs
@@ -35,7 +35,7 @@ ggplot(quantify_for_ilan, aes(y=total,x=time,color=phenotype,group=phenotype)) +
   geom_point()
 
 stan_file = 'how_much_more_produced_in_oe.stan'
-stan_list = list(T1=9,
+stan_list = list(T1=16,
                  T2=nTestOE,
                  x=quantify_for_ilan %>% filter(phenotype=='WT') %>% .$total,
                  y=quantify_for_ilan %>% filter(phenotype=='OE') %>% .$total,

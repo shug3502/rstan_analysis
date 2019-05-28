@@ -46,9 +46,9 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
     pred <- as.data.frame(estimates, pars = 'y_ode') %>%
       gather(factor_key = TRUE) %>%
       group_by(key) %>%
-      summarize(lb = quantile(value, probs = 0.05),
+      summarize(lb = quantile(value, probs = 0.025),
                 median = quantile(value, probs = 0.5),
-                ub = quantile(value, probs = 0.95))
+                ub = quantile(value, probs = 0.975))
     xdata <- data.frame(rna = as.vector(raw_data),cellID = as.vector(matrix(rep(1:16,nTotal),nrow=nTotal,byrow=TRUE)),time = rep(times$ts2,16))
     pred <- pred %>% bind_cols(xdata) %>%
             mutate(split = if_else(time %in% times$ts3,'train','test'),
@@ -60,7 +60,8 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
 
 library(ggplot2)
 animate_on <- FALSE
-font_size <- 18
+my_device <- NULL #or cairo_ps, not sure why sometimes this works or not
+font_size <- 16
 all_extracted_samples <- simulate_from_ODE_model() 
 p1 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
 p1 <- p1 + geom_line() +
@@ -87,7 +88,7 @@ p2 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95), aes(x = time, 
 #  geom_point(aes(x = time, y = rna)) +
   NULL
 print(p2)
-ggsave('plots/fig2a.eps',device=cairo_ps)
+ggsave('plots/fig2a.eps',device = my_device)
 
 p3 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95) %>% filter(time==max(time)), aes(x = cellID, y = median, group=factor(nu))) +
   geom_line() +
@@ -102,10 +103,10 @@ p3 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95) %>% filter(time
   #  geom_point(aes(x = cellID, y = rna)) +
   NULL
 #add schematic image of egg chamber to plot
-im <- magick::image_read('plots/fig1c.eps')
-df <- data_frame(x = 15,
-                 y = 1500,
-                 width = 700,
+im <- magick::image_read('plots/fig1c.pdf')
+df <- data_frame(x = 14,
+                 y = 2000,
+                 width = 900,
                  image = list(im))
 p3 <- p3 + geom_subview(aes(x=x,y=y,subview=image,width=width,height=width), data=df)
   if (animate_on){
@@ -115,7 +116,7 @@ p3 <- p3 + geom_subview(aes(x=x,y=y,subview=image,width=width,height=width), dat
   ease_aes('linear')
   }
 print(p3)
-ggsave('plots/fig2b.eps',device=cairo_ps)
+ggsave('plots/fig2b.eps',device = my_device)
 
 p5 <- ggplot(all_extracted_samples %>%
                filter(nu>0.85 & nu<0.95, cellID==1),
@@ -130,18 +131,18 @@ p5 <- ggplot(all_extracted_samples %>%
   #  geom_point(aes(x = time, y = rna)) +
   NULL
 print(p5)
-ggsave('plots/fig2d.eps')
+ggsave('plots/fig2d.eps',device = my_device)
 
 if (!animate_on){
   library(patchwork)
-  p3 <- p3 + labs(title='b) Time: 32.4 hrs')
+  p3 <- p3 + labs(title='b) Time: 32 hrs')
   p4 <- p2 + p3 + plot_layout(ncol = 1,heights = c(2, 1))
   print(p4)
-  ggsave('plots/fig2.eps', width=9,height=9)
+  ggsave('plots/fig2.eps', width=9,height=9,device = my_device)
   
   library(patchwork)
   p4 <- p5 + p3 + plot_layout(ncol = 1,heights = c(1, 1))
   print(p4)
-  ggsave('plots/fig2v2.eps', width=9,height=9)
+  ggsave('plots/fig2v2.eps', width=9,height=9,device = my_device)
 }
 

@@ -13,8 +13,8 @@ expose_stan_functions(stan_model('quasi_steady_state_model.stan'))
 
 ############################################
 #set ICs
-th = c(0.24,12.9)
-
+th = c(0.22,9.9)
+text_size = 18
 ############################################
 #try to construct as functions 
 
@@ -58,9 +58,11 @@ g <- ggplot(df, aes(x=log10(a), y=log10(b)))
 g <- g + geom_raster(aes(fill=log10(dy)),interpolate=TRUE) +
     geom_contour(aes(z=log10(dy),color='darkorange')) + 
   theme_bw() + 
-  theme(text = element_text(size=20),
-        axis.text.x = element_text(size=20),
-        axis.text.y = element_text(size=20)) +
+  labs(x = expression(log[10](a)), y = expression(log[10](b)),
+       fill=expression(log[10](dy))) +
+  theme(text = element_text(size=text_size),
+        axis.text.x = element_text(size=text_size),
+        axis.text.y = element_text(size=text_size)) +
   scale_fill_gradientn(colours=c('cyan','dodgerblue4'),limits=c(-8,12))
 pts <- data.frame(a=c(log10(th[2])),b=c(log10(th[1])))
 g <- g + geom_point(data=pts,aes(a,b),color='darkorange',size=5) +
@@ -71,4 +73,4 @@ ggsave(plot_name,device=cairo_ps)
 }
 
 detach('package:limSolve',unload=TRUE) #detach packages so that does not interfere with dplyr when running other code
-detach('MASS',unload=TRUE)
+detach('package:MASS',unload=TRUE)

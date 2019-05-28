@@ -6,9 +6,9 @@ post_pred_plot_at_stst <- function(raw_data,ts,nSamples,params,estimates,identif
   pred <- as.data.frame(estimates, pars = params) %>%
     gather(factor_key = TRUE) %>%
     group_by(key) %>%
-    summarize(lb = quantile(value, probs = 0.25),
+    summarize(lb = quantile(value, probs = 0.025),
               median = quantile(value, probs = 0.5),
-              ub = quantile(value, probs = 0.75))
+              ub = quantile(value, probs = 0.975))
   xdata <- data.frame(rna = as.vector(raw_data),cellID = as.vector(matrix(rep(1:16,nSamples),nrow=nSamples,byrow=TRUE)),time = rep(ts,16))
   pred %<>% bind_cols(xdata) %>%
     mutate(split = case_when(time %in% OE_test ~ 'overexpression',
@@ -30,9 +30,9 @@ post_pred_plot_at_stst <- function(raw_data,ts,nSamples,params,estimates,identif
   }
   #add schematic image of egg chamber to plot
   im <- magick::image_read('plots/fig1c.eps')
-  df <- data_frame(x = 14,
-                   y = 0.8,
-                   width = 2,
+  df <- data_frame(x = 13,
+                   y = 0.7,
+                   width = 3,
                    image = list(im))
   p1 <- p1 + geom_subview(aes(x=x,y=y,subview=image,width=width,height=width), data=df)
   ggsave(paste(title_stem,identifier, '.eps',sep=''),device=cairo_ps)
