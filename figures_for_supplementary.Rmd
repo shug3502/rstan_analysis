@@ -1,0 +1,29 @@
+---
+title: "Supplementary Figures"
+author: "Jonathan U Harrison"
+date: "27/05/2019"
+output: html_document
+fig_width: 6
+fig_height: 4
+---
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=4,
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+Outline of Figures:
+
+```{r}
+source('extract_times_and_scaling.R')
+times = extract_times_and_scaling(16,4,14,optional_plot = TRUE)
+```
+
+
+```{r}
+library(rstan)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+source('simulate_from_ODE_model.R')
+```
+
+
+
