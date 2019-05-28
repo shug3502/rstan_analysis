@@ -61,7 +61,7 @@ simulate_from_ODE_model <- function(th = c(0.2,10),
 library(ggplot2)
 animate_on <- FALSE
 my_device <- NULL #or cairo_ps, not sure why sometimes this works or not
-font_size <- 16
+font_size <- 14
 all_extracted_samples <- simulate_from_ODE_model() 
 p1 <- ggplot(all_extracted_samples, aes(x = time, y = median, group = factor(nu), color=factor(nu)))
 p1 <- p1 + geom_line() +
@@ -83,6 +83,8 @@ p2 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95), aes(x = time, 
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
         strip.text = element_text(size = 8), legend.position = 'None') + 
+  scale_x_continuous(breaks=scales::pretty_breaks(n=3)) +
+  scale_y_continuous(breaks=scales::pretty_breaks(n=3)) +
   scale_color_discrete(name = "nu") + 
   scale_colour_brewer(palette=7) + 
 #  geom_point(aes(x = time, y = rna)) +
@@ -103,7 +105,7 @@ p3 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95) %>% filter(time
   #  geom_point(aes(x = cellID, y = rna)) +
   NULL
 #add schematic image of egg chamber to plot
-im <- magick::image_read('plots/fig1c.pdf')
+im <- magick::image_read('plots/fig1c.eps')
 df <- data_frame(x = 14,
                  y = 2000,
                  width = 900,
