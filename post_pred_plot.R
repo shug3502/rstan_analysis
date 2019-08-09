@@ -5,6 +5,7 @@ post_pred_plot <- function(raw_data,ts,nSamples,params,estimates,identifier,
 require(tidyr)
 require(ggplot2)
 require(magrittr)
+  my_device <- NULL
 pred <- as.data.frame(estimates, pars = params) %>%
   gather(factor_key = TRUE) %>%
   group_by(key) %>%
@@ -47,6 +48,6 @@ if (!is.na(raw_data[1])){
 p1 <- p1 + geom_point(aes(x = time, y = rna, colour = split))
 }
 print(p1)
-ggsave(paste(title_stem,identifier, '.eps',sep=''),device=cairo_ps)
+ggsave(paste(title_stem,identifier, '.eps',sep=''),device=my_device)
 return(p1)
 }

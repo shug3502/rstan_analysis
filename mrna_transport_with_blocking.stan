@@ -208,13 +208,15 @@ parameters {
   real<lower=0> phi; //difference between particles in NCs and in Oocyte
   real<lower=0> a;
   real<lower=0> b;
-  real<lower=0,upper=1> nu;
+  real<lower=0,upper=1> nu_prime;
 }
 transformed parameters {
+  real<lower=0,upper=1> nu;
   real theta[3];
+  nu = 1-nu_prime;
   theta[1] = b;
   theta[2] = a;
-  theta[3] = nu;
+  theta[3] = nu_prime;
 }
 model {
   real z[T1,16];
@@ -222,7 +224,7 @@ model {
   phi ~ normal(0.345,0.047) T[0,];
   a ~ normal(0,10) T[0,];
   b ~ normal(0,10) T[0,];
-  nu ~ beta(1,1) T[0,1];
+  nu_prime ~ beta(1,1) T[0,1];
   z = integrate_ode_rk45(mrnatransport, y0, 0, ts1, theta, x_r, x_i);
   for (t in 1:T1){
     for (j in 1:16) {

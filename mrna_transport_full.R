@@ -11,7 +11,8 @@
 
 mrna_transport_inference_full <- function(identifier='full_v099',use_real_data=TRUE,run_mcmc=FALSE,nSamples=15,nTest=5,nTestOE=3,
                                           parametersToPlot = c("theta","phi","sigma","a","b"),verbose=FALSE,compare_via_loo=FALSE,
-                                          show_diagnostic_plots=FALSE, train_on_OE=FALSE, alpha=2, model_str='simple'
+                                          show_diagnostic_plots=FALSE, train_on_OE=FALSE, use_prior_predictive=FALSE,
+                                          alpha=2, model_str='simple'
                                           ){
   library(rstan)
   library(mvtnorm)
@@ -116,18 +117,18 @@ stopifnot(dir.exists('fits') & dir.exists('plots'))
 
   ##########################
   if (run_mcmc) {
-    # if (use_prior_predictive){
-    # stan_file = case_when( model_str == 'simple' ~ 'prior_predictive_with_blocking.stan',
-    #                        model_str == 'decay' ~ 'prior_predictive_with_decay.stan',
-    #                        model_str == 'density_dependent' ~ 'prior_predictive_density_dependent_with_blocking.stan'
-    # )
-    # } else {
+    if (use_prior_predictive){
+    stan_file = case_when( model_str == 'simple' ~ 'prior_predictive_full.stan',
+                           model_str == 'decay' ~ 'prior_predictive_with_decay.stan',
+                           model_str == 'density_dependent' ~ 'prior_predictive_density_dependent_with_blocking.stan'
+    )
+    } else {
      stan_file = case_when( model_str == 'simple' ~ 'mrna_transport_with_blocking.stan',
                              model_str == 'decay' ~ 'mrna_transport_with_decay.stan',
                              model_str == 'density_dependent' ~ 'mrna_transport_density_dependent_with_blocking.stan',
                              model_str == 'decay_fixed' ~ 'mrna_transport_with_greater_decay.stan'
                             )
-    # }
+    }
       print(paste('Using the following stan file: ', stan_file, sep=''))
       stan_list = list(y = exp_data,
                        T1  = nSamples,
@@ -185,13 +186,19 @@ stopifnot(dir.exists('fits') & dir.exists('plots'))
   ###############################
   
   #look at posterior predictive distn
-  source('post_pred_plot.R')
+    source('post_pred_plot.R')
+    if (!use_prior_predictive){
     p1 <- post_pred_plot(test_data,times$ts2,nTest+nSamples+nTestOE,'y_pred',
                          estimates,identifier,title_stem='plots/posterior_pred',
                          ts_test=times$ts3,OE_test=times$ts4,filter_out_wt=TRUE)
     p2 <- post_pred_plot(overexpression_data,times$ts4,nTestOE,'y_pred_OE',
                          estimates,identifier,title_stem='plots/posterior_pred_OE',
                          ts_test=times$ts3,OE_test=times$ts4,filter_out_wt=FALSE)
+    } else {
+      p1 <- post_pred_plot(raw_data,times$ts1,nSamples,'y_pred',
+                           estimates,identifier,title_stem='plots/prior_pred',
+                           ts_test=times$ts3,OE_test=times$ts4,filter_out_wt=TRUE)
+    }
   if (show_diagnostic_plots) {
     source('plot_running_means.R')
     plot_running_means(estimates,parametersToPlot,identifier)

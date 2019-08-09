@@ -67,10 +67,12 @@ transformed_with_distances <- transformed_data %>%
                               (cellID %in% c(2,3,5,9)) ~ 1,
                               (cellID %in% c(4,6,7,8,10,11,13)) ~ 2,
                               (cellID %in% c(8,12,14,15)) ~ 3,
-                              (cellID ==16) ~ 4 ))
+                              (cellID ==16) ~ 4 ),
+         phenotype = factor(phenotype,levels = c("WT","OE")))
   
 p1 <-  ggplot(data=transformed_with_distances,aes(x=factor(distance),y=mRNA)) +
-  geom_violin(trim = TRUE, draw_quantiles = 0.5) +
+  geom_violin(trim=TRUE, draw_quantiles = 0.5, color="red",size=1) + 
+  geom_violin(trim=TRUE,fill="transparent",size=1) +
   geom_jitter(size=0.5,width=0.2) +
   facet_wrap(~phenotype) +
   theme_bw() + 
@@ -97,7 +99,8 @@ p2 <- transformed_with_distances %>%
   mutate(Ranking = get_ranking(mRNA)) %>%
   ungroup() %>%
   ggplot(aes(x=factor(distance),y=Ranking)) +
-  geom_violin(trim = TRUE, draw_quantiles = 0.5) +
+  geom_violin(trim=TRUE, draw_quantiles = 0.5, color="red",size=1,width=1.5) + 
+  geom_violin(trim=TRUE,fill="transparent",size=1,width=1.5) +
   geom_jitter(size=0.5,width=0.2) +
   facet_wrap(~phenotype) +
   theme_bw() + 

@@ -72,14 +72,14 @@ ggsave(paste('plots/fig4',identifier,'.eps',sep=''),device=cairo_ps)
 Fig5: Results of inference for dynamic model A) Posterior pairs plot, B) Posterior predictive distribution, C) Sensitivity to a, b.
 ```{r, Fig5, echo=FALSE,message=FALSE}
 source('mrna_transport_full.R')
-res_WT = mrna_transport_inference_full('no_decay_v399',
-						use_real_data = TRUE, run_mcmc = TRUE,
+res_WT = mrna_transport_inference_full('no_decay_v401',
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 16, nTest = 4, nTestOE = 14,
 						verbose = TRUE, compare_via_loo = FALSE,
 						show_diagnostic_plots = TRUE, train_on_OE = FALSE,
 						parametersToPlot = c('a','b','nu','phi','sigma'),alpha=2.23,model_str='simple')
 res_OE = mrna_transport_inference_full('no_decay_OE_v399',
-						use_real_data = TRUE, run_mcmc = TRUE,
+						use_real_data = TRUE, run_mcmc = FALSE,
 						nSamples = 16, nTest = 4, nTestOE = 14,
 						verbose = TRUE, compare_via_loo = FALSE,
 						show_diagnostic_plots = TRUE, train_on_OE = TRUE,
@@ -160,13 +160,14 @@ FigS2: Convergence diagnostics for MCMC inference methods
 FigS3: Prior predictive distribution
 ```{r, FigS3, echo=FALSE}
 source('mrna_transport_full.R')
-res_PP = mrna_transport_inference_full('prior_pred_v391',
+res_PP = mrna_transport_inference_full('prior_pred_v399',
 						use_real_data = TRUE, run_mcmc = TRUE,
-						nSamples = 9, nTest = 11, nTestOE = 9,
+						nSamples = 16, nTest = 4, nTestOE = 14,
 						verbose = TRUE, compare_via_loo = FALSE,
-						show_diagnostic_plots = FALSE, use_hierarchical_model = FALSE,
-						use_prior_predictive = TRUE, train_on_OE = FALSE,
-						is_nu_uniform = TRUE, no_decay_model = TRUE)
+						show_diagnostic_plots = FALSE, train_on_OE = FALSE,
+						use_prior_predictive = TRUE,
+						parametersToPlot = c('a','b','nu','phi','sigma'),
+						alpha=2.23, model_str='simple')
 ```
 
 FigSPairs: Posterior pairwise plot
