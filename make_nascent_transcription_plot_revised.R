@@ -7,7 +7,7 @@ source('get_nascent_transcription.R')
 ##############
 #for OE
 nascent_transcription = get_nascent_transcription(nTestOE,'OE')
-nt_df_oe <- data.frame(nascent_transcription) 
+nt_df_oe <- data.frame(nascent_transcription)[times$sort_indices4,] 
 colnames(nt_df_oe) = seq_len(16)
 nt_df_oe <- nt_df_oe %>%
   mutate(time = times$ts4) %>%

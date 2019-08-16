@@ -5,7 +5,7 @@ post_pred_plot <- function(raw_data,ts,nSamples,params,estimates,identifier,
 require(tidyr)
 require(ggplot2)
 require(magrittr)
-  my_device <- NULL
+  my_device <- cairo_ps
 pred <- as.data.frame(estimates, pars = params) %>%
   gather(factor_key = TRUE) %>%
   group_by(key) %>%
@@ -37,13 +37,13 @@ pred$cellID <- factor(pred$cellID,levels = c(bl[1:2], 4, bl[3:4],
 p1 <- ggplot(pred, aes(x = time, y = median)) +
   geom_line() +
   geom_ribbon(aes(ymin = lb, ymax = ub), alpha = 0.25) +
-  facet_wrap( ~cellID, ncol = 5, drop = F, strip.position="bottom",scales=scale) +
-#  facet_wrap(~cellID,scales=scale) +   #needed to remove factor(cellID) 
+  facet_wrap( ~cellID, ncol = 5, drop = F, strip.position="bottom", scales=scale) +
   labs(x = "Time (hrs)", y = "mRNA") +
   theme_classic() +
   theme(strip.background=element_blank(), text = element_text(size = 12),
         axis.text = element_text(size = 12),
-        legend.position = "none", strip.text = element_text(size = 8))
+        legend.position = "none", strip.text = element_text(size = 8)) +
+  NULL
 if (!is.na(raw_data[1])){
 p1 <- p1 + geom_point(aes(x = time, y = rna, colour = split))
 }

@@ -3,6 +3,7 @@
 */*/*.pickle
 fits/*
 plots/*.eps
+plots/*.key
 plots/*.jpg
 *_files/
 .Rhistory

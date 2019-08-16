@@ -81,7 +81,7 @@ p2 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95), aes(x = time, 
   facet_wrap(~cellID,scales='free_y') +   #needed to remove factor(cellID) 
   labs(title='a)', x = "Time (hrs)", y = "mRNA\ncomplexes") +
   theme_bw() +
-  theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
+  theme(text = element_text(size = font_size), axis.text = element_text(size = 14),
         strip.text = element_text(size = 8), legend.position = 'None') + 
   scale_x_continuous(breaks=scales::pretty_breaks(n=3)) +
   scale_y_continuous(breaks=scales::pretty_breaks(n=3)) +
@@ -104,11 +104,12 @@ p3 <- ggplot(all_extracted_samples %>% filter(nu>0.85 & nu<0.95) %>% filter(time
   scale_colour_brewer(palette=7) + 
   #  geom_point(aes(x = cellID, y = rna)) +
   NULL
+ggsave("plots/fig2b_without_schematic.eps",device = my_device)
 #add schematic image of egg chamber to plot
 im <- magick::image_read('plots/fig1c.eps')
-df <- data_frame(x = 14,
-                 y = 2000,
-                 width = 900,
+df <- data_frame(x = 13,
+                 y = 1900,
+                 width = 1600,
                  image = list(im))
 p3 <- p3 + geom_subview(aes(x=x,y=y,subview=image,width=width,height=width), data=df)
   if (animate_on){

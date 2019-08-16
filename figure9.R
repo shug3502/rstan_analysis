@@ -21,19 +21,19 @@ df_oe <- as.data.frame(overexpression_data) %>% mutate(time=times$ts4) %>% gathe
 gurken_rna_df <- full_join(df_wt,df_oe)
 quantify_for_ilan <- gurken_rna_df %>% 
   group_by(time) %>%
-  mutate(phenotype = factor(phenotype),
+  mutate(Phenotype = factor(phenotype),
          number = rna[cell==1],
          fraction = number/sum(rna),
          total = sum(rna)) %>%
   filter(cell==1)
 font_size = 32
-h1 <- ggplot(data = quantify_for_ilan, aes(x=time,y=number,color=phenotype)) + 
-  geom_point() +
+h1 <- ggplot(data = quantify_for_ilan, aes(x=time,y=number,color=Phenotype,shape=Phenotype)) + 
+  geom_point(size=4) +
   geom_smooth(method = lm, se = FALSE) +
   theme_bw() +
   theme(text = element_text(size = font_size), axis.text = element_text(size = font_size),
         strip.text = element_text(size = font_size)) +
-  xlab('Time') + 
+  xlab('Time (hrs)') + 
   ylab('mRNA complexes\nin oocyte')
 print(h1)
 ggsave(paste('plots/number_in_oocyte_','.eps',sep=''),device=cairo_ps, height=9,width=12)

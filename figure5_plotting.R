@@ -1,22 +1,33 @@
 #########
-marginal_ab_plot <- function(identifier,my_device=NULL){
+marginal_ab_plot <- function(identifier,my_device=NULL, fontsize = 14){
   estimates = readRDS(paste('fits/mrna_transport_estimates',identifier,'.rds',sep='')) 
   library(bayesplot)
-  fontsize = 20
+  library(patchwork)
   color_scheme_set("purple")
-  g1<- mcmc_dens(as.array(estimates),pars=c('a','b')) +
+  g1 <- mcmc_dens(as.array(estimates),pars=c('a')) +
     theme_bw() +
+    labs(x=bquote("a (particles"*~hr^{-1}*")"), y="Density") + 
     theme(text = element_text(size = fontsize), axis.text = element_text(size = fontsize),
           legend.position = "none",
           plot.title = element_text(size=fontsize), 
           strip.text.x = element_text(size = fontsize, face="italic")) +
-    labs(title='a)')
+    scale_y_continuous(breaks=scales::pretty_breaks(n=3)) + 
+    labs(title='a)') 
+  g2 <- mcmc_dens(as.array(estimates),pars=c('b')) +
+    theme_bw() +
+    labs(x=bquote("b ("*hr^{-1}*")")) + 
+    theme(text = element_text(size = fontsize), axis.text = element_text(size = fontsize),
+          legend.position = "none",
+          plot.title = element_text(size=fontsize), 
+          strip.text.x = element_text(size = fontsize, face="italic")) +
+    scale_y_continuous(breaks=scales::pretty_breaks(n=3))
+  g <- g1 + g2
   ggsave(paste('plots/post_marginal_',identifier,'.eps',sep=''),device=my_device)
-  return(g1)
+  return(g)
 }
 
 ###################
-plot_figure5 <- function(identifier,my_device=NULL){
+plot_figure5 <- function(identifier,my_device=NULL,fontsize = 14){
 library(ggplot2)
 library(patchwork)
 source('mrna_transport_full.R')
@@ -29,11 +40,11 @@ res_M0 = mrna_transport_inference_full(identifier = identifier,
                                        show_diagnostic_plots = TRUE, train_on_OE = FALSE,
                                        parametersToPlot = c('a','b','nu','phi','sigma'),
                                        model_str='simple')
-fontsize = 20
 res_WT = res_M0 +
-  labs(title='b)') + theme(title=element_text(size=fontsize*2/3))
-marginal_WT = marginal_ab_plot(identifier)
-marginal_WT + res_WT + plot_layout(ncol=1,height=c(1,3))
+  labs(title='b)') +
+  theme(title=element_text(size=fontsize))
+marginal_WT = marginal_ab_plot(identifier,my_device,fontsize)
+marginal_WT - res_WT + plot_layout(ncol=1,height=c(1,3))
 ggsave(paste('plots/fig5',identifier,'.eps',sep=''),width = 9, height = 9, device=my_device)
 
 ##################

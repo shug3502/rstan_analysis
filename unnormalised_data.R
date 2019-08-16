@@ -4,6 +4,7 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 nTestOE = 14
+font_size = 10
 source('extract_times_and_scaling.R')
 times = extract_times_and_scaling(9,11,nTestOE)
 data = matrix(as.numeric(read.csv('data/exp_data.csv',sep=',',header=FALSE,stringsAsFactors = FALSE)),ncol=16,byrow=TRUE)
@@ -22,8 +23,10 @@ h1 <- full_join(df_wt,df_oe) %>%
   ggplot(aes(x=cell,y=rna,group=time,color=time)) +
   geom_line() +
   facet_grid(~phenotype) +
+  scale_y_continuous(breaks=scales::pretty_breaks(n=3)) +
   theme_bw() +
-  theme(legend.position='None') + 
+  theme(legend.position='None', strip.text = element_text(size = 10), 
+        text = element_text(size = font_size)) + 
   labs(x='Cell ID',y='mRNA')
 print(h1)
 ggsave('plots/unnormalised_data_distn.eps')
@@ -32,9 +35,11 @@ h2 <- full_join(df_wt,df_oe) %>%
   ggplot(aes(x=cell,y=rna,color=factor(phenotype))) +
   geom_line() +
   facet_wrap(~time) +
+  scale_y_continuous(breaks=scales::pretty_breaks(n=3)) +
   theme_bw() +
-  theme(legend.position='None') + 
+  theme(legend.position='None', strip.text = element_text(size = 10), 
+        text = element_text(size = font_size)) + 
   labs(x='Cell ID',y='mRNA')
 print(h2)
-ggsave('plots/unnormalised_data_distn_faceted.eps')
+ggsave('plots/unnormalised_data_distn_faceted.eps',width=9,height=9)
 
